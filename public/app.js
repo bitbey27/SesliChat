@@ -9,12 +9,13 @@ class VoiceChatApp {
         this.username = null;
         this.currentRoom = null;
         this.peers = new Map(); // userId -> { pc: RTCPeerConnection, stream: MediaStream }
+        this.peerVolumes = new Map(); // userId -> volume (0.0 to 1.0)
         this.localStream = null;
         this.isMuted = false;
         this.isDeafened = false;
 
-        // Konuşma algılama
         this.audioContext = null;
+        this.notificationAudioContext = null; // Bildirim sesleri için ortak bağlam
         this.analyser = null;
         this.isSpeaking = false;
         this.speakingThreshold = 15;
@@ -103,6 +104,64 @@ class VoiceChatApp {
             e.preventDefault();
             this.sendChatMessage();
         });
+
+        window.addEventListener('beforeunload', () => {
+            if (this.ws) {
+                this.ws.close();
+            }
+        });
+    }
+
+    // =========================================
+    // Ses Efektleri
+    // =========================================
+    playSound(type) {
+        if (!this.notificationAudioContext) return;
+
+        try {
+            const ctx = this.notificationAudioContext;
+            
+            // Eğer tarayıcı tarafından durdurulduysa devam ettir
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            if (type === 'join') {
+                // Katılma sesi: Yükselen iki ton (ör: Discord join)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
+                osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1); // C#5
+                
+                gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
+                gainNode.gain.setValueAtTime(0.2, ctx.currentTime + 0.1);
+                gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+                
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.2);
+            } else if (type === 'leave') {
+                // Ayrılma sesi: Düşen iki ton
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(554, ctx.currentTime); // C#5
+                osc.frequency.setValueAtTime(440, ctx.currentTime + 0.1); // A4
+                
+                gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
+                gainNode.gain.setValueAtTime(0.2, ctx.currentTime + 0.1);
+                gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+                
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.2);
+            }
+        } catch (e) {
+            console.error('Ses efekti çalınamadı:', e);
+        }
     }
 
     // =========================================
@@ -113,6 +172,16 @@ class VoiceChatApp {
         if (!username) return;
 
         this.username = username;
+        
+        // Autoplay kurallarını aşmak için kullanıcı etkileşimi anında AudioContext oluştur
+        if (!this.notificationAudioContext) {
+            try {
+                this.notificationAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.error('Bildirim sesleri için AudioContext oluşturulamadı:', e);
+            }
+        }
+
         this.connectWebSocket();
     }
 
@@ -358,6 +427,7 @@ class VoiceChatApp {
         // Konuşma algılamayı başlat
         this.startVoiceActivityDetection();
 
+        this.playSound('join');
         this.showToast('🔊', 'Sesli kanala katıldın!');
     }
 
@@ -393,6 +463,7 @@ class VoiceChatApp {
         // Chat temizle
         this.chatMessages.innerHTML = '<div class="chat-welcome-msg"><span>👋</span> Sesli kanala hoş geldin! Buradan mesaj yazabilirsin.</div>';
 
+        this.playSound('leave');
         this.showToast('📤', 'Sesli kanaldan ayrıldın.');
     }
 
@@ -400,10 +471,12 @@ class VoiceChatApp {
     // Peer Olayları
     // =========================================
     onPeerJoined(message) {
+        this.playSound('join');
         this.showToast('👋', `${message.username} katıldı!`);
     }
 
     onPeerLeft(message) {
+        this.playSound('leave');
         const peer = this.peers.get(message.userId);
         if (peer) {
             peer.pc.close();
@@ -451,6 +524,11 @@ class VoiceChatApp {
                 audioEl.id = `audio-${peerId}`;
                 audioEl.autoplay = true;
                 audioEl.playsInline = true;
+                
+                // Kaydedilmiş ses seviyesini uygula
+                const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
+                audioEl.volume = volValue;
+                
                 document.body.appendChild(audioEl);
             }
             audioEl.srcObject = stream;
@@ -615,6 +693,46 @@ class VoiceChatApp {
                 <span class="participant-name">${user.username}</span>
                 <span class="participant-status">${user.isMuted ? '🔇 Sessiz' : user.isDeafened ? '🔇 Sağır' : isSpeaking ? '🗣️ Konuşuyor' : '🎤 Dinliyor'}</span>
             `;
+
+            // Eğer kullanıcı kendimiz değilse ses ayar çubuğu ekle
+            if (user.id !== this.userId) {
+                const volValue = this.peerVolumes.has(user.id) ? this.peerVolumes.get(user.id) : 1.0;
+                
+                const volControl = document.createElement('div');
+                volControl.className = 'participant-volume-control';
+                volControl.innerHTML = `
+                    <span class="volume-icon">🔊</span>
+                    <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="${volValue}">
+                `;
+
+                // Slider olayı
+                const slider = volControl.querySelector('.volume-slider');
+                slider.addEventListener('input', (e) => {
+                    const newVol = parseFloat(e.target.value);
+                    this.peerVolumes.set(user.id, newVol);
+                    
+                    const peer = this.peers.get(user.id);
+                    if (peer && peer.audioEl) {
+                        peer.audioEl.volume = newVol;
+                    }
+                    
+                    const icon = volControl.querySelector('.volume-icon');
+                    if (newVol === 0) icon.textContent = '🔇';
+                    else if (newVol < 0.5) icon.textContent = '🔉';
+                    else icon.textContent = '🔊';
+                });
+
+                // Başlangıç ikonunu ayarla
+                const icon = volControl.querySelector('.volume-icon');
+                if (volValue === 0) icon.textContent = '🔇';
+                else if (volValue < 0.5) icon.textContent = '🔉';
+                
+                // Event delegation'ı engellemek için tıklandığında üst kapsayıcıya gitmesini durdur
+                volControl.addEventListener('click', e => e.stopPropagation());
+
+                card.appendChild(volControl);
+            }
+
             this.voiceParticipants.appendChild(card);
         });
     }
