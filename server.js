@@ -17,10 +17,10 @@ app.get('/health', (req, res) => {
 
 // Oda ve kullanıcı yönetimi
 const rooms = {
-  'genel': { name: 'Genel', icon: '💬', users: new Map() },
-  'oyun': { name: 'Oyun', icon: '🎮', users: new Map() },
-  'muzik': { name: 'Müzik', icon: '🎵', users: new Map() },
-  'chill': { name: 'Chill', icon: '☕', users: new Map() }
+  'genel': { name: 'Genel', icon: '💬', isLocked: false, password: '', users: new Map() },
+  'oyun': { name: 'Oyun', icon: '🎮', isLocked: false, password: '', users: new Map() },
+  'muzik': { name: 'Müzik', icon: '🎵', isLocked: false, password: '', users: new Map() },
+  'chill': { name: 'Chill', icon: '☕', isLocked: false, password: '', users: new Map() }
 };
 
 // Tüm bağlı kullanıcılar
@@ -32,9 +32,12 @@ function broadcastRoomUpdate() {
     roomData[id] = {
       name: room.name,
       icon: room.icon,
+      isLocked: room.isLocked,
       users: Array.from(room.users.values()).map(u => ({
         id: u.id,
         username: u.username,
+        role: u.role,
+        color: u.color,
         isMuted: u.isMuted || false,
         isDeafened: u.isDeafened || false
       }))
@@ -53,6 +56,8 @@ function broadcastOnlineUsers() {
   const onlineList = Array.from(connectedUsers.values()).map(u => ({
     id: u.id,
     username: u.username,
+    role: u.role,
+    color: u.color,
     currentRoom: u.currentRoom || null
   }));
 
@@ -83,6 +88,8 @@ wss.on('connection', (ws) => {
           const user = {
             id: userId,
             username: message.username,
+            role: 'user', // varsayılan rol
+            color: message.color || '#5865F2',
             ws: ws,
             currentRoom: null,
             isMuted: false,
@@ -90,9 +97,23 @@ wss.on('connection', (ws) => {
           };
           connectedUsers.set(userId, user);
 
-          ws.send(JSON.stringify({ type: 'joined', userId }));
+          ws.send(JSON.stringify({ type: 'joined', userId, role: user.role }));
           broadcastRoomUpdate();
           broadcastOnlineUsers();
+          break;
+        }
+
+        case 'admin-login': {
+          const user = connectedUsers.get(userId);
+          if (!user) return;
+          if (message.password === 'admin123') { // Basit şifre kontrolü
+            user.role = 'admin';
+            ws.send(JSON.stringify({ type: 'admin-success' }));
+            broadcastRoomUpdate();
+            broadcastOnlineUsers();
+          } else {
+            ws.send(JSON.stringify({ type: 'admin-error', message: 'Hatalı şifre!' }));
+          }
           break;
         }
 
@@ -116,7 +137,14 @@ wss.on('connection', (ws) => {
           }
 
           const roomId = message.roomId;
+          const attemptPassword = message.password || '';
           if (!rooms[roomId]) return;
+
+          // Şifre kontrolü (Adminler şifresiz girebilir)
+          if (rooms[roomId].isLocked && user.role !== 'admin' && rooms[roomId].password !== attemptPassword) {
+            ws.send(JSON.stringify({ type: 'room-join-error', message: 'Hatalı oda şifresi!' }));
+            return;
+          }
 
           // Odadaki mevcut kullanıcılara yeni kullanıcıyı bildir
           rooms[roomId].users.forEach((otherUser) => {
@@ -215,6 +243,7 @@ wss.on('connection', (ws) => {
             type: 'chat-message',
             userId: userId,
             username: user.username,
+            color: user.color,
             message: message.message.substring(0, 500),
             timestamp: Date.now()
           });
@@ -241,6 +270,111 @@ wss.on('connection', (ws) => {
               u.ws.send(speakMsg);
             }
           });
+          break;
+        }
+
+        // --- ADMIN KOMUTLARI ---
+        case 'admin-clear-chat': {
+          const adminUser = connectedUsers.get(userId);
+          if (!adminUser || adminUser.role !== 'admin' || !adminUser.currentRoom) return;
+
+          const room = rooms[adminUser.currentRoom];
+          if (!room) return;
+          
+          const clearMsg = JSON.stringify({ type: 'clear-chat' });
+          room.users.forEach((u) => {
+            if (u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(clearMsg);
+            }
+          });
+          break;
+        }
+
+        case 'admin-kick': {
+          const adminUser = connectedUsers.get(userId);
+          if (!adminUser || adminUser.role !== 'admin') return;
+          
+          const targetUser = connectedUsers.get(message.targetId);
+          if (targetUser) {
+            // Kick mesajı gönder
+            if (targetUser.ws.readyState === WebSocket.OPEN) {
+              targetUser.ws.send(JSON.stringify({ type: 'kicked', message: 'Bir yönetici tarafından sunucudan atıldınız.' }));
+              // targetUser bağlantısını kapat (close eventi otomatik temizlik yapar)
+              setTimeout(() => targetUser.ws.close(), 500);
+            }
+          }
+          break;
+        }
+
+        case 'admin-set-room-password': {
+          const adminUser = connectedUsers.get(userId);
+          if (!adminUser || adminUser.role !== 'admin') return;
+          
+          const targetRoomId = message.roomId;
+          const newPassword = message.password || '';
+          
+          if (rooms[targetRoomId]) {
+            rooms[targetRoomId].isLocked = !!newPassword;
+            rooms[targetRoomId].password = newPassword;
+            broadcastRoomUpdate();
+          }
+          break;
+        }
+
+        case 'admin-create-room': {
+          const adminUser = connectedUsers.get(userId);
+          if (!adminUser || adminUser.role !== 'admin') return;
+          
+          const newRoomId = message.roomId;
+          const newRoomName = message.roomName;
+          const newRoomIcon = message.roomIcon || '📌';
+          const newPassword = message.password || '';
+
+          if (newRoomId && newRoomName && !rooms[newRoomId]) {
+            rooms[newRoomId] = {
+              name: newRoomName,
+              icon: newRoomIcon,
+              isLocked: !!newPassword,
+              password: newPassword,
+              users: new Map()
+            };
+            broadcastRoomUpdate();
+          }
+          break;
+        }
+
+        case 'admin-delete-room': {
+          const adminUser = connectedUsers.get(userId);
+          if (!adminUser || adminUser.role !== 'admin') return;
+
+          const roomIdToDelete = message.roomId;
+          // Temel 4 odayı silmeyi engelleyelim
+          const defaultRooms = ['genel', 'oyun', 'muzik', 'chill'];
+          if (defaultRooms.includes(roomIdToDelete)) {
+             ws.send(JSON.stringify({ type: 'admin-error', message: 'Varsayılan odalar silinemez!' }));
+             return;
+          }
+
+          if (rooms[roomIdToDelete]) {
+            // Odadaki kullanıcıları kickle veya çıkar
+            rooms[roomIdToDelete].users.forEach((u) => {
+               if (u.ws.readyState === WebSocket.OPEN) {
+                 u.ws.send(JSON.stringify({ type: 'kicked', message: 'Oda yönetici tarafından kapatıldı.' }));
+               }
+               u.currentRoom = null;
+            });
+            delete rooms[roomIdToDelete];
+            broadcastRoomUpdate();
+          }
+          break;
+        }
+
+        case 'update-color': {
+          const user = connectedUsers.get(userId);
+          if (!user) return;
+          user.color = message.color;
+          broadcastRoomUpdate();
+          broadcastOnlineUsers();
           break;
         }
       }

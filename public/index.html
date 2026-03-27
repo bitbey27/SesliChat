@@ -140,6 +140,25 @@
                             <line x1="3" y1="3" x2="17" y2="17" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                     </button>
+                    <button class="control-btn" id="settings-btn" title="Ses Ayarları">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </button>
+                    <button class="control-btn hidden" id="admin-panel-btn" title="Admin Paneli" style="color: var(--yellow);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="2 4 5 15 12 8 19 15 22 4"></polygon>
+                            <line x1="2" y1="20" x2="22" y2="20"></line>
+                        </svg>
+                    </button>
+                    <button class="control-btn" id="share-screen-btn" title="Ekran Paylaş">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </button>
                     <button class="control-btn" id="disconnect-btn" title="Bağlantıyı Kes" style="display:none;">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                             <path d="M4 4L16 16M16 4L4 16" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
@@ -196,15 +215,20 @@
                 </div>
 
                 <div class="voice-body">
+                    <div id="video-stage" class="video-stage hidden" style="flex: 2; margin-right: 15px; background: #000; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; position: relative;">
+                    </div>
                     <div class="voice-participants" id="voice-participants">
                         <!-- Katılımcılar JS ile doldurulacak -->
                     </div>
 
                     <!-- Mini Chat Alanı -->
                     <div class="chat-panel" id="chat-panel">
-                        <div class="chat-header">
-                            <span class="chat-header-icon">💬</span>
-                            <span class="chat-header-title">Sohbet</span>
+                        <div class="chat-header" style="display:flex; justify-content: space-between; align-items: center; padding-right: 10px;">
+                            <div>
+                                <span class="chat-header-icon">💬</span>
+                                <span class="chat-header-title">Sohbet</span>
+                            </div>
+                            <button id="clear-chat-btn" class="hidden" title="Sohbet Geçmişini Temizle (Admin)" style="background:none; border:none; cursor:pointer; color:#ED4245; font-size:18px;">🗑️</button>
                         </div>
                         <div class="chat-messages" id="chat-messages">
                             <div class="chat-welcome-msg">
@@ -212,6 +236,7 @@
                             </div>
                         </div>
                         <form class="chat-input-form" id="chat-input-form" autocomplete="off">
+                            <button type="button" id="emoji-toggle-btn" class="emoji-toggle-btn" title="Emoji Ekle">😀</button>
                             <input type="text" id="chat-input" class="chat-input" placeholder="Mesaj yaz..." maxlength="500">
                             <button type="submit" class="chat-send-btn" title="Gönder">
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -252,6 +277,93 @@
     <!-- Bildirim Toast -->
     <div id="toast-container" class="toast-container"></div>
 
-    <script src="app.js"></script>
+    <!-- Modals -->
+    <!-- Oda Şifresi Modalı -->
+    <div id="password-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>🔒 Özel Oda</h3>
+            <p>Bu odaya katılmak için şifre girmelisiniz.</p>
+            <input type="password" id="room-password-input" class="modern-input" placeholder="Şifre...">
+            <div class="modal-actions">
+                <button id="cancel-password-btn" class="btn-secondary">İptal</button>
+                <button id="submit-password-btn" class="btn-primary">Katıl</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ses Ayarları Modalı -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>⚙️ Ses ve Görüntü Ayarları</h3>
+            <div class="settings-group">
+                <label class="setting-item">
+                    <span>Yankı Giderme (Echo Cancellation)</span>
+                    <input type="checkbox" id="setting-echo" checked>
+                </label>
+                <label class="setting-item">
+                    <span>Gürültü Engelleme (Noise Suppression)</span>
+                    <input type="checkbox" id="setting-noise" checked>
+                </label>
+                <label class="setting-item">
+                    <span>Otomatik Kazanç (Auto Gain Control)</span>
+                    <input type="checkbox" id="setting-gain" checked>
+                </label>
+                <hr style="margin: 15px 0; border-color: rgba(255,255,255,0.1);">
+                <label class="setting-item" style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>Profil Rengi</span>
+                    <input type="color" id="setting-color" value="#5865F2" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer; background: transparent; padding: 0;">
+                </label>
+                <p class="setting-hint" style="margin-top:10px; font-size:12px; color:var(--text-secondary);">Not: Oyun oynarken arka plandaki seslerin yankı yapmasını önlemek için Yankı Giderme'yi açık tutun ancak müzik deneyimi için Gürültü Engelleme'yi kapatmayı deneyin. Profil profil renginiz tüm odalarda geçerlidir.</p>
+            </div>
+            <div class="modal-actions">
+                <button id="close-settings-btn" class="btn-primary">Kaydet ve Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Oda Yönetimi Modalı -->
+    <div id="admin-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>👑 Admin Paneli</h3>
+            
+            <div class="settings-group">
+                <h4>Yeni Oda Oluştur</h4>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <input type="text" id="admin-new-room-id" class="modern-input" placeholder="Oda ID (bosluksuz, kucuk harf)">
+                    <input type="text" id="admin-new-room-name" class="modern-input" placeholder="Oda Adı">
+                    <input type="text" id="admin-new-room-icon" class="modern-input" placeholder="İkon (örn: 🔒)">
+                    <input type="password" id="admin-new-room-password" class="modern-input" placeholder="Şifre (İsteğe bağlı)">
+                    <button id="admin-create-room-btn" class="btn-primary">Yeni Oda Oluştur</button>
+                </div>
+            </div>
+            
+            <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1);">
+            
+            <div class="settings-group">
+                <h4>Oda Şifresi Güncelle / Odayı Sil</h4>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <select id="admin-select-room" class="modern-input">
+                        <option value="">Oda Seçin...</option>
+                    </select>
+                    <input type="password" id="admin-update-password" class="modern-input" placeholder="Yeni Şifre (Açmak için boş bırak)">
+                    <div style="display:flex; gap:8px;">
+                        <button id="admin-set-password-btn" class="btn-primary" style="flex:1;">Şifreyi Güncelle</button>
+                        <button id="admin-delete-room-btn" class="btn-leave" style="flex:1; background:rgba(237,66,69,0.2); color:#ED4245; border:1px solid rgba(237,66,69,0.5);">Odayı Sil</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions mt-4">
+                <button id="close-admin-btn" class="btn-secondary" style="width: 100%;">Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emojiler için küçük kap -> style.css'te tasarlanacak -->
+    <div id="emoji-picker" class="emoji-picker hidden">
+        <div class="emoji-grid" id="emoji-grid"></div>
+    </div>
+
+    <script src="app.js?v=2.0.2"></script>
 </body>
 </html>
