@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,12 +17,55 @@ app.get('/health', (req, res) => {
 });
 
 // Oda ve kullanıcı yönetimi
-const rooms = {
+let rooms = {
   'genel': { name: 'Genel', icon: '💬', isLocked: false, password: '', users: new Map() },
   'oyun': { name: 'Oyun', icon: '🎮', isLocked: false, password: '', users: new Map() },
   'muzik': { name: 'Müzik', icon: '🎵', isLocked: false, password: '', users: new Map() },
   'chill': { name: 'Chill', icon: '☕', isLocked: false, password: '', users: new Map() }
 };
+
+const ROOMS_FILE = path.join(__dirname, 'rooms.json');
+
+function saveRooms() {
+  try {
+    const dataToSave = {};
+    for (const [id, room] of Object.entries(rooms)) {
+      dataToSave[id] = {
+        name: room.name,
+        icon: room.icon,
+        isLocked: room.isLocked,
+        password: room.password
+      };
+    }
+    fs.writeFileSync(ROOMS_FILE, JSON.stringify(dataToSave, null, 2));
+    console.log('💾 Odalar kaydedildi.');
+  } catch (err) {
+    console.error('Oda kaydetme hatası:', err);
+  }
+}
+
+function loadRooms() {
+  try {
+    if (fs.existsSync(ROOMS_FILE)) {
+      const data = fs.readFileSync(ROOMS_FILE, 'utf8');
+      const loadedRooms = JSON.parse(data);
+      for (const [id, room] of Object.entries(loadedRooms)) {
+        rooms[id] = {
+          ...room,
+          users: new Map()
+        };
+      }
+      console.log('📂 Odalar yüklendi.');
+    } else {
+      // Dosya yoksa varsayılanları kaydet
+      saveRooms();
+    }
+  } catch (err) {
+    console.error('Oda yükleme hatası:', err);
+  }
+}
+
+loadRooms();
 
 // Tüm bağlı kullanıcılar
 const connectedUsers = new Map();
@@ -316,6 +360,7 @@ wss.on('connection', (ws) => {
           if (rooms[targetRoomId]) {
             rooms[targetRoomId].isLocked = !!newPassword;
             rooms[targetRoomId].password = newPassword;
+            saveRooms();
             broadcastRoomUpdate();
           }
           break;
@@ -338,6 +383,7 @@ wss.on('connection', (ws) => {
               password: newPassword,
               users: new Map()
             };
+            saveRooms();
             broadcastRoomUpdate();
           }
           break;
@@ -364,6 +410,7 @@ wss.on('connection', (ws) => {
                u.currentRoom = null;
             });
             delete rooms[roomIdToDelete];
+            saveRooms();
             broadcastRoomUpdate();
           }
           break;

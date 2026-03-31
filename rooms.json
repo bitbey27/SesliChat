@@ -1,0 +1,26 @@
+{
+  "genel": {
+    "name": "Genel",
+    "icon": "💬",
+    "isLocked": false,
+    "password": ""
+  },
+  "oyun": {
+    "name": "Oyun",
+    "icon": "🎮",
+    "isLocked": false,
+    "password": ""
+  },
+  "muzik": {
+    "name": "Müzik",
+    "icon": "🎵",
+    "isLocked": false,
+    "password": ""
+  },
+  "chill": {
+    "name": "Chill",
+    "icon": "☕",
+    "isLocked": false,
+    "password": ""
+  }
+}
