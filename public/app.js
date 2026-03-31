@@ -11,6 +11,7 @@ class VoiceChatApp {
         this.currentRoom = null;
         this.peers = new Map(); // userId -> { pc: RTCPeerConnection, stream: MediaStream }
         this.peerVolumes = new Map(); // userId -> volume (0.0 to 1.0)
+        this.roomPasswords = JSON.parse(localStorage.getItem('roomPasswords') || '{}');
         this.localStream = null;
         this.isMuted = false;
         this.isDeafened = false;
@@ -67,6 +68,12 @@ class VoiceChatApp {
         this.loginForm = document.getElementById('login-form');
         this.usernameInput = document.getElementById('username-input');
 
+        // Kayıtlı kullanıcı adını yükle
+        const savedUsername = localStorage.getItem('username');
+        if (savedUsername && this.usernameInput) {
+            this.usernameInput.value = savedUsername;
+        }
+
         // Kanallar
         this.channelList = document.getElementById('channel-list');
 
@@ -76,6 +83,8 @@ class VoiceChatApp {
         this.userStatusText = document.getElementById('user-status-text');
         this.micBtn = document.getElementById('mic-btn');
         this.deafenBtn = document.getElementById('deafen-btn');
+        this.camBtn = document.getElementById('cam-btn');
+        this.shareScreenBtn = document.getElementById('share-screen-btn');
         this.disconnectBtn = document.getElementById('disconnect-btn');
 
         // Sesli Oda
@@ -133,7 +142,9 @@ class VoiceChatApp {
         this.videoStage = document.getElementById('video-stage');
         this.clearChatBtn = document.getElementById('clear-chat-btn');
         this.isScreenSharing = false;
+        this.isCameraOn = false;
         this.screenStream = null;
+        this.cameraStream = null;
     }
 
     initEventListeners() {
@@ -283,7 +294,10 @@ class VoiceChatApp {
             });
         }
 
-        // Ekran Paylaşımı Butonu
+        // Kamera ve Ekran Paylaşımı
+        if (this.camBtn) {
+            this.camBtn.addEventListener('click', () => this.toggleCamera());
+        }
         if (this.shareScreenBtn) {
             this.shareScreenBtn.addEventListener('click', () => this.toggleScreenShare());
         }
@@ -366,6 +380,7 @@ class VoiceChatApp {
         if (!username) return;
 
         this.username = username;
+        localStorage.setItem('username', username);
         // Başlangıç için rastgele bir renk ata
         if (!this.avatarColor) {
             const colors = ['#7C5CFC', '#3BA55D', '#FAA81A', '#ED4245', '#F47B67', '#00B0F4', '#E67E22', '#9B59B6'];
@@ -675,6 +690,10 @@ class VoiceChatApp {
         
         const roomInfo = this.roomsList && this.roomsList[roomId];
         if (roomInfo && roomInfo.isLocked && this.role !== 'admin') {
+            // Kayıtlı şifre var mı kontrol et
+            if (this.roomPasswords[roomId]) {
+                return this.executeJoinRoom(roomId, this.roomPasswords[roomId]);
+            }
             this.pendingRoomId = roomId;
             this.roomPasswordInput.value = '';
             this.passwordModal.classList.remove('hidden');
@@ -699,6 +718,12 @@ class VoiceChatApp {
                 roomId: roomId,
                 password: password
             }));
+
+            // Şifreyi yerel olarak kaydet (başarısız olsa bile deneriz, başarılıysa kalır)
+            if (password) {
+                this.roomPasswords[roomId] = password;
+                localStorage.setItem('roomPasswords', JSON.stringify(this.roomPasswords));
+            }
         } catch (err) {
             console.error('Mikrofon erişim hatası:', err);
             this.showToast('❌', 'Mikrofon erişimi reddedildi veya ayarlarda bir sorun oluştu.');
@@ -1074,21 +1099,20 @@ class VoiceChatApp {
                 card.appendChild(volControl);
             }
 
-            // Eğer Admin isek "Kick" butonu ekle kartın altına
+            // Eğer Admin isek "Kick" simgesi ekle
             if (this.role === 'admin' && user.id !== this.userId) {
-                const kickBtn = document.createElement('button');
-                kickBtn.textContent = 'Sunucudan At';
-                kickBtn.className = 'btn-leave'; // Kırmızı buton stili
-                kickBtn.style.marginTop = '10px';
-                kickBtn.style.padding = '4px 8px';
-                kickBtn.style.fontSize = '12px';
-                kickBtn.style.width = '100%';
+                const kickIcon = document.createElement('div');
+                kickIcon.className = 'admin-kick-icon';
+                kickIcon.innerHTML = '❌';
+                kickIcon.title = 'Kullanıcıyı At';
                 
-                kickBtn.onclick = (e) => {
+                kickIcon.onclick = (e) => {
                     e.stopPropagation();
-                    this.ws.send(JSON.stringify({ type: 'admin-kick', targetId: user.id }));
+                    if (confirm(`${user.username} adlı kullanıcıyı atmak istediğinize emin misiniz?`)) {
+                        this.ws.send(JSON.stringify({ type: 'admin-kick', targetId: user.id }));
+                    }
                 };
-                card.appendChild(kickBtn);
+                card.appendChild(kickIcon);
             }
 
             this.voiceParticipants.appendChild(card);
@@ -1276,6 +1300,66 @@ class VoiceChatApp {
 
         this.chatMessages.appendChild(msgEl);
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    // =========================================
+    // Kamera (Camera Share)
+    // =========================================
+    async toggleCamera() {
+        if (this.isCameraOn) {
+            this.stopCamera();
+            return;
+        }
+
+        try {
+            this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
+                audio: false
+            });
+
+            this.isCameraOn = true;
+            this.camBtn.classList.add('active');
+            this.camBtn.querySelector('.icon-cam-on').classList.add('hidden');
+            this.camBtn.querySelector('.icon-cam-off').classList.remove('hidden');
+            
+            const videoTrack = this.cameraStream.getVideoTracks()[0];
+            
+            this.peers.forEach((peer) => {
+                peer.pc.addTrack(videoTrack, this.cameraStream);
+            });
+            
+            this.showLocalVideo(this.cameraStream);
+            this.showToast('📷', 'Kameranız açıldı!');
+
+        } catch (err) {
+            console.error('Kamera hatası:', err);
+            this.showToast('❌', 'Kamera başlatılamadı. İzinlerinizi kontrol edin.');
+        }
+    }
+
+    stopCamera() {
+        if (!this.isCameraOn) return;
+        this.isCameraOn = false;
+        this.camBtn.classList.remove('active');
+        this.camBtn.querySelector('.icon-cam-on').classList.remove('hidden');
+        this.camBtn.querySelector('.icon-cam-off').classList.add('hidden');
+
+        if (this.cameraStream) {
+            this.cameraStream.getTracks().forEach(track => track.stop());
+            const videoTrack = this.cameraStream.getVideoTracks()[0];
+            if (videoTrack) {
+                this.peers.forEach((peer) => {
+                    const senders = peer.pc.getSenders();
+                    const sender = senders.find(s => s.track && s.track.kind === 'video');
+                    if (sender) peer.pc.removeTrack(sender);
+                });
+            }
+            this.cameraStream = null;
+        }
+
+        this.videoStage.innerHTML = '';
+        this.videoStage.classList.add('hidden');
+        this.showToast('📷', 'Kamera kapatıldı.');
     }
 
     // =========================================

@@ -585,6 +585,7 @@ body {
     align-items: center;
     justify-content: space-between;
     border-top: 1px solid rgba(0, 0, 0, 0.2);
+    gap: 4px; /* Elemanlar arası boşluk */
 }
 
 .user-info {
@@ -636,6 +637,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 80px; /* Admin butonları için yer aç */
 }
 
 .user-status {
@@ -645,7 +647,7 @@ body {
 
 .user-controls {
     display: flex;
-    gap: 4px;
+    gap: 2px;
 }
 
 .control-btn {
@@ -812,6 +814,35 @@ body {
     transition: all var(--transition-normal);
     position: relative;
     animation: participantEntry 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.participant-card:hover .admin-kick-icon {
+    opacity: 1;
+}
+
+.admin-kick-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(237, 66, 69, 0.9);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 5;
+    border: 2px solid var(--bg-secondary);
+}
+
+.admin-kick-icon:hover {
+    background: var(--red);
+    transform: scale(1.1);
 }
 
 @keyframes participantEntry {
@@ -1475,6 +1506,25 @@ body {
     height: 100%;
     object-fit: contain;
     max-height: 60vh;
+}
+
+/* Tam Ekran CSS */
+.remote-stream-container:fullscreen {
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remote-stream-container:fullscreen .stage-video {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    object-fit: contain;
+}
+
+.remote-stream-container:fullscreen .stream-controls {
+    bottom: 30px !important;
 }
 
 .stage-label {
