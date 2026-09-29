@@ -2779,10 +2779,9 @@ class VoiceChatApp {
         'squeak':    { pitch: 10, filterType: 'highpass',filterFreq: 500,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 5 }
     };
 
-    /** Mikrofonu AudioContext + Web Audio native efekt zincirinden geçir.
-     *  SoundTouchJS bypass edildi (extract() sessiz dönüyor, ScriptProcessorNode deprecated).
-     *  Bunun yerine native BiquadFilter + WaveShaper + DelayNode + ConvolverNode kullanır.
-     *  Zincir: mic → BiquadFilter → WaveShaper → DelayNode → MediaStreamDestination → WebRTC
+    /** Mikrofonu AudioContext + AudioWorklet pitch shifter + Web Audio efekt zincirinden geçir.
+     *  Zincir: mic → PitchNode (AudioWorklet) → BiquadFilter1 → BiquadFilter2 → WaveShaper → DelayNode → MediaStreamDestination → WebRTC
+     *  AudioWorklet yüklenemezse pitch node'u bypass edilir (sadece EQ zinciri çalışır).
      */
     async initVoiceChangerChain(rawMicStream) {
         try {
@@ -2793,33 +2792,60 @@ class VoiceChatApp {
                 try { await this.vcAudioContext.resume(); } catch (_) {}
             }
 
+            // === AudioWorklet modülünü yükle ===
+            // pitch-processor.js statik dosya olarak servis edilir
+            this.vcPitchWorkletLoaded = false;
+            try {
+                await this.vcAudioContext.audioWorklet.addModule('/pitch-processor.js');
+                this.vcPitchWorkletLoaded = true;
+                console.log('[VC] AudioWorklet pitch-processor yüklendi ✅');
+            } catch (e) {
+                console.warn('[VC] AudioWorklet yüklenemedi, pitch bypass edilecek:', e);
+            }
+
             // Mikrofon → AudioContext source
             this.vcSourceNode = this.vcAudioContext.createMediaStreamSource(rawMicStream);
 
-            // BiquadFilter — EQ için (lowpass/highpass/highshelf/lowshelf/peaking/allpass)
+            // === Pitch Shifter (AudioWorkletNode) — gerçek granular synthesis ===
+            if (this.vcPitchWorkletLoaded) {
+                this.vcPitchNode = new AudioWorkletNode(this.vcAudioContext, 'pitch-processor', {
+                    parameterData: { pitch: 1 },  // 1 = passthrough
+                    numberOfInputs: 1,
+                    numberOfOutputs: 1,
+                    channelCount: 2,
+                    channelCountMode: 'explicit',
+                    channelInterpretation: 'speakers',
+                    outputChannelCount: [2]
+                });
+                console.log('[VC] AudioWorkletNode (pitch-processor) oluşturuldu');
+            } else {
+                this.vcPitchNode = null;
+            }
+
+            // BiquadFilter1 — ana EQ
             this.vcBiquadFilter = this.vcAudioContext.createBiquadFilter();
-            this.vcBiquadFilter.type = 'allpass';  // başlangıçta etkisiz
+            this.vcBiquadFilter.type = 'allpass';
             this.vcBiquadFilter.frequency.value = 1000;
             this.vcBiquadFilter.gain.value = 0;
 
-            // İkinci BiquadFilter — daha karmaşık EQ için
+            // BiquadFilter2 — ikincil EQ (formant simülasyonu için)
             this.vcBiquadFilter2 = this.vcAudioContext.createBiquadFilter();
             this.vcBiquadFilter2.type = 'allpass';
             this.vcBiquadFilter2.frequency.value = 1000;
             this.vcBiquadFilter2.gain.value = 0;
 
-            // WaveShaper — distortion (robot/çiğlik efekti)
+            // WaveShaper — distortion (robot/çiğlik)
             this.vcWaveShaper = this.vcAudioContext.createWaveShaper();
-            this.vcWaveShaper.curve = null;  // başlangıçta etkisiz
+            this.vcWaveShaper.curve = null;
             this.vcWaveShaper.oversample = '2x';
 
-            // DelayNode — echo/reverb efekti için
+            // DelayNode — echo/reverb
             this.vcDelayNode = this.vcAudioContext.createDelay(1.0);
             this.vcDelayNode.delayTime.value = 0;
             this.vcDelayFeedback = this.vcAudioContext.createGain();
             this.vcDelayFeedback.gain.value = 0;
 
-            // MediaStreamAudioDestinationNode — WebRTC'ye gönderilecek stream
+            // MediaStreamDestination → WebRTC
             this.vcDestNode = this.vcAudioContext.createMediaStreamDestination();
 
             // Monitor için gain node (lokal dinleme — varsayılan 0)
@@ -2827,22 +2853,27 @@ class VoiceChatApp {
             this.vcMonitorGain.gain.value = 0;
 
             // === BAĞLANTI ZİNCİRİ ===
-            // mic source → biquadFilter1 → biquadFilter2 → waveShaper → delayNode → destNode (WebRTC)
-            //                                                                              ↓
-            //                                                                          monitorGain → speakers
-            this.vcSourceNode.connect(this.vcBiquadFilter);
+            // mic → pitchNode → biquad1 → biquad2 → waveShaper → delayNode → destNode (WebRTC)
+            //                                                                        ↓
+            //                                                                    monitorGain → speakers
+            let lastNode = this.vcSourceNode;
+            if (this.vcPitchNode) {
+                lastNode.connect(this.vcPitchNode);
+                lastNode = this.vcPitchNode;
+            }
+            lastNode.connect(this.vcBiquadFilter);
             this.vcBiquadFilter.connect(this.vcBiquadFilter2);
             this.vcBiquadFilter2.connect(this.vcWaveShaper);
             this.vcWaveShaper.connect(this.vcDelayNode);
             this.vcDelayNode.connect(this.vcDelayFeedback);
-            this.vcDelayFeedback.connect(this.vcDelayNode);  // feedback loop (echo)
+            this.vcDelayFeedback.connect(this.vcDelayNode);
             this.vcDelayNode.connect(this.vcDestNode);
             this.vcDelayNode.connect(this.vcMonitorGain);
             this.vcMonitorGain.connect(this.vcAudioContext.destination);
 
             this.vcProcessedStream = this.vcDestNode.stream;
             this.vcActive = true;
-            console.log('[VC] Voice changer zinciri kuruldu — Web Audio native (Biquad + WaveShaper + Delay)');
+            console.log('[VC] Voice changer zinciri kuruldu — AudioWorklet + Biquad + WaveShaper + Delay');
             return this.vcProcessedStream;
         } catch (e) {
             console.error('[VC] Voice changer zinciri kurulamadı:', e);
@@ -2863,23 +2894,37 @@ class VoiceChatApp {
         return curve;
     }
 
-    /** Pitch değeri (SoundTouch artık yok — sadece log için tutuyoruz) */
+    /** Pitch değerini AudioWorkletNode'a uygula (gerçek pitch shifting!)
+     *  semitone → pitch ratio: 2^(semitones/12)
+     *  0 semitone = ratio 1 (passthrough)
+     *  +12 semitone = ratio 2 (bir oktav yukarı)
+     *  -12 semitone = ratio 0.5 (bir oktav aşağı)
+     */
     applyPitchToSoundTouch(semitones) {
         if (!this.vcActive) return;
-        // Not: Gerçek pitch shifting için AudioWorklet gerekir, şu an bypass
-        console.log('[VC] Pitch ayarı:', semitones, 'semitone (BiquadFilter ile simüle edilecek)');
-        // Pitch yerine frekans filter'ı ile benzer etki sağla
-        if (this.vcBiquadFilter) {
-            // Pitch yükselince yüksek frekansları vurgula (highshelf)
-            // Pitch düşürünce düşük frekansları vurgula (lowshelf)
+        const pitchRatio = Math.pow(2, semitones / 12);
+
+        // AudioWorkletNode pitch parametresini ayarla
+        if (this.vcPitchNode && this.vcPitchWorkletLoaded) {
+            const pitchParam = this.vcPitchNode.parameters.get('pitch');
+            if (pitchParam) {
+                pitchParam.value = pitchRatio;
+                console.log('[VC] Pitch (AudioWorklet):', semitones, 'semitone → ratio', pitchRatio.toFixed(3));
+            }
+        }
+
+        // Formant simülasyonu — BiquadFilter2 ile
+        // Pitch yükselince: yüksek frekansları biraz daha vurgula (parlak ses)
+        // Pitch düşürünce: düşük frekansları biraz daha vurgula (kalın ses)
+        if (this.vcBiquadFilter2) {
             if (semitones > 0) {
                 this.vcBiquadFilter2.type = 'highshelf';
-                this.vcBiquadFilter2.frequency.value = Math.max(500, 3000 - semitones * 200);
-                this.vcBiquadFilter2.gain.value = semitones * 1.5;
+                this.vcBiquadFilter2.frequency.value = Math.max(1500, 3500 - semitones * 150);
+                this.vcBiquadFilter2.gain.value = Math.min(semitones * 1, 6);  // max +6dB
             } else if (semitones < 0) {
                 this.vcBiquadFilter2.type = 'lowshelf';
-                this.vcBiquadFilter2.frequency.value = Math.min(2000, 500 + Math.abs(semitones) * 200);
-                this.vcBiquadFilter2.gain.value = Math.abs(semitones) * 1.5;
+                this.vcBiquadFilter2.frequency.value = Math.min(1500, 500 + Math.abs(semitones) * 150);
+                this.vcBiquadFilter2.gain.value = Math.min(Math.abs(semitones) * 1, 6);  // max +6dB
             } else {
                 this.vcBiquadFilter2.type = 'allpass';
                 this.vcBiquadFilter2.gain.value = 0;
