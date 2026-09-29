@@ -1,27 +1,31 @@
 /**
- * SesliChat — AudioWorklet Pitch Shifter (Granular Synthesis)
+ * SesliChat — AudioWorklet Pitch Shifter (v2 — Higher Quality)
  *
- * Bu dosya AudioWorklet processor olarak register edilir.
- * AudioWorklet audio thread'inde çalışır — main thread'i bloklamaz.
+ * İYİLEŞTİRMELER (v1'e göre):
+ * - Cubic (Catmull-Rom) interpolation → linear interpolation yerine
+ *   Quantization noise azalır, daha temiz ses
+ * - 4 grain 75% overlap (v1'de 2 grain 50% overlap vardı)
+ *   Daha smooth crossfade, grain restart discontinuity daha az duyulur
+ * - Daha küçük grain size: 1024 samples (23ms @ 44.1kHz)
+ *   Voice fundamental (80-300Hz, period 3-12ms) için ideal
+ * - Proper window normalization (4 grain toplamı sabit ~1.0)
  *
- * Algoritma: Granular Synthesis (Overlap-Add)
- * - Input samples circular buffer'a yazılır
- * - İki grain okuyucu (grain1 ve grain2) yarım grain offset ile
- * - Hann window crossfade → click artifacts yok
- * - readIdx pitch oranında ilerler:
- *   * pitch > 1: daha hızlı oku → output pitch yükselir
- *   * pitch < 1: daha yavaş oku → output pitch düşer
- *   * pitch = 1: passthrough (input = output, sadece bir miktar gecikme)
- * - Grain bittiğinde readIdx writeIdx'in gerisine sıfırlanır (grain restart)
+ * Algoritma: Granular Synthesis with 4-grain overlap-add
+ * - Input circular buffer (stereo, 16KB)
+ * - 4 grain reader, 75% offset ile (0, 256, 512, 768 samples)
+ * - Hann window (grain baş/sonunda smooth fade)
+ * - Cubic interpolation ile sample okuma
+ * - Grain restart: writeIdx - grainSize
  *
- * Test: pitch=1 → output input'un biraz gecikmiş hali (passthrough)
+ * Test: pitch=1 → output ≈ input (passthrough)
  *       pitch=2 → bir oktav yukarı
  *       pitch=0.5 → bir oktav aşağı
  */
 
-const BUFFER_SIZE = 16384;     // Circular buffer boyutu (~370ms @ 44.1kHz)
-const GRAIN_SIZE = 2048;       // Grain boyutu (~46ms — sesin doğal periyodu için iyi)
-const HALF_GRAIN = GRAIN_SIZE / 2;
+const BUFFER_SIZE = 16384;     // Circular buffer boyutu
+const GRAIN_SIZE = 1024;        // 23ms @ 44.1kHz — voice için ideal
+const OVERLAP_COUNT = 4;        // 4 grain → 75% overlap
+const GRAIN_STEP = GRAIN_SIZE / OVERLAP_COUNT; // 256 samples offset
 
 class PitchProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
@@ -43,38 +47,55 @@ class PitchProcessor extends AudioWorkletProcessor {
         ];
         this.writeIdx = 0;
 
-        // İki grain reader — yarım grain offset
-        this.readIdx1 = 0;
-        this.readIdx2 = 0;
-        this.grainPos1 = 0;
-        this.grainPos2 = HALF_GRAIN;  // offset
+        // 4 grain reader — offset'li başlangıç
+        this.readIdxs = [0, 0, 0, 0];
+        this.grainPos = [
+            0,
+            GRAIN_STEP,
+            2 * GRAIN_STEP,
+            3 * GRAIN_STEP
+        ];
 
-        // Hann window — grain baş/sonunda amplitude 0'a iner (smooth fade)
+        // Hann window
         this.hann = new Float32Array(GRAIN_SIZE);
         for (let i = 0; i < GRAIN_SIZE; i++) {
             this.hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / GRAIN_SIZE);
         }
-
-        // Son process çağrısında input var mıydı?
-        this.hasInput = false;
     }
 
     /**
-     * Linear interpolation ile circular buffer'dan oku
+     * Cubic (Catmull-Rom) interpolation ile circular buffer'dan oku
+     * Linear interpolation'dan çok daha temiz — quantization noise yok
      */
-    readSample(buffer, readIdx) {
+    readSampleCubic(buffer, readIdx) {
         const intPos = Math.floor(readIdx);
         const frac = readIdx - intPos;
-        const idx1 = ((intPos % BUFFER_SIZE) + BUFFER_SIZE) % BUFFER_SIZE;
-        const idx2 = (idx1 + 1) % BUFFER_SIZE;
-        return buffer[idx1] * (1 - frac) + buffer[idx2] * frac;
+        // 4 sample: idx-1, idx, idx+1, idx+2
+        const baseIdx = ((intPos % BUFFER_SIZE) + BUFFER_SIZE) % BUFFER_SIZE;
+        const idx0 = (baseIdx - 1 + BUFFER_SIZE) % BUFFER_SIZE;
+        const idx1 = baseIdx;
+        const idx2 = (baseIdx + 1) % BUFFER_SIZE;
+        const idx3 = (baseIdx + 2) % BUFFER_SIZE;
+        const s0 = buffer[idx0];
+        const s1 = buffer[idx1];
+        const s2 = buffer[idx2];
+        const s3 = buffer[idx3];
+        // Catmull-Rom: cubic Bezier
+        const frac2 = frac * frac;
+        const frac3 = frac2 * frac;
+        return 0.5 * (
+            (-s0 + 3*s1 - 3*s2 + s3) * frac3 +
+            (2*s0 - 5*s1 + 4*s2 - s3) * frac2 +
+            (-s0 + s2) * frac +
+            2 * s1
+        );
     }
 
     process(inputs, outputs, parameters) {
         const input = inputs[0];
         const output = outputs[0];
 
-        // Input yoksa sessizlik output (ama processor yaşamaya devam et)
+        // Input yok → sessizlik output (ama processor yaşamaya devam)
         if (!input || input.length === 0 || !input[0] || input[0].length === 0) {
             for (let ch = 0; ch < output.length; ch++) {
                 if (output[ch]) output[ch].fill(0);
@@ -84,7 +105,7 @@ class PitchProcessor extends AudioWorkletProcessor {
 
         const pitch = parameters.pitch[0];
         const numFrames = output[0].length;
-        const numChannels = Math.min(input.length, output.length, 2);  // max 2 kanal
+        const numChannels = Math.min(input.length, output.length, 2);
 
         for (let i = 0; i < numFrames; i++) {
             // 1. Input samples'ı circular buffer'a yaz
@@ -95,51 +116,42 @@ class PitchProcessor extends AudioWorkletProcessor {
             }
             this.writeIdx = (this.writeIdx + 1) % BUFFER_SIZE;
 
-            // 2. Hann window değerleri (grain1 ve grain2 için)
-            const g1 = Math.floor(this.grainPos1);
-            const g2 = Math.floor(this.grainPos2);
-            const window1 = this.hann[g1];
-            const window2 = this.hann[g2];
-
-            // 3. Her channel için sample oku ve mix'le
+            // 2. Her channel için 4 grain'i topla
             for (let ch = 0; ch < numChannels; ch++) {
                 const buf = this.buffers[ch];
-                // Grain 1 okuma
-                const sample1 = this.readSample(buf, this.readIdx1);
-                // Grain 2 okuma (yarım grain offset)
-                const sample2 = this.readSample(buf, this.readIdx2);
-                // Mix — Hann window'lar yarım grain offset ile toplamı 1 yapar
-                output[ch][i] = sample1 * window1 + sample2 * window2;
+                let sum = 0;
+                for (let g = 0; g < OVERLAP_COUNT; g++) {
+                    // Cubic interpolation ile sample oku
+                    const sample = this.readSampleCubic(buf, this.readIdxs[g]);
+                    const windowVal = this.hann[Math.floor(this.grainPos[g])];
+                    sum += sample * windowVal;
+                }
+                // Normalization: 4 grain 75% overlap ile Hann window toplamı ~2
+                // Bölme 2 → output level input'a yakın
+                output[ch][i] = sum / 2;
             }
 
-            // Eğer output 1 kanal ama input 2 kanal: ikinci kanalı output'a kopyala (mono'dan)
+            // Eğer tek kanal varsa, output 2. kanalı kopyala
             if (numChannels === 1 && output.length > 1 && output[1]) {
                 output[1][i] = output[0][i];
             }
 
-            // 4. Pozisyonları ilerlet
-            // pitch > 1: readIdx daha hızlı ilerler → input daha hızlı okunur → output pitch yükselir
-            // pitch < 1: readIdx daha yavaş ilerler → input daha yavaş okunur → output pitch düşer
-            this.readIdx1 += pitch;
-            this.readIdx2 += pitch;
-            this.grainPos1 += 1;
-            this.grainPos2 += 1;
+            // 3. Pozisyonları ilerlet
+            for (let g = 0; g < OVERLAP_COUNT; g++) {
+                this.readIdxs[g] += pitch;
+                this.grainPos[g] += 1;
 
-            // 5. Wrap readIdx'ler
-            while (this.readIdx1 >= BUFFER_SIZE) this.readIdx1 -= BUFFER_SIZE;
-            while (this.readIdx1 < 0) this.readIdx1 += BUFFER_SIZE;
-            while (this.readIdx2 >= BUFFER_SIZE) this.readIdx2 -= BUFFER_SIZE;
-            while (this.readIdx2 < 0) this.readIdx2 += BUFFER_SIZE;
+                // Wrap readIdxs
+                while (this.readIdxs[g] >= BUFFER_SIZE) this.readIdxs[g] -= BUFFER_SIZE;
+                while (this.readIdxs[g] < 0) this.readIdxs[g] += BUFFER_SIZE;
 
-            // 6. Grain restart — writeIdx'in gerisine sıfırla
-            //    Bu grain içindeki son "lookback" noktasıdır
-            if (this.grainPos1 >= GRAIN_SIZE) {
-                this.grainPos1 = 0;
-                this.readIdx1 = (this.writeIdx - HALF_GRAIN + BUFFER_SIZE) % BUFFER_SIZE;
-            }
-            if (this.grainPos2 >= GRAIN_SIZE) {
-                this.grainPos2 = 0;
-                this.readIdx2 = (this.writeIdx - HALF_GRAIN + BUFFER_SIZE) % BUFFER_SIZE;
+                // Grain restart — writeIdx'in gerisine sıfırla
+                if (this.grainPos[g] >= GRAIN_SIZE) {
+                    this.grainPos[g] = 0;
+                    // writeIdx - grainSize pozisyonuna geri dön
+                    // (input'un grainSize kadar gerisinde, yani geçmiş)
+                    this.readIdxs[g] = (this.writeIdx - GRAIN_SIZE + BUFFER_SIZE) % BUFFER_SIZE;
+                }
             }
         }
 

@@ -2758,25 +2758,19 @@ class VoiceChatApp {
     // =========================================
     // VOICE CHANGER (Ses Değiştirici - Admin only)
     // =========================================
-    // 10 kaliteli efekt preset
-    // - pitch: semitone cinsinden (-12 to +12)
-    // - filterType: BiquadFilter type ('lowpass', 'highpass', 'highshelf', 'lowshelf', 'allpass')
-    // - filterFreq: Hz
-    // - filterGain: dB (only for shelf/peaking)
-    // - delayTime: saniye (0 = no delay)
-    // - feedback: 0-1 (delay feedback)
-    // - distortion: 0-100 (waveshaper amount)
+    // 10 kaliteli efekt preset — gerçek pitch shifting ile
+    // Pitch değerleri daha dramatik (cubic interpolation + 4 grain overlap ile temiz)
     static VOICE_PRESETS = {
-        'normal':    { pitch: 0,  filterType: 'allpass',  filterFreq: 1000, filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
-        'deep_male': { pitch: -5, filterType: 'lowpass',  filterFreq: 2800, filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
-        'thin_male': { pitch: -2, filterType: 'highpass', filterFreq: 250,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
-        'female':    { pitch: 4,  filterType: 'highshelf',filterFreq: 3000, filterGain: 4,  delayTime: 0,    feedback: 0,   distortion: 0 },
-        'child':     { pitch: 7,  filterType: 'highpass', filterFreq: 200,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
-        'robot':     { pitch: 0,  filterType: 'allpass',  filterFreq: 1000, filterGain: 0,  delayTime: 0.04, feedback: 0.3, distortion: 15 },
-        'alien':     { pitch: 3,  filterType: 'allpass',  filterFreq: 1000, filterGain: 0,  delayTime: 0.08, feedback: 0.4, distortion: 0 },
-        'ghost':     { pitch: -3, filterType: 'lowpass',  filterFreq: 1500, filterGain: 0,  delayTime: 0.18, feedback: 0.5, distortion: 0 },
-        'santa':     { pitch: -5, filterType: 'lowpass',  filterFreq: 2500, filterGain: 0,  delayTime: 0.06, feedback: 0.2, distortion: 0 },
-        'squeak':    { pitch: 10, filterType: 'highpass',filterFreq: 500,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 5 }
+        'normal':    { pitch: 0,  filterType: 'allpass',   filterFreq: 1000, filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
+        'deep_male': { pitch: -6, filterType: 'lowpass',   filterFreq: 3200, filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
+        'thin_male': { pitch: -3, filterType: 'highpass',  filterFreq: 200,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
+        'female':    { pitch: 5,  filterType: 'highshelf',filterFreq: 3500, filterGain: 5,  delayTime: 0,    feedback: 0,   distortion: 0 },
+        'child':     { pitch: 8,  filterType: 'highpass', filterFreq: 200,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 0 },
+        'robot':     { pitch: 0,  filterType: 'allpass',  filterFreq: 1000, filterGain: 0,  delayTime: 0.04, feedback: 0.3, distortion: 20 },
+        'alien':     { pitch: 4,  filterType: 'allpass',  filterFreq: 1000, filterGain: 0,  delayTime: 0.08, feedback: 0.4, distortion: 0 },
+        'ghost':     { pitch: -4, filterType: 'lowpass',  filterFreq: 1800, filterGain: 0,  delayTime: 0.18, feedback: 0.5, distortion: 0 },
+        'santa':     { pitch: -6, filterType: 'lowpass',  filterFreq: 2800, filterGain: 0,  delayTime: 0.06, feedback: 0.2, distortion: 0 },
+        'squeak':    { pitch: 12, filterType: 'highpass', filterFreq: 500,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 5 }
     };
 
     /** Mikrofonu AudioContext + AudioWorklet pitch shifter + Web Audio efekt zincirinden geçir.
