@@ -689,6 +689,46 @@ class VoiceChatApp {
             }
         }
 
+        // === GLOBAL USER INTERACTION → AudioContext RESUME ===
+        // Tarayıcı AudioContext'i uzun boşlukta veya tab arka planda askıya alabilir.
+        // Bu durumda voice changer zinciri çalışmaz, ses gitmez/dinlenmez.
+        // Herhangi bir kullanıcı etkileşiminde AudioContext'i otomatik resume et.
+        const resumeAudioOnInteraction = () => {
+            // 1. Voice changer AudioContext
+            if (this.vcAudioContext && this.vcAudioContext.state === 'suspended') {
+                this.vcAudioContext.resume().catch(() => {});
+            }
+            // 2. Notification AudioContext
+            if (this.notificationAudioContext && this.notificationAudioContext.state === 'suspended') {
+                this.notificationAudioContext.resume().catch(() => {});
+            }
+            // 3. Durmuş peer audio elementlerini tekrar çalmaya zorla
+            this.peers.forEach((peer) => {
+                if (peer.audioEl && peer.remoteStream) {
+                    if (peer.audioEl.paused) {
+                        this.forcePlayAudio(peer.audioEl);
+                    }
+                }
+            });
+        };
+        // Tüm etkileşim tipleri için dinleyici ekle
+        document.addEventListener('click', resumeAudioOnInteraction);
+        document.addEventListener('keydown', resumeAudioOnInteraction);
+        document.addEventListener('touchstart', resumeAudioOnInteraction);
+        // Tab tekrar görünür olduğunda da resume
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                resumeAudioOnInteraction();
+            }
+        });
+        // Periyodik kontrol — her 5 saniyede bir (kullanıcı etkileşimi olmadan da çalışabilir)
+        setInterval(() => {
+            if (this.vcAudioContext && this.vcAudioContext.state === 'suspended' && !document.hidden) {
+                // Sadece tab görünür durumdaysa deneyelim (arka planda çalışmaz zaten)
+                this.vcAudioContext.resume().catch(() => {});
+            }
+        }, 5000);
+
         this.connectWebSocket();
     }
 
@@ -1078,10 +1118,26 @@ class VoiceChatApp {
         this.disconnectBtn.style.display = 'flex';
         this.userStatusText.textContent = 'Sesli kanalda';
 
+        // === AUDIO SYNC FIX ===
+        // Oda yeniden girince AudioContext'i resume et
+        // (leaveRoom'dan sonra uzun süre geçtiyse suspended olmuş olabilir)
+        this.resumeVcAudioContext();
+
         // Odadaki mevcut kullanıcılarla bağlantı kur
         message.existingUsers.forEach(user => {
             this.createPeerConnection(user.id, true);
         });
+
+        // === AUDIO SYNC FIX ===
+        // Peer'lar oluştuktan kısa süre sonra audio elementlerini force-play et
+        // (yeni peer'ların ontrack'i 1-2 sn içinde fire olacak, audio orada çalacak)
+        setTimeout(() => {
+            this.peers.forEach((peer) => {
+                if (peer.audioEl && peer.remoteStream && peer.audioEl.paused) {
+                    this.forcePlayAudio(peer.audioEl);
+                }
+            });
+        }, 2000);
 
         // Konuşma algılamayı başlat
         this.startVoiceActivityDetection();
@@ -1154,6 +1210,16 @@ class VoiceChatApp {
     onPeerJoined(message) {
         this.playSound('join');
         this.showToast('👋', `${message.username} katıldı!`);
+        // === AUDIO SYNC FIX ===
+        // Yeni kullanıcı katıldığında AudioContext'i resume et
+        // (uzun süre etkileşim olmazsa tarayıcı suspended yapıyor → ses gitmiyor)
+        this.resumeVcAudioContext();
+        // Bu cihazda durmuş peer audio elementlerini tekrar çal
+        this.peers.forEach((peer) => {
+            if (peer.audioEl && peer.remoteStream && peer.audioEl.paused) {
+                this.forcePlayAudio(peer.audioEl);
+            }
+        });
     }
 
     onPeerLeft(message) {
@@ -2782,6 +2848,68 @@ class VoiceChatApp {
         }
     }
 
+    /** Voice changer hazır değilse lazy init et — admin VC butona bastığında çağrılır.
+     *  Bu noktada SoundTouchJS kütüphanesi mutlaka yüklenmiş olmalı. */
+    async ensureVoiceChangerReady() {
+        if (this.vcActive) return true;
+
+        // SoundTouchJS yüklü mü?
+        if (typeof SoundTouch === 'undefined' || typeof SimpleFilter === 'undefined' || typeof WebAudioBufferSource === 'undefined') {
+            this.showToast('❌', 'Ses kütüphanesi yüklenemedi. Sayfayı yenileyin (F5).');
+            return false;
+        }
+
+        // rawMicStream var mı? (oda katıldığımızda sakladığımız ham mikrofon)
+        if (!this.rawMicStream) {
+            this.showToast('⚠️', 'Mikrofon hazır değil — önce odaya katıl.');
+            return false;
+        }
+
+        // VC chain'i init et
+        const newStream = await this.initVoiceChangerChain(this.rawMicStream);
+        if (!this.vcActive) {
+            this.showToast('❌', 'Voice changer başlatılamadı.');
+            return false;
+        }
+
+        // Mevcut peer connection'larda audio track'i değiştir (replaceTrack)
+        const newAudioTrack = newStream.getAudioTracks()[0];
+        if (newAudioTrack) {
+            this.peers.forEach((peer) => {
+                try {
+                    const senders = peer.pc.getSenders();
+                    const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                    if (audioSender) {
+                        audioSender.replaceTrack(newAudioTrack).catch(e => 
+                            console.warn('[VC] replaceTrack hatası:', e)
+                        );
+                    }
+                } catch (e) {
+                    console.warn('[VC] peer update hatası:', e);
+                }
+            });
+        }
+
+        // localStream'i güncelle — artık VC zincirinden geçen stream kullanılsun
+        this.localStream = newStream;
+        console.log('[VC] Voice changer lazy-init tamamlandı');
+        return true;
+    }
+
+    /** AudioContext askıdaysa resume et — voice changer'i ve WebRTC ses akışını canlı tutar.
+     *  Tarayıcı otomatik suspended yapabilir (uzun boşluk, tab arka plan vs). */
+    async resumeVcAudioContext() {
+        if (!this.vcAudioContext) return;
+        if (this.vcAudioContext.state === 'suspended') {
+            try {
+                await this.vcAudioContext.resume();
+                console.log('[VC] AudioContext resumed');
+            } catch (e) {
+                console.warn('[VC] AudioContext resume failed:', e);
+            }
+        }
+    }
+
     /** Pitch değerini SoundTouch'a uygula (semitone → ratio) */
     applyPitchToSoundTouch(semitones) {
         if (!this.vcSoundTouch || !this.vcActive) return;
@@ -2795,16 +2923,19 @@ class VoiceChatApp {
     }
 
     /** Bir preset uygula (admin butona bastığında) */
-    applyVoicePreset(presetName) {
+    async applyVoicePreset(presetName) {
         const preset = VoiceChatApp.VOICE_PRESETS[presetName];
         if (!preset) {
             console.warn('[VC] Bilinmeyen preset:', presetName);
             return;
         }
+        // Voice changer hazır değilse ŞİMDİ init et (SoundTouchJS artık yüklenmiş olmalı)
         if (!this.vcActive) {
-            this.showToast('⚠️', 'Voice changer hazır değil — önce odaya katıl.');
-            return;
+            const ready = await this.ensureVoiceChangerReady();
+            if (!ready) return;
         }
+        // AudioContext askıdaysa resume et
+        await this.resumeVcAudioContext();
 
         this.currentVoicePreset = presetName;
         this.currentPitch = preset.pitch;
@@ -2855,9 +2986,16 @@ class VoiceChatApp {
     }
 
     /** Monitor (lokal dinleme) aç/kapat — sadece admin kendi sesini duyarak test eder */
-    toggleVoiceMonitor() {
-        if (!this.vcActive || !this.vcMonitorGain) {
-            this.showToast('⚠️', 'Voice changer hazır değil — önce odaya katıl.');
+    async toggleVoiceMonitor() {
+        // Lazy init voice changer if not ready
+        if (!this.vcActive) {
+            const ready = await this.ensureVoiceChangerReady();
+            if (!ready) return;
+        }
+        // AudioContext askıdaysa resume et
+        await this.resumeVcAudioContext();
+        if (!this.vcMonitorGain) {
+            this.showToast('⚠️', 'Monitor hazır değil.');
             return;
         }
         this.vcMonitorActive = !this.vcMonitorActive;
