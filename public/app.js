@@ -157,40 +157,49 @@ class VoiceChatApp {
         this.screenStream = null;
         this.cameraStream = null;
 
-        // === YOUTUBE MÜZİK PLAYER ELEMENTLERİ ===
+        // === YOUTUBE MÜZİK PLAYER ELEMENTLERİ (yeni modern tasarım) ===
         this.musicBtn = document.getElementById('music-btn');
         this.musicPanel = document.getElementById('music-panel');
+        this.musicCloseBtn = document.getElementById('music-close-btn');
         this.musicUrlInput = document.getElementById('music-url-input');
         this.musicLoadUrlBtn = document.getElementById('music-load-url-btn');
-        this.musicPlayBtn = document.getElementById('music-play-btn');
-        this.musicStopBtn = document.getElementById('music-stop-btn');
-        this.musicTrackLabel = document.getElementById('music-track-label');
-        this.musicProgress = document.getElementById('music-progress');
-        this.musicCurrentTime = document.getElementById('music-current-time');
-        this.musicDuration = document.getElementById('music-duration');
-        this.musicLocalVolume = document.getElementById('music-local-volume');
-        this.musicLocalMuteBtn = document.getElementById('music-local-mute-btn');
         this.ytSearchInput = document.getElementById('yt-search-input');
         this.ytSearchBtn = document.getElementById('yt-search-btn');
         this.ytSearchStatus = document.getElementById('yt-search-status');
         this.ytSearchResults = document.getElementById('yt-search-results');
+        this.ytLinkToggleBtn = document.getElementById('yt-link-toggle-btn');
+        this.ytLinkRow = document.getElementById('yt-link-row');
         this.ytPlayerWrapper = document.getElementById('yt-player-wrapper');
         this.ytPlayerDjContainer = document.getElementById('yt-player-dj');
+        // Şu an çalıyor alanı
+        this.mpNowPlaying = document.getElementById('mp-now-playing');
+        this.mpNpTitle = document.getElementById('mp-np-title');
+        this.mpNpThumb = document.getElementById('mp-np-thumb');
+        this.musicProgress = document.getElementById('music-progress');
+        this.musicCurrentTime = document.getElementById('music-current-time');
+        this.musicDuration = document.getElementById('music-duration');
+        this.musicLocalVolume = document.getElementById('music-local-volume');
+        this.musicVolUp = document.getElementById('music-vol-up');
+        this.musicVolDown = document.getElementById('music-vol-down');
+        this.musicVolLabel = document.getElementById('mp-vol-label');
+        this.musicLocalMuteBtn = document.getElementById('music-local-mute-btn');
+        this.musicStopBtn = document.getElementById('music-stop-btn');
 
         // Müzik durumu
         this.isSharingMusic = false;
         this.isMusicLocallyMuted = false;
         this.pendingMusicSeek = null;
         this.musicStatusInterval = null;
-        this.ytPlayer = null;             // DJ'nin YouTube IFrame player'ı
+        this.ytPlayer = null;
         this.ytPlayerReady = false;
-        this.ytApiReady = false;           // API script yüklü mü?
-        this.ytPendingVideoId = null;      // Player hazır bekleyen video ID
+        this.ytApiReady = false;
+        this.ytPendingVideoId = null;
+        this.ytPendingThumb = null;
         this.currentVideoId = null;
         this.currentTrackName = '';
-        this.youtubeSearchEnabled = false; // server config'ten gelecek
-        // Dinleyici tarafı — her DJ için bir player konteynırı
-        this.listenerPlayers = new Map(); // djId -> { wrapper, player, ready, videoHidden, userMuted }
+        this.currentThumbUrl = '';
+        this.youtubeSearchEnabled = false;
+        this.listenerPlayers = new Map();
     }
 
     initEventListeners() {
@@ -373,8 +382,16 @@ class VoiceChatApp {
                     // İlk açılışta YouTube API ready mi kontrol et
                     if (!this.musicPanel.classList.contains('hidden')) {
                         this.ensureYtPlayerReady();
+                        // Arama kutusuna otomatik fokus
+                        if (this.ytSearchInput) setTimeout(() => this.ytSearchInput.focus(), 100);
                     }
                 }
+            });
+        }
+        // Panel kapatma butonu
+        if (this.musicCloseBtn) {
+            this.musicCloseBtn.addEventListener('click', () => {
+                if (this.musicPanel) this.musicPanel.classList.add('hidden');
             });
         }
         // YouTube arama butonu
@@ -386,13 +403,20 @@ class VoiceChatApp {
                 if (e.key === 'Enter') this.youtubeSearch();
             });
         }
-        // URL yapıştırma
+        // URL yapıştırma (link toggle butonu ile göster/gizle)
+        if (this.ytLinkToggleBtn) {
+            this.ytLinkToggleBtn.addEventListener('click', () => {
+                if (this.ytLinkRow) this.ytLinkRow.classList.toggle('hidden');
+            });
+        }
         if (this.musicLoadUrlBtn) {
             this.musicLoadUrlBtn.addEventListener('click', () => {
                 const url = (this.musicUrlInput.value || '').trim();
                 if (url) {
                     const videoId = this.extractYouTubeId(url);
                     if (videoId) {
+                        // URL'den video yükle — thumbnail bilmeden, sadece videoId ile
+                        // getYouTubeVideoInfo ekleyerek thumbnail alabiliriz ama şimdilik basit tutalım
                         this.loadYouTubeVideo(videoId, url);
                     } else {
                         this.showToast('⚠️', 'Geçerli bir YouTube linki değil.');
@@ -403,12 +427,10 @@ class VoiceChatApp {
                 if (e.key === 'Enter') this.musicLoadUrlBtn.click();
             });
         }
-        if (this.musicPlayBtn) {
-            this.musicPlayBtn.addEventListener('click', () => this.toggleMusicPlay());
-        }
         if (this.musicStopBtn) {
             this.musicStopBtn.addEventListener('click', () => this.stopMusicShare());
         }
+        // Progress bar — DJ'nin video içinde ileri/geri sarma
         if (this.musicProgress) {
             this.musicProgress.addEventListener('input', (e) => {
                 this.pendingMusicSeek = parseFloat(e.target.value);
@@ -418,20 +440,47 @@ class VoiceChatApp {
                 }
             });
         }
+        // Volume slider
         if (this.musicLocalVolume) {
             this.musicLocalVolume.addEventListener('input', (e) => {
                 const vol = parseInt(e.target.value, 10);
+                this.updateVolumeUI(vol);
                 if (this.ytPlayer && this.ytPlayerReady) {
-                    this.ytPlayer.setVolume(this.isMusicLocallyMuted ? 0 : vol);
+                    if (this.isMusicLocallyMuted) {
+                        // Mute açıksa unmute yap ve yeni ses seviyesini uygula
+                        this.isMusicLocallyMuted = false;
+                        if (this.musicLocalMuteBtn) this.musicLocalMuteBtn.textContent = '🔊';
+                    }
+                    this.ytPlayer.unMute();
+                    this.ytPlayer.setVolume(vol);
                 }
             });
         }
+        // Volume + / - butonları
+        if (this.musicVolUp) {
+            this.musicVolUp.addEventListener('click', () => {
+                let vol = parseInt(this.musicLocalVolume.value, 10) + 10;
+                if (vol > 100) vol = 100;
+                this.musicLocalVolume.value = vol;
+                this.musicLocalVolume.dispatchEvent(new Event('input'));
+            });
+        }
+        if (this.musicVolDown) {
+            this.musicVolDown.addEventListener('click', () => {
+                let vol = parseInt(this.musicLocalVolume.value, 10) - 10;
+                if (vol < 0) vol = 0;
+                this.musicLocalVolume.value = vol;
+                this.musicLocalVolume.dispatchEvent(new Event('input'));
+            });
+        }
+        // Mute toggle
         if (this.musicLocalMuteBtn) {
             this.musicLocalMuteBtn.addEventListener('click', () => {
                 this.isMusicLocallyMuted = !this.isMusicLocallyMuted;
                 if (this.ytPlayer && this.ytPlayerReady) {
-                    if (this.isMusicLocallyMuted) this.ytPlayer.mute();
-                    else {
+                    if (this.isMusicLocallyMuted) {
+                        this.ytPlayer.mute();
+                    } else {
                         this.ytPlayer.unMute();
                         this.ytPlayer.setVolume(parseInt(this.musicLocalVolume.value, 10));
                     }
@@ -441,8 +490,6 @@ class VoiceChatApp {
         }
 
         // === YOUTUBE IFRAME API HAZIR OLUNCA ===
-        // youtube/iframe_api script yüklenince window.onYouTubeIframeAPIReady çağrılır
-        // (Asenkron olarak yüklendiği için önceden tanımlayalım)
         if (!window.onYouTubeIframeAPIReady) {
             window.onYouTubeIframeAPIReady = () => {
                 if (window.app && window.app.onYtApiReady) window.app.onYtApiReady();
@@ -454,23 +501,37 @@ class VoiceChatApp {
             this.youtubeSearchEnabled = !!c.youtubeSearchEnabled;
             if (this.ytSearchStatus) {
                 if (this.youtubeSearchEnabled) {
-                    this.ytSearchStatus.textContent = '🔍 Arama hazır';
+                    this.ytSearchStatus.textContent = '🔍 Arama hazır — şarkı adı yaz, Ara\'ya bas';
                     this.ytSearchStatus.style.color = 'var(--green)';
+                    // Link toggle butonunu gizle çünkü arama çalışıyor
+                    if (this.ytLinkToggleBtn) this.ytLinkToggleBtn.style.display = 'none';
                 } else {
-                    this.ytSearchStatus.textContent = '⚠️ Arama kapalı. Render Dashboard\'tan YOUTUBE_API_KEY ekleyin. Şimdilik YouTube linki yapıştırabilirsiniz.';
+                    this.ytSearchStatus.textContent = '⚠️ Arama kapalı (YOUTUBE_API_KEY yok). Link yapıştırmak için 🔗 butona bas.';
                     this.ytSearchStatus.style.color = 'var(--yellow)';
+                    // Link toggle butonunu göster
+                    if (this.ytLinkToggleBtn) this.ytLinkToggleBtn.style.display = 'flex';
                 }
             }
         }).catch(() => {});
 
         // === SAYFA YENİLEME OTOMATİK GİRİŞ ===
-        // Eğer kullanıcı adı kayıtlıysa otomatik giriş yap
         const savedUsername = localStorage.getItem('username');
         if (savedUsername) {
             setTimeout(() => {
                 if (this.usernameInput) this.usernameInput.value = savedUsername;
                 this.login();
             }, 200);
+        }
+    }
+
+    /** Volume UI güncelle — label ve ikon */
+    updateVolumeUI(vol) {
+        if (this.musicVolLabel) this.musicVolLabel.textContent = String(vol);
+        if (this.musicLocalMuteBtn) {
+            // Mute ikonu sadece sessizse değişsin
+            if (!this.isMusicLocallyMuted) {
+                this.musicLocalMuteBtn.textContent = vol === 0 ? '🔇' : '🔊';
+            }
         }
     }
 
@@ -1897,10 +1958,10 @@ class VoiceChatApp {
     /** youtube/iframe_api script'i yüklendiğinde çağrılır */
     onYtApiReady() {
         this.ytApiReady = true;
-        // Eğer DJ player'ı bekleyen bir video varsa, şimdi yükle
-        if (this.ytPendingVideoId) {
-            this.createDjPlayer(this.ytPendingVideoId);
-            this.ytPendingVideoId = null;
+        // Eğer bekleyen video varsa, player'ı oluştur ve videoyu yükle
+        if (this.ytPendingVideoId && !this.ytPlayer) {
+            this.ensureYtPlayerReady();
+            // Eğer ensureYtPlayerReady başarılıysa videoyu yükle (onReady'de yükleyeceğiz)
         }
         // Listener player'lar için de bekleyen DJ varsa
         this.listenerPlayers.forEach((data, djId) => {
@@ -1914,12 +1975,11 @@ class VoiceChatApp {
     ensureYtPlayerReady() {
         if (this.ytPlayer || !this.ytApiReady) return;
         if (!this.ytPlayerDjContainer) return;
-        // Boş player oluştur, video yüklenmemiş
         try {
             // eslint-disable-next-line no-undef
             this.ytPlayer = new YT.Player(this.ytPlayerDjContainer, {
-                height: '200',
-                width: '356',
+                height: '180',
+                width: '320',
                 videoId: '',
                 playerVars: {
                     autoplay: 0,
@@ -1929,7 +1989,19 @@ class VoiceChatApp {
                     playsinline: 1
                 },
                 events: {
-                    onReady: () => { this.ytPlayerReady = true; },
+                    onReady: () => {
+                        this.ytPlayerReady = true;
+                        // Player hazır olur olmaz bekleyen video varsa yükle + çal
+                        if (this.ytPendingVideoId) {
+                            const vid = this.ytPendingVideoId;
+                            const thumb = this.ytPendingThumb;
+                            this.ytPendingVideoId = null;
+                            this.ytPendingThumb = null;
+                            // loadVideoById autoplay yapar
+                            this.ytPlayer.loadVideoById(vid);
+                            this.showToast('🎵', 'Video yükleniyor...');
+                        }
+                    },
                     onStateChange: (e) => this.onDjPlayerStateChange(e)
                 }
             });
@@ -1947,18 +2019,16 @@ class VoiceChatApp {
                 // Sadece status güncelle
                 this.sendMusicStatus(true, this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
             }
-            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '⏸ Duraklat';
         } else if (event.data === 2) {
             // Durdu
             if (this.isSharingMusic && this.ytPlayer) {
                 this.sendMusicStatus(false, this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
             }
-            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶ Çal & Paylaş';
         } else if (event.data === 0) {
             // Bitti → paylaşımı durdur
             this.stopMusicShare();
         }
-        // Progress bar güncelle (interval zaten çalışıyor ama burada da update yapalım)
+        // Progress bar + UI güncelle
         this.updateDjProgressUI();
     }
 
@@ -2036,7 +2106,9 @@ class VoiceChatApp {
                 </div>
             `;
             el.addEventListener('click', () => {
-                this.loadYouTubeVideo(item.videoId, item.title);
+                // === TIKLAYINCA ANINDA ÇAL ===
+                // videoId + title + thumbnail bilgisini birlikte gönder
+                this.loadYouTubeVideo(item.videoId, item.title, item.thumbnail);
                 // Seçili sonucu işaretle
                 this.ytSearchResults.querySelectorAll('.yt-result-item').forEach(x => x.classList.remove('selected'));
                 el.classList.add('selected');
@@ -2045,12 +2117,17 @@ class VoiceChatApp {
         });
     }
 
-    /** Bir YouTube videosu yükle (DJ tarafı) — link yapıştırma veya arama sonucu seçme */
-    loadYouTubeVideo(videoId, title) {
+    /** Bir YouTube videosu yükle + ANINDA ÇAL (DJ tarafı)
+     *  Tıklanan sonuç ya da yapıştırılan link ile çağrılır. */
+    loadYouTubeVideo(videoId, title, thumbnail) {
         if (!videoId) return;
         this.currentVideoId = videoId;
         this.currentTrackName = title || `YouTube: ${videoId}`;
-        if (this.musicTrackLabel) this.musicTrackLabel.textContent = this.currentTrackName;
+        // Thumbnail: parametre olarak verilmişse onu kullan, yoksa YouTube'un standart URL'i
+        this.currentThumbUrl = thumbnail || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
+        // "Şu an çalıyor" alanını güncelle ve göster
+        this.updateNowPlayingUI();
 
         // Önce eski paylaşımı durdur (yeni video seçildi)
         if (this.isSharingMusic) {
@@ -2060,16 +2137,22 @@ class VoiceChatApp {
         // Player'ı hazırla ve videoyu yükle
         this.ensureYtPlayerReady();
         if (this.ytApiReady && this.ytPlayer) {
-            // Player zaten oluşturulmuş, yeni video yükle
+            // Player zaten oluşturulmuş — loadVideoById video yükler VE otomatik başlatır
             this.ytPlayer.loadVideoById(videoId);
-            // Müzik panelinde player wrapper'ı göster
-            if (this.ytPlayerWrapper) this.ytPlayerWrapper.classList.remove('hidden');
         } else {
-            // API hazır değil, bekle
+            // API hazır değil — bekleyen video olarak sakla, onReady'de yüklenecek
             this.ytPendingVideoId = videoId;
-            if (this.ytPlayerWrapper) this.ytPlayerWrapper.classList.remove('hidden');
+            this.ytPendingThumb = this.currentThumbUrl;
         }
-        this.showToast('🎵', 'Video yüklendi. "Çal & Paylaş" ile başlat.');
+        // Video seçildiğinde "Şu an çalıyor" alanını göster
+        if (this.mpNowPlaying) this.mpNowPlaying.classList.remove('hidden');
+        this.showToast('🎵', 'Video yükleniyor ve çalınıyor...');
+    }
+
+    /** "Şu an çalıyor" UI'ını güncelle */
+    updateNowPlayingUI() {
+        if (this.mpNpTitle) this.mpNpTitle.textContent = this.currentTrackName || 'Müzik seçilmedi';
+        if (this.mpNpThumb && this.currentThumbUrl) this.mpNpThumb.src = this.currentThumbUrl;
     }
 
     // =========================================

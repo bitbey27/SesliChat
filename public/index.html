@@ -239,58 +239,65 @@
                         <!-- Katılımcılar JS ile doldurulacak -->
                     </div>
 
-                    <!-- === YOUTUBE MÜZİK PLAYER PANEL (DJ tarafı) === -->
+                    <!-- === YOUTUBE MÜZİK PLAYER (yeni modern tasarım) === -->
                     <div id="music-panel" class="music-panel hidden">
-                        <div class="music-panel-header">
-                            <span class="music-panel-title">🎵 YouTube Müzik (DJ)</span>
-                            <span class="music-panel-hint">Aradığın şarkıyı bul, tıkla — odadaki herkese video+klibi ile gider. Herkes kendi ses seviyesini ve video göster/gizle seçeneğini ayarlar.</span>
+                        <!-- Header -->
+                        <div class="mp-header">
+                            <div class="mp-header-title">
+                                <span class="mp-icon">🎵</span>
+                                <span>YouTube Müzik</span>
+                            </div>
+                            <button id="music-close-btn" class="mp-close-btn" title="Kapat">✕</button>
                         </div>
-                        <div class="music-panel-body">
-                            <!-- YOUTUBE ARAMA -->
-                            <div class="yt-search-row">
-                                <input type="text" id="yt-search-input" class="modern-input" placeholder="🔍 YouTube'da şarkı ara..." style="flex:1;">
-                                <button id="yt-search-btn" class="btn-primary" style="padding: 6px 14px; font-size: 13px;">Ara</button>
-                            </div>
-                            <div id="yt-search-status" class="yt-search-status"></div>
-                            <div id="yt-search-results" class="yt-search-results"></div>
 
-                            <div class="music-divider">
-                                <span>VEYA</span>
+                        <!-- Arama kutusu (büyük + ikon buton) -->
+                        <div class="mp-search-row">
+                            <input type="text" id="yt-search-input" class="mp-search-input" placeholder="Şarkı veya sanatçı ara..." autocomplete="off">
+                            <button id="yt-search-btn" class="mp-search-btn" title="Ara">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </button>
+                            <button id="yt-link-toggle-btn" class="mp-link-btn" title="YouTube linki yapıştır" style="display:none;">🔗</button>
+                        </div>
+                        <!-- Link yapıştırma (varsayılan gizli) -->
+                        <div id="yt-link-row" class="mp-link-row hidden">
+                            <input type="text" id="music-url-input" class="mp-link-input" placeholder="https://youtu.be/...">
+                            <button id="music-load-url-btn" class="mp-link-load-btn">Yükle</button>
+                        </div>
+
+                        <!-- Arama durumu -->
+                        <div id="yt-search-status" class="mp-search-status"></div>
+
+                        <!-- Sonuçlar (yatay kaydırma + grid) -->
+                        <div id="yt-search-results" class="mp-results"></div>
+
+                        <!-- Şu an çalıyor alanı -->
+                        <div id="mp-now-playing" class="mp-now-playing hidden">
+                            <div class="mp-np-info">
+                                <div class="mp-np-thumb-wrapper">
+                                    <img id="mp-np-thumb" class="mp-np-thumb" src="" alt="">
+                                    <div class="mp-np-play-indicator">🎵</div>
+                                </div>
+                                <div class="mp-np-text">
+                                    <div id="mp-np-title" class="mp-np-title">Müzik seçilmedi</div>
+                                    <div class="mp-np-time-row">
+                                        <span id="music-current-time" class="mp-time">0:00</span>
+                                        <input type="range" id="music-progress" class="mp-progress" min="0" max="100" value="0">
+                                        <span id="music-duration" class="mp-time">0:00</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- YOUTUBE URL YAPIŞTIRMA -->
-                            <div class="music-source-row">
-                                <input type="text" id="music-url-input" class="modern-input" placeholder="YouTube linki yapıştır (örn: https://youtu.be/dQw4w9WgXcQ)" style="flex:1;">
-                                <button id="music-load-url-btn" class="btn-secondary" style="padding: 6px 14px; font-size: 13px;">Yükle</button>
-                            </div>
-
-                            <!-- ŞU AN ÇALAN VİDEO BİLGİSİ -->
-                            <div class="music-track-row">
-                                <span class="music-track-label" id="music-track-label">Henüz müzik seçilmedi</span>
-                            </div>
-
-                            <!-- YOUTUBE PLAYER (DJ tarafı) -->
-                            <div id="yt-player-wrapper" class="yt-player-wrapper hidden">
-                                <div id="yt-player-dj"></div>
-                            </div>
-
-                            <!-- PROGRESS + KONTROLLER -->
-                            <div class="music-progress-row">
-                                <input type="range" id="music-progress" class="music-progress" min="0" max="100" value="0">
-                                <span id="music-current-time" class="music-time">0:00</span>
-                                <span class="music-time-sep">/</span>
-                                <span id="music-duration" class="music-time">0:00</span>
-                            </div>
-                            <div class="music-controls-row">
-                                <button id="music-play-btn" class="btn-primary music-play-btn" style="min-width: 100px;">▶ Çal & Paylaş</button>
-                                <button id="music-stop-btn" class="btn-leave music-stop-btn" style="min-width: 100px; background: rgba(237,66,69,0.2); color: #ED4245; border: 1px solid rgba(237,66,69,0.5);">⏹ Paylaşımı Durdur</button>
-                                <span class="music-volume-group">
-                                    <button id="music-local-mute-btn" class="control-btn" title="Sadece sizin işitmenizi kapat/aç" style="font-size:18px;">🔊</button>
-                                    <input type="range" id="music-local-volume" class="music-local-volume" min="0" max="100" step="1" value="70" title="Sizin duyduğunuz ses seviyesi (peer'lar etkilenmez)">
-                                </span>
-                            </div>
-                            <div class="music-hint">
-                                💡 "Çal & Paylaş" basınca odadaki herkes aynı YouTube klibini görür. Her dinleyici kendi panelinden: ses seviyesi, mute, video gizle ayarlarını yapabilir. Sadece sizin duyduğunuz ses peer'ları etkilemez.
+                            <!-- Volume + mute + stop -->
+                            <div class="mp-controls-row">
+                                <button id="music-vol-down" class="mp-vol-btn" title="Sesi Kıs">−</button>
+                                <input type="range" id="music-local-volume" class="mp-volume" min="0" max="100" step="1" value="70" title="Ses seviyesi">
+                                <button id="music-vol-up" class="mp-vol-btn" title="Sesi Aç">+</button>
+                                <span id="mp-vol-label" class="mp-vol-label">70</span>
+                                <button id="music-local-mute-btn" class="mp-mute-btn" title="Sesi kapat/aç">🔊</button>
+                                <button id="music-stop-btn" class="mp-stop-btn" title="Paylaşımı durdur">⏹ Paylaşımı Durdur</button>
                             </div>
                         </div>
                     </div>
