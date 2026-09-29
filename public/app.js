@@ -2779,21 +2779,13 @@ class VoiceChatApp {
         'squeak':    { pitch: 10, filterType: 'highpass',filterFreq: 500,  filterGain: 0,  delayTime: 0,    feedback: 0,   distortion: 5 }
     };
 
-    /** Mikrofonu AudioContext + SoundTouch + EQ + Delay zincirinden geçir.
-     *  10 kaliteli efekt için SoundTouchJS pitch shifting + BiquadFilter + DelayNode + WaveShaper kullanır.
-     *  Zincir: mic → SoundTouch(script) → BiquadFilter → DelayNode → MediaStreamDestination → WebRTC
-     *  Ayrıca monitor için: → GainNode → speakers (lokal test)
+    /** Mikrofonu AudioContext + Web Audio native efekt zincirinden geçir.
+     *  SoundTouchJS bypass edildi (extract() sessiz dönüyor, ScriptProcessorNode deprecated).
+     *  Bunun yerine native BiquadFilter + WaveShaper + DelayNode + ConvolverNode kullanır.
+     *  Zincir: mic → BiquadFilter → WaveShaper → DelayNode → MediaStreamDestination → WebRTC
      */
     async initVoiceChangerChain(rawMicStream) {
         try {
-            // === SoundTouchJS dynamic import ===
-            if (!this._soundtouchModule) {
-                console.log('[VC] SoundTouchJS dynamic import ediliyor...');
-                this._soundtouchModule = await import('https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js');
-                console.log('[VC] SoundTouchJS yüklendi:', Object.keys(this._soundtouchModule));
-            }
-            const { SoundTouch, SimpleFilter, WebAudioBufferSource } = this._soundtouchModule;
-
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             this.vcAudioContext = new AudioContextClass();
 
@@ -2804,76 +2796,22 @@ class VoiceChatApp {
             // Mikrofon → AudioContext source
             this.vcSourceNode = this.vcAudioContext.createMediaStreamSource(rawMicStream);
 
-            // SoundTouch instance — pitch=1 (değişiklik yok) başlangıçta
-            this.vcSoundTouch = new SoundTouch();
-            this.vcSoundTouch.pitch = 1;
-            this.vcSoundTouch.tempo = 1;
-            this.vcSoundTouch.rate = 1;
-
-            // WebAudioBufferSource — başlangıçta boş bir AudioBuffer ile
-            const initBuf = this.vcAudioContext.createBuffer(2, 4096, this.vcAudioContext.sampleRate);
-            this.vcBufferSource = new WebAudioBufferSource(initBuf);
-
-            // SimpleFilter
-            this.vcFilter = new SimpleFilter(this.vcBufferSource, this.vcSoundTouch);
-
-            // ScriptProcessorNode — real-time SoundTouch pitch shift
-            const BUFFER_SIZE = 4096;
-            this.vcScriptProcessor = this.vcAudioContext.createScriptProcessor(BUFFER_SIZE, 2, 2);
-
-            this.vcScriptProcessor.onaudioprocess = (e) => {
-                try {
-                    const inBuf = e.inputBuffer;
-                    const outBuf = e.outputBuffer;
-                    const leftIn = inBuf.getChannelData(0);
-                    const rightIn = inBuf.numberOfChannels > 1 ? inBuf.getChannelData(1) : leftIn;
-                    const numFrames = leftIn.length;
-
-                    // 1. Yeni AudioBuffer oluştur (veya yeniden kullan)
-                    if (!this._vcInputAudioBuf || this._vcInputAudioBuf.length !== numFrames) {
-                        this._vcInputAudioBuf = this.vcAudioContext.createBuffer(2, numFrames, this.vcAudioContext.sampleRate);
-                    }
-                    this._vcInputAudioBuf.getChannelData(0).set(leftIn);
-                    if (this._vcInputAudioBuf.numberOfChannels > 1) {
-                        this._vcInputAudioBuf.getChannelData(1).set(rightIn);
-                    }
-
-                    // 2. WebAudioBufferSource'a bu buffer'ı ver
-                    this.vcBufferSource.buffer = this._vcInputAudioBuf;
-                    // SimpleFilter'ın sourcePosition'ını sıfırla (clear da çağırır)
-                    try {
-                        this.vcFilter.sourcePosition = 0;
-                    } catch (e2) {
-                        // ilk çağrıda clear() çağrılır, hata olabilir
-                    }
-
-                    // 3. SoundTouch'tan output al (interleaved stereo)
-                    const outInterleaved = new Float32Array(numFrames * 2);
-                    this.vcFilter.extract(outInterleaved, numFrames);
-
-                    // 4. De-interleave: stereo samples → ayrı kanallar
-                    const leftOut = outBuf.getChannelData(0);
-                    const rightOut = outBuf.numberOfChannels > 1 ? outBuf.getChannelData(1) : leftOut;
-                    for (let i = 0; i < numFrames; i++) {
-                        leftOut[i] = outInterleaved[i * 2];
-                        rightOut[i] = outInterleaved[i * 2 + 1];
-                    }
-                } catch (err) {
-                    console.error('[VC] onaudioprocess hatası:', err);
-                    // Hatada en azından input'u output'a pasla ki sessizlik olmasın
-                    try {
-                        const leftIn = e.inputBuffer.getChannelData(0);
-                        const leftOut = e.outputBuffer.getChannelData(0);
-                        leftOut.set(leftIn);
-                    } catch (_) {}
-                }
-            };
-
-            // BiquadFilter — EQ için (lowpass/highpass/highshelf/lowshelf)
+            // BiquadFilter — EQ için (lowpass/highpass/highshelf/lowshelf/peaking/allpass)
             this.vcBiquadFilter = this.vcAudioContext.createBiquadFilter();
             this.vcBiquadFilter.type = 'allpass';  // başlangıçta etkisiz
             this.vcBiquadFilter.frequency.value = 1000;
             this.vcBiquadFilter.gain.value = 0;
+
+            // İkinci BiquadFilter — daha karmaşık EQ için
+            this.vcBiquadFilter2 = this.vcAudioContext.createBiquadFilter();
+            this.vcBiquadFilter2.type = 'allpass';
+            this.vcBiquadFilter2.frequency.value = 1000;
+            this.vcBiquadFilter2.gain.value = 0;
+
+            // WaveShaper — distortion (robot/çiğlik efekti)
+            this.vcWaveShaper = this.vcAudioContext.createWaveShaper();
+            this.vcWaveShaper.curve = null;  // başlangıçta etkisiz
+            this.vcWaveShaper.oversample = '2x';
 
             // DelayNode — echo/reverb efekti için
             this.vcDelayNode = this.vcAudioContext.createDelay(1.0);
@@ -2881,12 +2819,7 @@ class VoiceChatApp {
             this.vcDelayFeedback = this.vcAudioContext.createGain();
             this.vcDelayFeedback.gain.value = 0;
 
-            // WaveShaper — distortion (robot efekti için)
-            this.vcWaveShaper = this.vcAudioContext.createWaveShaper();
-            this.vcWaveShaper.curve = null;  // başlangıçta etkisiz
-            this.vcWaveShaper.oversample = '2x';
-
-            // MediaStreamAudioDestinationNode — WebRTC'ye gönderilecek yeni stream
+            // MediaStreamAudioDestinationNode — WebRTC'ye gönderilecek stream
             this.vcDestNode = this.vcAudioContext.createMediaStreamDestination();
 
             // Monitor için gain node (lokal dinleme — varsayılan 0)
@@ -2894,22 +2827,22 @@ class VoiceChatApp {
             this.vcMonitorGain.gain.value = 0;
 
             // === BAĞLANTI ZİNCİRİ ===
-            // mic source → scriptProcessor (SoundTouch) → biquadFilter → waveShaper → delayNode → destNode (WebRTC)
-            //                                                                                  ↓
-            //                                                                              monitorGain → speakers
-            this.vcSourceNode.connect(this.vcScriptProcessor);
-            this.vcScriptProcessor.connect(this.vcBiquadFilter);
-            this.vcBiquadFilter.connect(this.vcWaveShaper);
+            // mic source → biquadFilter1 → biquadFilter2 → waveShaper → delayNode → destNode (WebRTC)
+            //                                                                              ↓
+            //                                                                          monitorGain → speakers
+            this.vcSourceNode.connect(this.vcBiquadFilter);
+            this.vcBiquadFilter.connect(this.vcBiquadFilter2);
+            this.vcBiquadFilter2.connect(this.vcWaveShaper);
             this.vcWaveShaper.connect(this.vcDelayNode);
             this.vcDelayNode.connect(this.vcDelayFeedback);
-            this.vcDelayFeedback.connect(this.vcDelayNode);  // feedback loop
+            this.vcDelayFeedback.connect(this.vcDelayNode);  // feedback loop (echo)
             this.vcDelayNode.connect(this.vcDestNode);
             this.vcDelayNode.connect(this.vcMonitorGain);
             this.vcMonitorGain.connect(this.vcAudioContext.destination);
 
             this.vcProcessedStream = this.vcDestNode.stream;
             this.vcActive = true;
-            console.log('[VC] Voice changer zinciri kuruldu — SoundTouch + EQ + Delay + WaveShaper');
+            console.log('[VC] Voice changer zinciri kuruldu — Web Audio native (Biquad + WaveShaper + Delay)');
             return this.vcProcessedStream;
         } catch (e) {
             console.error('[VC] Voice changer zinciri kurulamadı:', e);
@@ -2918,17 +2851,7 @@ class VoiceChatApp {
         }
     }
 
-    /** Pitch değerini SoundTouch'a uygula (semitone → ratio)
-     *  semitone: -12 (oktav aşağı) → ratio 0.5, 0 (değişiklik yok) → ratio 1, +12 (oktav yukarı) → ratio 2
-     */
-    applyPitchToSoundTouch(semitones) {
-        if (!this.vcSoundTouch || !this.vcActive) return;
-        const pitchRatio = Math.pow(2, semitones / 12);
-        this.vcSoundTouch.pitch = pitchRatio;
-        console.log('[VC] Pitch:', semitones, 'semitone → ratio', pitchRatio.toFixed(3));
-    }
-
-    /** WaveShaper için distortion curve oluştur (robot efekti için) */
+    /** WaveShaper için distortion curve oluştur (robot/çiğlik efekti) */
     makeDistortionCurve(amount) {
         const samples = 44100;
         const curve = new Float32Array(samples);
@@ -2938,6 +2861,30 @@ class VoiceChatApp {
             curve[i] = (3 + amount) * x * 20 * deg / (Math.PI + amount * Math.abs(x));
         }
         return curve;
+    }
+
+    /** Pitch değeri (SoundTouch artık yok — sadece log için tutuyoruz) */
+    applyPitchToSoundTouch(semitones) {
+        if (!this.vcActive) return;
+        // Not: Gerçek pitch shifting için AudioWorklet gerekir, şu an bypass
+        console.log('[VC] Pitch ayarı:', semitones, 'semitone (BiquadFilter ile simüle edilecek)');
+        // Pitch yerine frekans filter'ı ile benzer etki sağla
+        if (this.vcBiquadFilter) {
+            // Pitch yükselince yüksek frekansları vurgula (highshelf)
+            // Pitch düşürünce düşük frekansları vurgula (lowshelf)
+            if (semitones > 0) {
+                this.vcBiquadFilter2.type = 'highshelf';
+                this.vcBiquadFilter2.frequency.value = Math.max(500, 3000 - semitones * 200);
+                this.vcBiquadFilter2.gain.value = semitones * 1.5;
+            } else if (semitones < 0) {
+                this.vcBiquadFilter2.type = 'lowshelf';
+                this.vcBiquadFilter2.frequency.value = Math.min(2000, 500 + Math.abs(semitones) * 200);
+                this.vcBiquadFilter2.gain.value = Math.abs(semitones) * 1.5;
+            } else {
+                this.vcBiquadFilter2.type = 'allpass';
+                this.vcBiquadFilter2.gain.value = 0;
+            }
+        }
     }
 
     /** Voice changer hazır değilse lazy init et — admin VC butona bastığında çağrılır.
@@ -2996,16 +2943,9 @@ class VoiceChatApp {
         }
     }
 
-    /** Pitch değerini SoundTouch'a uygula (semitone → ratio) */
-    applyPitchToSoundTouch(semitones) {
-        if (!this.vcSoundTouch || !this.vcActive) return;
-        // semitone → pitch ratio: 2^(semitones/12)
-        // 0 semitone = ratio 1 (değişiklik yok)
-        // +12 semitone = ratio 2 (bir oktav yukarı)
-        // -12 semitone = ratio 0.5 (bir oktav aşağı)
-        const pitchRatio = Math.pow(2, semitones / 12);
-        this.vcSoundTouch.pitch = pitchRatio;
-        console.log('[VC] Pitch uygulandı:', semitones, 'semitone → ratio', pitchRatio);
+    /** Pitch değerini SoundTouch'a uygula (artık kullanılmıyor — bypass edildi) */
+    applyPitchToSoundTouch_old(semitones) {
+        // Eski SoundTouchJS metodu — artık kullanılmıyor
     }
 
     /** Bir preset uygula (admin butona bastığında) — 10 efektten biri */
