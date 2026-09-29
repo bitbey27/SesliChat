@@ -2030,6 +2030,31 @@ body {
 .mp-vol-btn:active {
     transform: scale(0.95);
 }
+
+/* Play/Pause butonu — en belirgin */
+.mp-play-pause-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(124, 92, 252, 0.4);
+}
+.mp-play-pause-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 18px rgba(124, 92, 252, 0.55);
+}
+.mp-play-pause-btn:active {
+    transform: scale(0.95);
+}
 .mp-volume {
     flex: 1;
     min-width: 80px;
