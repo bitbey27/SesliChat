@@ -275,11 +275,15 @@
 
                         <!-- Şu an çalıyor alanı -->
                         <div id="mp-now-playing" class="mp-now-playing hidden">
-                            <div class="mp-np-info">
-                                <div class="mp-np-thumb-wrapper">
-                                    <img id="mp-np-thumb" class="mp-np-thumb" src="" alt="">
-                                    <div class="mp-np-play-indicator">🎵</div>
+                            <!-- YouTube player (görünür — klip gösterilir) -->
+                            <div id="yt-player-wrapper" class="mp-player-wrapper">
+                                <div id="yt-player-dj"></div>
+                                <div id="mp-loading-overlay" class="mp-loading-overlay hidden">
+                                    <div class="mp-spinner"></div>
+                                    <div>Player yükleniyor...</div>
                                 </div>
+                            </div>
+                            <div class="mp-np-info">
                                 <div class="mp-np-text">
                                     <div id="mp-np-title" class="mp-np-title">Müzik seçilmedi</div>
                                     <div class="mp-np-time-row">

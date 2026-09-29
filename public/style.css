@@ -2128,20 +2128,73 @@ body {
     color: #fff;
 }
 
-/* === DJ'NİN YOUTUBE PLAYER KONTEYNIRI (gizli — DJ sadece thumbnail görür) === */
-.yt-player-wrapper {
-    position: absolute;
-    width: 1px;
-    height: 1px;
+/* === DJ'NİN YOUTUBE PLAYER KONTEYNIRI (görünür — klip gösterilir) === */
+.mp-player-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    max-height: 220px;
+    background: #000;
+    border-radius: 10px;
     overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-    left: -9999px;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.mp-player-wrapper iframe,
+.mp-player-wrapper > div {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    border: none;
+}
+/* Eski class hâlâ referans ediliyor — geriye dönük uyumlu */
+.yt-player-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    max-height: 220px;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 .yt-player-wrapper iframe,
 .yt-player-wrapper > div {
-    width: 320px !important;
-    height: 180px !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    border: none;
+}
+
+/* Loading overlay — player yüklenirken göster */
+.mp-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #fff;
+    font-size: 12px;
+    z-index: 5;
+}
+.mp-loading-overlay.hidden { display: none; }
+.mp-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--brand-primary);
+    border-radius: 50%;
+    animation: mpSpin 0.8s linear infinite;
+}
+@keyframes mpSpin {
+    to { transform: rotate(360deg); }
 }
 
 /* === DİNLEYİCİ KUTUSU === */
