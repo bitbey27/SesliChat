@@ -1256,19 +1256,9 @@ class VoiceChatApp {
             iceServers: this.iceServers
         });
 
-        // Yerel ses akışını ekle
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream);
-            });
-        }
-
-        // Eğer ekran paylaşıyorsak, onu da ekle
-        if (this.isScreenSharing && this.screenStream) {
-            this.screenStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.screenStream);
-            });
-        }
+        // === Event handler'ları ÖNCE set et (addTrack'tan önce) ===
+        // Bu, race condition'u önler: addTrack → onnegotiationneeded queued olur,
+        // explicit createOffer ile çakışıp m-line order hatası vermesini engeller
 
         // ICE adaylarını gönder
         pc.onicecandidate = (event) => {
@@ -1281,12 +1271,19 @@ class VoiceChatApp {
             }
         };
 
-        // Renegotiation (örneğin ekran paylaşımı track eklendiğinde)
+        // Renegotiation — signalingState'i await'ten SONRA da kontrol et (race condition önle)
         pc.onnegotiationneeded = async () => {
             try {
-                if (pc.signalingState !== "stable") return;
-                console.log(`[WRTC] onnegotiationneeded → creating offer for ${peerId}`);
+                if (pc.signalingState !== "stable") {
+                    console.log(`[WRTC] onnegotiationneeded skipped (state: ${pc.signalingState})`);
+                    return;
+                }
                 const offer = await pc.createOffer();
+                // Await sırasında explicit createOffer çalışmış olabilir — tekrar kontrol
+                if (pc.signalingState !== "stable") {
+                    console.log(`[WRTC] onnegotiationneeded: state changed during await (${pc.signalingState}), skipping`);
+                    return;
+                }
                 await pc.setLocalDescription(offer);
                 this.ws.send(JSON.stringify({
                     type: 'offer',
@@ -1345,12 +1342,24 @@ class VoiceChatApp {
             }
         };
 
-        // Peer datasını başlat (yoksa)
+        // Peer datasını başlat
         if (!this.peers.has(peerId)) {
             this.peers.set(peerId, { pc, audioEl: null, remoteStream: null });
         }
 
-        // Teklif oluştur (initiator ise)
+        // === ŞİMDİ tracks ekle (handler'lar set, onnegotiationneeded güvenli) ===
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => {
+                pc.addTrack(track, this.localStream);
+            });
+        }
+        if (this.isScreenSharing && this.screenStream) {
+            this.screenStream.getTracks().forEach(track => {
+                pc.addTrack(track, this.screenStream);
+            });
+        }
+
+        // Explicit createOffer (initiator ise) — race condition güvenli
         if (isInitiator) {
             this.createOffer(peerId, pc);
         }
@@ -1386,7 +1395,17 @@ class VoiceChatApp {
 
     async createOffer(peerId, pc) {
         try {
+            // Race condition önle: eğer onnegotiationneeded zaten çalıştıysa (state have-local-offer), atla
+            if (pc.signalingState !== 'stable') {
+                console.log(`[WRTC] createOffer skipped (state: ${pc.signalingState})`);
+                return;
+            }
             const offer = await pc.createOffer();
+            // Await sırasında onnegotiationneeded fire etmiş olabilir — tekrar kontrol
+            if (pc.signalingState !== 'stable') {
+                console.log(`[WRTC] createOffer: state changed during await (${pc.signalingState}), skipping setLocalDescription`);
+                return;
+            }
             await pc.setLocalDescription(offer);
 
             this.ws.send(JSON.stringify({
