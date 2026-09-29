@@ -1256,11 +1256,19 @@ class VoiceChatApp {
             iceServers: this.iceServers
         });
 
-        // === KRİTİK: Event handler'ları addTrack'ten ÖNCE set et ===
-        // Aksi halde addTrack → onnegotiationneeded queued olur ama handler null olduğu için kaybolur
-        // VE explicit createOffer ile duplicate offer oluşur (race condition = "glare")
-        pc._isInitiator = isInitiator;
-        pc._initialNegotiationDone = false;
+        // Yerel ses akışını ekle
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => {
+                pc.addTrack(track, this.localStream);
+            });
+        }
+
+        // Eğer ekran paylaşıyorsak, onu da ekle
+        if (this.isScreenSharing && this.screenStream) {
+            this.screenStream.getTracks().forEach(track => {
+                pc.addTrack(track, this.screenStream);
+            });
+        }
 
         // ICE adaylarını gönder
         pc.onicecandidate = (event) => {
@@ -1273,27 +1281,20 @@ class VoiceChatApp {
             }
         };
 
-        // onnegotiationneeded — initiator ise ilk offer'ı oluştur, responder ise ilk offer'ı bekle
-        // (responder ilk offer'ı explicit createOffer ile DEĞİL, incoming offer'ı handleOffer ile handle eder)
+        // Renegotiation (örneğin ekran paylaşımı track eklendiğinde)
         pc.onnegotiationneeded = async () => {
-            // Responder ise ve ilk negotiation henüz yapılmadıysa atla (glare önle)
-            if (!pc._isInitiator && !pc._initialNegotiationDone) {
-                console.log(`[WRTC] onnegotiationneeded skipped for responder ${peerId} (waiting for offer)`);
-                return;
-            }
             try {
                 if (pc.signalingState !== "stable") return;
                 console.log(`[WRTC] onnegotiationneeded → creating offer for ${peerId}`);
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                pc._initialNegotiationDone = true;
                 this.ws.send(JSON.stringify({
                     type: 'offer',
                     targetId: peerId,
                     data: pc.localDescription
                 }));
             } catch (err) {
-                console.error('[WRTC] Negotiation hatası:', err);
+                console.error('[WRTC] Renegotiation hatası:', err);
             }
         };
 
@@ -1301,18 +1302,16 @@ class VoiceChatApp {
         pc.ontrack = (event) => {
             const track = event.track;
             const stream = event.streams[0];
-            
-            // Eğer video (Ekran Paylaşımı) ise Stage'e ekle
+
             if (track.kind === 'video') {
                 this.showRemoteVideo(peerId, stream);
-                
                 track.onended = () => {
                     this.removeRemoteVideo(peerId);
                 };
                 return;
             }
 
-            // === AUDIO TRACK (voice only) ===
+            // AUDIO TRACK (voice)
             let peerData = this.peers.get(peerId);
             if (!peerData) {
                 peerData = { pc, audioEl: null, remoteStream: null };
@@ -1346,28 +1345,15 @@ class VoiceChatApp {
             }
         };
 
-        // === Peer datasını başlat (yoksa) ===
+        // Peer datasını başlat (yoksa)
         if (!this.peers.has(peerId)) {
             this.peers.set(peerId, { pc, audioEl: null, remoteStream: null });
         }
 
-        // === ŞİMDİ localStream tracks ekle (artık handler'lar set, onnegotiationneeded güvenli) ===
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream);
-            });
+        // Teklif oluştur (initiator ise)
+        if (isInitiator) {
+            this.createOffer(peerId, pc);
         }
-        
-        // Ekran paylaşıyorsak onu da ekle
-        if (this.isScreenSharing && this.screenStream) {
-            this.screenStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.screenStream);
-            });
-        }
-
-        // === NOT: explicit createOffer KALDIRILDI ===
-        // Artık onnegotiationneeded initiator için otomatik offer oluşturur
-        // Bu, race condition'u önlüyor (daha önce hem onnegotiationneeded hem createOffer offer oluşturuyordu)
 
         return pc;
     }
@@ -1423,20 +1409,10 @@ class VoiceChatApp {
         }
 
         try {
-            console.log(`[WRTC] handleOffer from ${message.senderId}, signalingState: ${pc.signalingState}`);
-            // Eğer signalingState "have-local-offer" ise bu "glare" — rollback yap
-            if (pc.signalingState === 'have-local-offer') {
-                console.warn('[WRTC] Glare detected! Rolling back local offer...');
-                // Rollback: signaling state'i "stable" a geri al
-                await pc.setLocalDescription({ type: 'rollback' });
-            }
             await pc.setRemoteDescription(new RTCSessionDescription(message.data));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            // İlk negotiation tamamlandı — artık responder için onnegotiationneeded aktif
-            pc._initialNegotiationDone = true;
 
-            console.log(`[WRTC] Answer sent to ${message.senderId}`);
             this.ws.send(JSON.stringify({
                 type: 'answer',
                 targetId: message.senderId,
@@ -1451,12 +1427,9 @@ class VoiceChatApp {
         const peer = this.peers.get(message.senderId);
         if (peer) {
             try {
-                console.log(`[WRTC] handleAnswer from ${message.senderId}`);
                 await peer.pc.setRemoteDescription(new RTCSessionDescription(message.data));
-                // İlk negotiation tamamlandı — initiator için de _initialNegotiationDone işaretle
-                peer.pc._initialNegotiationDone = true;
             } catch (err) {
-                console.error('Answer işleme hatası:', err);
+                console.error('[WRTC] Answer işleme hatası:', err);
             }
         }
     }
@@ -2778,18 +2751,29 @@ class VoiceChatApp {
     };
 
     /** Mikrofonu AudioContext + SoundTouch zincirinden geçir
-     *  Bu fonksiyon gerçek ses yakalama zincirini kurar — voice changer aktif değilse bile
-     *  ham ses "processed stream" olarak çıkar ama pitch=0 (yani aynı ses).
-     *  Voice changer aktifleştiğinde sadece SoundTouch parametreleri değişir, peer'lara replaceTrack gerekmez. */
+     *
+     *  ⚠️ GECİCİ OLARAK DEVRE DIŞI: SoundTouchJS 0.1.30'da WebAudioBufferSource.onaudioprocess
+     *  metodu kaldırılmış — eski API uyumsuz. ScriptProcessor.onaudioprocess içinde
+     *  TypeError fırlatıyor (752+ kez), bu da audio stream'i bozuyor.
+     *
+     *  Şimdilik raw mic stream kullanıyoruz. Voice changer özelliği UI'da gizli.
+     *  İleride doğru API ile yeniden eklenecek.
+     */
     async initVoiceChangerChain(rawMicStream) {
+        console.log('[VC] Voice changer geçici olarak devre dışı — raw mic kullanılıyor');
+        // VC chain kurma, doğrudan raw mic dön
+        this.vcActive = false;
+        return rawMicStream;
+    }
+
+    // === ESKİ SOUNDTOUCH KODU (referans için) ===
+    // Yeni API bulunca burayı yeniden etkinleştir
+    /*
+    async initVoiceChangerChain_OLD(rawMicStream) {
         try {
-            // === SoundTouchJS dynamic import ===
-            // Kütüphane ES module olduğu için <script src> ile global exposure olmuyor.
-            // Runtime'da dynamic import ile yükle, sonra global window'a da expose et.
             if (!this._soundtouchModule) {
                 console.log('[VC] SoundTouchJS dynamic import ediliyor...');
                 this._soundtouchModule = await import('https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js');
-                // Globals olarak da expose et (diğer kodlar için)
                 window.SoundTouch = this._soundtouchModule.SoundTouch;
                 window.SimpleFilter = this._soundtouchModule.SimpleFilter;
                 window.WebAudioBufferSource = this._soundtouchModule.WebAudioBufferSource;
@@ -2799,49 +2783,31 @@ class VoiceChatApp {
 
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             this.vcAudioContext = new AudioContextClass();
-
-            // Eğer askıdaysa resume
             if (this.vcAudioContext.state === 'suspended') {
                 try { await this.vcAudioContext.resume(); } catch (_) {}
             }
 
-            // Mikrofon → AudioContext source
             this.vcSourceNode = this.vcAudioContext.createMediaStreamSource(rawMicStream);
-
-            // SoundTouch instance — pitch=0 başlangıçta (yani ham ses)
             this.vcSoundTouch = new SoundTouch();
-            this.vcSoundTouch.pitch = 1;  // 1 = pitch değişikliği yok
+            this.vcSoundTouch.pitch = 1;
             this.vcSoundTouch.tempo = 1;
             this.vcSoundTouch.rate = 1;
 
-            // WebAudioBufferSource — SoundTouch'a input'u besler
             this.vcBufferSource = new WebAudioBufferSource();
-
-            // SimpleFilter — SoundTouch + bufferSource bağla
             this.vcFilter = new SimpleFilter(this.vcBufferSource, this.vcSoundTouch);
 
-            // ScriptProcessorNode — real-time ses işleme (4096 samples buffer)
             const BUFFER_SIZE = 4096;
             this.vcScriptProcessor = this.vcAudioContext.createScriptProcessor(BUFFER_SIZE, 2, 2);
 
-            // onaudioprocess — input → SoundTouch → output
             this.vcScriptProcessor.onaudioprocess = (e) => {
                 try {
-                    const inBuf = e.inputBuffer;
-                    const outBuf = e.outputBuffer;
-                    const leftIn = inBuf.getChannelData(0);
-                    const rightIn = inBuf.numberOfChannels > 1 ? inBuf.getChannelData(1) : leftIn;
-
-                    // SoundTouch'a input besle
-                    this.vcBufferSource.onaudioprocess(leftIn, rightIn);
-
-                    // SoundTouch'tan output al
+                    const leftIn = e.inputBuffer.getChannelData(0);
+                    const rightIn = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : leftIn;
+                    this.vcBufferSource.onaudioprocess(leftIn, rightIn);  // ← HATA: metod yok
                     const samples = new Float32Array(leftIn.length * 2);
                     this.vcFilter.extract(samples, leftIn.length);
-
-                    // De-interleave: stereo samples → ayrı kanallar
-                    const leftOut = outBuf.getChannelData(0);
-                    const rightOut = outBuf.numberOfChannels > 1 ? outBuf.getChannelData(1) : leftOut;
+                    const leftOut = e.outputBuffer.getChannelData(0);
+                    const rightOut = e.outputBuffer.numberOfChannels > 1 ? e.outputBuffer.getChannelData(1) : leftOut;
                     for (let i = 0; i < leftIn.length; i++) {
                         leftOut[i] = samples[i * 2];
                         rightOut[i] = samples[i * 2 + 1];
@@ -2851,14 +2817,10 @@ class VoiceChatApp {
                 }
             };
 
-            // MediaStreamAudioDestinationNode — WebRTC'ye gönderilecek yeni stream
             this.vcDestNode = this.vcAudioContext.createMediaStreamDestination();
-
-            // Monitor için gain node (lokal dinleme — varsayılan 0)
             this.vcMonitorGain = this.vcAudioContext.createGain();
             this.vcMonitorGain.gain.value = 0;
 
-            // Bağlantı zinciri:
             this.vcSourceNode.connect(this.vcScriptProcessor);
             this.vcScriptProcessor.connect(this.vcDestNode);
             this.vcScriptProcessor.connect(this.vcMonitorGain);
@@ -2866,54 +2828,19 @@ class VoiceChatApp {
 
             this.vcProcessedStream = this.vcDestNode.stream;
             this.vcActive = true;
-            console.log('[VC] Voice changer zinciri kuruldu — pitch=0 (pasif)');
             return this.vcProcessedStream;
         } catch (e) {
             console.error('[VC] Voice changer zinciri kurulamadı:', e);
-            return rawMicStream; // fallback — en azından çalışsın
+            return rawMicStream;
         }
     }
+    */
 
-    /** Voice changer hazır değilse lazy init et — admin VC butona bastığında çağrılır.
-     *  SoundTouchJS dynamic import ile initVoiceChangerChain içinde yüklenir. */
+    /** Voice changer hazır değilse lazy init et.
+     *  ⚠️ GECİCİ OLARAK DEVRE DIŞI: SoundTouchJS 0.1.30 API'si değişti. */
     async ensureVoiceChangerReady() {
-        if (this.vcActive) return true;
-
-        // rawMicStream var mı? (oda katıldığımızda sakladığımız ham mikrofon)
-        if (!this.rawMicStream) {
-            this.showToast('⚠️', 'Mikrofon hazır değil — önce odaya katıl.');
-            return false;
-        }
-
-        // VC chain'i init et (SoundTouchJS'i dynamic import ile yükleyecek)
-        const newStream = await this.initVoiceChangerChain(this.rawMicStream);
-        if (!this.vcActive) {
-            this.showToast('❌', 'Voice changer başlatılamadı. Sayfayı yenileyin.');
-            return false;
-        }
-
-        // Mevcut peer connection'larda audio track'i değiştir (replaceTrack)
-        const newAudioTrack = newStream.getAudioTracks()[0];
-        if (newAudioTrack) {
-            this.peers.forEach((peer) => {
-                try {
-                    const senders = peer.pc.getSenders();
-                    const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-                    if (audioSender) {
-                        audioSender.replaceTrack(newAudioTrack).catch(e => 
-                            console.warn('[VC] replaceTrack hatası:', e)
-                        );
-                    }
-                } catch (e) {
-                    console.warn('[VC] peer update hatası:', e);
-                }
-            });
-        }
-
-        // localStream'i güncelle — artık VC zincirinden geçen stream kullanılsun
-        this.localStream = newStream;
-        console.log('[VC] Voice changer lazy-init tamamlandı');
-        return true;
+        this.showToast('⚠️', 'Ses değiştirici geçici olarak devre dışı.');
+        return false;
     }
 
     /** AudioContext askıdaysa resume et — voice changer'i ve WebRTC ses akışını canlı tutar.

@@ -441,35 +441,13 @@
 
             <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1);">
 
-            <!-- === VOICE CHANGER (Admin only) === -->
+            <!-- === VOICE CHANGER (geçici olarak devre dışı) === -->
             <div class="settings-group">
                 <h4>🎭 Ses Değiştirici</h4>
-                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 10px;">Sadece adminler kullanabilir. Sesin anında değişir, karşı taraf duyar.</p>
-
-                <!-- Preset Butonları -->
-                <div class="vc-presets" id="vc-presets">
-                    <button class="vc-preset-btn active" data-preset="normal">🎤 Normal</button>
-                    <button class="vc-preset-btn" data-preset="deep_male">🧔 Kalın Erkek</button>
-                    <button class="vc-preset-btn" data-preset="thin_male">👨 İnce Erkek</button>
-                    <button class="vc-preset-btn" data-preset="female">👩 Kadın</button>
-                    <button class="vc-preset-btn" data-preset="child">👧 Çocuk</button>
-                    <button class="vc-preset-btn" data-preset="robot">🤖 Robot</button>
-                    <button class="vc-preset-btn" data-preset="alien">👽 Yabancı</button>
-                </div>
-
-                <!-- Custom Pitch Slider -->
-                <div class="vc-pitch-row">
-                    <span class="vc-pitch-label">Pitch:</span>
-                    <input type="range" id="vc-pitch-slider" class="vc-pitch-slider" min="-12" max="12" step="1" value="0">
-                    <span class="vc-pitch-value" id="vc-pitch-value">0</span>
-                    <span class="vc-pitch-unit">semitone</span>
-                </div>
-
-                <!-- Monitor (lokal test) -->
-                <div class="vc-monitor-row">
-                    <button id="vc-monitor-btn" class="vc-monitor-btn" title="Sesinizi lokal olarak dinleyin (karşı tarafa gitmez)">🔊 Kendi Sesimi Dinle</button>
-                    <span class="vc-status" id="vc-status">Pasif</span>
-                </div>
+                <p style="font-size: 11px; color: var(--text-secondary); margin: 0;">
+                    🔧 Geçici olarak devre dışı. SoundTouchJS kütüphanesinin API'si değişti, 
+                    yakında düzeltilecek.
+                </p>
             </div>
 
             <div class="modal-actions mt-4">
