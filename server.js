@@ -8,12 +8,79 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// JSON body parser — YouTube search endpoint için
+app.use(express.json());
+
+// === YOUTUBE API KEY (Render env var) ===
+// Set YOUTUBE_API_KEY in Render Dashboard → Environment
+// Boşsa search devre dışı kalır, ama URL yapıştırma çalışmaya devam eder
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
+
+
 // Statik dosyaları sun
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Sağlık kontrolü (Render.com için)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', users: connectedUsers.size });
+});
+
+// === YOUTUBE ARAMA ENDPOINT ===
+// Frontend bu endpoint'e POST yapıp arama sonuçlarını alır.
+// YOUTUBE_API_KEY yoksa 403 döner, frontend URL yapıştırmayı kullanır.
+app.post('/youtube-search', async (req, res) => {
+  try {
+    const query = (req.body && req.body.q) || (req.query && req.query.q) || '';
+    if (!query || query.length < 2) {
+      return res.status(400).json({ error: 'En az 2 karakter gerekli' });
+    }
+    if (!YOUTUBE_API_KEY) {
+      return res.status(403).json({
+        error: 'YOUTUBE_API_KEY ayarlı değil. URL yapıştırmayı kullanabilirsiniz.',
+        noApiKey: true
+      });
+    }
+    // YouTube Data API v3 — search
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
+    const https = require('https');
+    const data = await new Promise((resolve, reject) => {
+      https.get(url, (r) => {
+        let body = '';
+        r.on('data', (chunk) => body += chunk);
+        r.on('end', () => {
+          try { resolve(JSON.parse(body)); } catch (e) { reject(e); }
+        });
+      }).on('error', reject);
+    });
+
+    if (data.error) {
+      console.error('YouTube API hatası:', data.error.message);
+      return res.status(500).json({ error: 'YouTube API hatası: ' + (data.error.message || 'bilinmeyen') });
+    }
+
+    // Frontend için sadece gerekili alanları döndür
+    const items = (data.items || []).map(item => ({
+      videoId: item.id.videoId,
+      title: item.snippet.title,
+      channelTitle: item.snippet.channelTitle,
+      thumbnail: item.snippet.thumbnails && (item.snippet.thumbnails.medium || item.snippet.thumbnails.default)
+        ? (item.snippet.thumbnails.medium || item.snippet.thumbnails.default).url
+        : null,
+      publishedAt: item.snippet.publishedAt
+    }));
+    return res.json({ items });
+  } catch (err) {
+    console.error('YouTube search error:', err);
+    return res.status(500).json({ error: 'Sunucu hatası: ' + (err.message || 'bilinmeyen') });
+  }
+});
+
+// === CONFIG ENDPOINT — frontend YOUTUBE_API_KEY olup olmadığını kontrol etsin diye ===
+app.get('/config', (req, res) => {
+  res.json({
+    youtubeSearchEnabled: !!YOUTUBE_API_KEY,
+    version: '2.0.0'
+  });
 });
 
 // Oda ve kullanıcı yönetimi
@@ -190,26 +257,35 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        // === MÜZİK PLAYER RELAY ===
+        // === MÜZİK PLAYER RELAY (YOUTUBE) ===
         // DJ müzik başlattığında odadaki herkese haber ver
         case 'music-start': {
           const user = connectedUsers.get(userId);
           if (!user || !user.currentRoom) return;
           user.isSharingMusic = true;
-          user.musicTrackName = (message.trackName || 'Müzik').substring(0, 80);
+          user.musicTrackName = (message.trackName || 'Müzik').substring(0, 100);
+          // YouTube video ID'sini sakla — yeni katılanlara da iletmek için
+          user.musicVideoId = (message.youtubeVideoId || '').substring(0, 30);
           const room = rooms[user.currentRoom];
           if (!room) return;
           const payload = JSON.stringify({
             type: 'music-start',
             djId: userId,
             djName: user.username,
-            trackName: user.musicTrackName
+            trackName: user.musicTrackName,
+            youtubeVideoId: user.musicVideoId,
+            isPlaying: true,
+            currentTime: 0
           });
           room.users.forEach((u) => {
             if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
               u.ws.send(payload);
             }
           });
+          // Oda seviyesinde "şu an çalan DJ" bilgisini sakla — yeni katılanlara iletmek için
+          room.currentDjId = userId;
+          room.currentVideoId = user.musicVideoId;
+          room.currentTrackName = user.musicTrackName;
           break;
         }
 
@@ -219,9 +295,17 @@ wss.on('connection', (ws) => {
           if (!user) return;
           user.isSharingMusic = false;
           user.musicTrackName = '';
+          user.musicVideoId = '';
           if (user.currentRoom && rooms[user.currentRoom]) {
+            const room = rooms[user.currentRoom];
+            // Sadece bu kullanıcı şu anki DJ ise oda seviyesindeki state'i temizle
+            if (room.currentDjId === userId) {
+              room.currentDjId = null;
+              room.currentVideoId = '';
+              room.currentTrackName = '';
+            }
             const payload = JSON.stringify({ type: 'music-stop', djId: userId });
-            rooms[user.currentRoom].users.forEach((u) => {
+            room.users.forEach((u) => {
               if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
                 u.ws.send(payload);
               }
@@ -236,6 +320,8 @@ wss.on('connection', (ws) => {
           if (!user || !user.currentRoom) return;
           const room = rooms[user.currentRoom];
           if (!room) return;
+          // Sadece şu anki DJ'den gelen durum güncellemelerini ilet (çakışan DJ'ler için)
+          if (room.currentDjId !== userId) return;
           const payload = JSON.stringify({
             type: 'music-status',
             djId: userId,
@@ -328,6 +414,23 @@ wss.on('connection', (ws) => {
             roomId,
             existingUsers
           }));
+
+          // === YENİ KATILANA MEVCUT MÜZİK DURUMUNU BİLDİR ===
+          // Eğer odada şu an çalan bir DJ varsa, yeni katılan kullanıcıya da music-start gönder
+          if (rooms[roomId].currentDjId && rooms[roomId].currentVideoId) {
+            // DJ'yi bul
+            const djUser = connectedUsers.get(rooms[roomId].currentDjId);
+            const djName = djUser ? djUser.username : 'DJ';
+            ws.send(JSON.stringify({
+              type: 'music-start',
+              djId: rooms[roomId].currentDjId,
+              djName: djName,
+              trackName: rooms[roomId].currentTrackName || 'Müzik',
+              youtubeVideoId: rooms[roomId].currentVideoId,
+              isPlaying: true,
+              currentTime: 0
+            }));
+          }
 
           broadcastRoomUpdate();
           broadcastOnlineUsers();

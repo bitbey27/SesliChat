@@ -157,13 +157,11 @@ class VoiceChatApp {
         this.screenStream = null;
         this.cameraStream = null;
 
-        // === MÜZİK PLAYER ELEMENTLERİ ===
+        // === YOUTUBE MÜZİK PLAYER ELEMENTLERİ ===
         this.musicBtn = document.getElementById('music-btn');
         this.musicPanel = document.getElementById('music-panel');
-        this.musicFileInput = document.getElementById('music-file-input');
         this.musicUrlInput = document.getElementById('music-url-input');
         this.musicLoadUrlBtn = document.getElementById('music-load-url-btn');
-        this.musicAudio = document.getElementById('music-audio');           // DJ'nin yerel <audio> elementi
         this.musicPlayBtn = document.getElementById('music-play-btn');
         this.musicStopBtn = document.getElementById('music-stop-btn');
         this.musicTrackLabel = document.getElementById('music-track-label');
@@ -172,16 +170,27 @@ class VoiceChatApp {
         this.musicDuration = document.getElementById('music-duration');
         this.musicLocalVolume = document.getElementById('music-local-volume');
         this.musicLocalMuteBtn = document.getElementById('music-local-mute-btn');
+        this.ytSearchInput = document.getElementById('yt-search-input');
+        this.ytSearchBtn = document.getElementById('yt-search-btn');
+        this.ytSearchStatus = document.getElementById('yt-search-status');
+        this.ytSearchResults = document.getElementById('yt-search-results');
+        this.ytPlayerWrapper = document.getElementById('yt-player-wrapper');
+        this.ytPlayerDjContainer = document.getElementById('yt-player-dj');
 
         // Müzik durumu
         this.isSharingMusic = false;
-        this.musicStream = null;            // Müziği peer'lara gönderen MediaStream
-        this.musicAudioContext = null;      // Müziği yakalamak için AudioContext
-        this.musicSourceNode = null;
-        this.musicDestNode = null;
-        this.musicStatusInterval = null;
         this.isMusicLocallyMuted = false;
         this.pendingMusicSeek = null;
+        this.musicStatusInterval = null;
+        this.ytPlayer = null;             // DJ'nin YouTube IFrame player'ı
+        this.ytPlayerReady = false;
+        this.ytApiReady = false;           // API script yüklü mü?
+        this.ytPendingVideoId = null;      // Player hazır bekleyen video ID
+        this.currentVideoId = null;
+        this.currentTrackName = '';
+        this.youtubeSearchEnabled = false; // server config'ten gelecek
+        // Dinleyici tarafı — her DJ için bir player konteynırı
+        this.listenerPlayers = new Map(); // djId -> { wrapper, player, ready, videoHidden, userMuted }
     }
 
     initEventListeners() {
@@ -356,28 +365,42 @@ class VoiceChatApp {
             }
         });
 
-        // === MÜZİK PLAYER OLAYLARI ===
+        // === YOUTUBE MÜZİK PLAYER OLAYLARI ===
         if (this.musicBtn) {
             this.musicBtn.addEventListener('click', () => {
                 if (this.musicPanel) {
                     this.musicPanel.classList.toggle('hidden');
+                    // İlk açılışta YouTube API ready mi kontrol et
+                    if (!this.musicPanel.classList.contains('hidden')) {
+                        this.ensureYtPlayerReady();
+                    }
                 }
             });
         }
-        if (this.musicFileInput) {
-            this.musicFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    this.loadMusicFromFile(file);
-                }
+        // YouTube arama butonu
+        if (this.ytSearchBtn) {
+            this.ytSearchBtn.addEventListener('click', () => this.youtubeSearch());
+        }
+        if (this.ytSearchInput) {
+            this.ytSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.youtubeSearch();
             });
         }
+        // URL yapıştırma
         if (this.musicLoadUrlBtn) {
             this.musicLoadUrlBtn.addEventListener('click', () => {
                 const url = (this.musicUrlInput.value || '').trim();
                 if (url) {
-                    this.loadMusicFromUrl(url);
+                    const videoId = this.extractYouTubeId(url);
+                    if (videoId) {
+                        this.loadYouTubeVideo(videoId, url);
+                    } else {
+                        this.showToast('⚠️', 'Geçerli bir YouTube linki değil.');
+                    }
                 }
+            });
+            this.musicUrlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.musicLoadUrlBtn.click();
             });
         }
         if (this.musicPlayBtn) {
@@ -388,64 +411,62 @@ class VoiceChatApp {
         }
         if (this.musicProgress) {
             this.musicProgress.addEventListener('input', (e) => {
-                // DJ seeking — anlık değil, change'de uygula
                 this.pendingMusicSeek = parseFloat(e.target.value);
-                if (this.musicAudio && this.musicAudio.duration) {
-                    this.musicAudio.currentTime = this.pendingMusicSeek;
+                if (this.ytPlayer && this.ytPlayerReady) {
+                    this.ytPlayer.seekTo(this.pendingMusicSeek, true);
                     this.pendingMusicSeek = null;
                 }
             });
         }
         if (this.musicLocalVolume) {
             this.musicLocalVolume.addEventListener('input', (e) => {
-                const vol = parseFloat(e.target.value);
-                // Sadece DJ'nin kendi duyduğu ses seviyesini değiştir (peer'lara giden stream etkilenmez)
-                if (this.musicAudio) {
-                    this.musicAudio.volume = this.isMusicLocallyMuted ? 0 : vol;
+                const vol = parseInt(e.target.value, 10);
+                if (this.ytPlayer && this.ytPlayerReady) {
+                    this.ytPlayer.setVolume(this.isMusicLocallyMuted ? 0 : vol);
                 }
-                this.musicLocalVolume.dataset.value = vol;
             });
         }
         if (this.musicLocalMuteBtn) {
             this.musicLocalMuteBtn.addEventListener('click', () => {
                 this.isMusicLocallyMuted = !this.isMusicLocallyMuted;
-                if (this.musicAudio) {
-                    this.musicAudio.volume = this.isMusicLocallyMuted ? 0 : parseFloat(this.musicLocalVolume.value);
+                if (this.ytPlayer && this.ytPlayerReady) {
+                    if (this.isMusicLocallyMuted) this.ytPlayer.mute();
+                    else {
+                        this.ytPlayer.unMute();
+                        this.ytPlayer.setVolume(parseInt(this.musicLocalVolume.value, 10));
+                    }
                 }
                 this.musicLocalMuteBtn.textContent = this.isMusicLocallyMuted ? '🔇' : '🔊';
             });
         }
-        // Müzik audio elementi olayları
-        if (this.musicAudio) {
-            this.musicAudio.addEventListener('loadedmetadata', () => {
-                if (this.musicDuration) {
-                    this.musicDuration.textContent = this.formatTime(this.musicAudio.duration);
-                }
-                if (this.musicProgress) {
-                    this.musicProgress.max = Math.floor(this.musicAudio.duration || 0);
-                }
-            });
-            this.musicAudio.addEventListener('timeupdate', () => {
-                if (this.musicCurrentTime) {
-                    this.musicCurrentTime.textContent = this.formatTime(this.musicAudio.currentTime);
-                }
-                if (this.musicProgress && !this.pendingMusicSeek) {
-                    this.musicProgress.value = Math.floor(this.musicAudio.currentTime || 0);
-                }
-            });
-            this.musicAudio.addEventListener('ended', () => {
-                this.musicAudio.currentTime = 0;
-                this.sendMusicStatus(false, 0, this.musicAudio.duration);
-                if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
-            });
+
+        // === YOUTUBE IFRAME API HAZIR OLUNCA ===
+        // youtube/iframe_api script yüklenince window.onYouTubeIframeAPIReady çağrılır
+        // (Asenkron olarak yüklendiği için önceden tanımlayalım)
+        if (!window.onYouTubeIframeAPIReady) {
+            window.onYouTubeIframeAPIReady = () => {
+                if (window.app && window.app.onYtApiReady) window.app.onYtApiReady();
+            };
         }
+
+        // Sayfa açılır açılmaz /config çek — YouTube arama açık mı kapalı mı öğren
+        fetch('/config').then(r => r.json()).then(c => {
+            this.youtubeSearchEnabled = !!c.youtubeSearchEnabled;
+            if (this.ytSearchStatus) {
+                if (this.youtubeSearchEnabled) {
+                    this.ytSearchStatus.textContent = '🔍 Arama hazır';
+                    this.ytSearchStatus.style.color = 'var(--green)';
+                } else {
+                    this.ytSearchStatus.textContent = '⚠️ Arama kapalı. Render Dashboard\'tan YOUTUBE_API_KEY ekleyin. Şimdilik YouTube linki yapıştırabilirsiniz.';
+                    this.ytSearchStatus.style.color = 'var(--yellow)';
+                }
+            }
+        }).catch(() => {});
 
         // === SAYFA YENİLEME OTOMATİK GİRİŞ ===
         // Eğer kullanıcı adı kayıtlıysa otomatik giriş yap
         const savedUsername = localStorage.getItem('username');
         if (savedUsername) {
-            // Input'u doldur ve login() fonksiyonunu çağır
-            // Kısa bir gecikme ile, DOM tamamen hazır olsun
             setTimeout(() => {
                 if (this.usernameInput) this.usernameInput.value = savedUsername;
                 this.login();
@@ -934,6 +955,13 @@ class VoiceChatApp {
             this.stopMusicShare();
         }
 
+        // === DİNLEYİCİ PLAYER'LARI DA TEMİZLE ===
+        // Tüm listener YouTube player'larını kaldır
+        this.listenerPlayers.forEach((data, djId) => {
+            try { if (data.player && data.player.destroy) data.player.destroy(); } catch (_) {}
+        });
+        this.listenerPlayers.clear();
+
         // Tüm peer bağlantılarını kapat
         this.peers.forEach((peer, peerId) => {
             try { peer.pc.close(); } catch (_) {}
@@ -942,12 +970,6 @@ class VoiceChatApp {
                 try { peer.audioEl.srcObject = null; } catch (_) {}
                 try { peer.audioEl.pause(); } catch (_) {}
                 try { peer.audioEl.remove(); } catch (_) {}
-            }
-            // Müzik elementini de temizle
-            if (peer.musicEl) {
-                try { peer.musicEl.srcObject = null; } catch (_) {}
-                try { peer.musicEl.pause(); } catch (_) {}
-                try { peer.musicEl.remove(); } catch (_) {}
             }
         });
         this.peers.clear();
@@ -998,15 +1020,17 @@ class VoiceChatApp {
                 try { peer.audioEl.pause(); } catch (_) {}
                 try { peer.audioEl.remove(); } catch (_) {}
             }
-            // === MÜZİK PLAYER === - müzik elementini de temizle
-            if (peer.musicEl) {
-                try { peer.musicEl.srcObject = null; } catch (_) {}
-                try { peer.musicEl.pause(); } catch (_) {}
-                try { peer.musicEl.remove(); } catch (_) {}
-            }
             this.peers.delete(message.userId);
         }
-        // UI'daki müzik kontrollerini de kaldır
+        // === YOUTUBE MÜZİK === - Bu DJ için listener player'ı da temizle
+        // (Eğer bu kullanıcı DJ ise ve biz onu dinliyorduysak)
+        const ldata = this.listenerPlayers.get(message.userId);
+        if (ldata) {
+            try { if (ldata.player && ldata.player.destroy) ldata.player.destroy(); } catch (_) {}
+            if (ldata.wrapper && ldata.wrapper.parentNode) ldata.wrapper.parentNode.removeChild(ldata.wrapper);
+            this.listenerPlayers.delete(message.userId);
+        }
+        // UI'daki müzik kutusu kalmışsa onu da kaldır
         const musicControls = document.getElementById(`music-controls-${message.userId}`);
         if (musicControls) musicControls.remove();
         this.showToast('👋', `${message.username} ayrıldı.`);
@@ -1076,55 +1100,31 @@ class VoiceChatApp {
                 return;
             }
 
-            // === AUDIO TRACK ===
-            // İlk audio track = sesli konuşma (voice)
-            // İkinci audio track = müzik (eğer DJ müzik paylaşıyorsa)
-            // Peer datasını al
+            // === AUDIO TRACK (voice only) ===
+            // Müzik artık YouTube IFrame Player'dan geliyor (peer-to-peer audio track değil).
+            // Bu yüzden bu kısım sadece voice track için.
             let peerData = this.peers.get(peerId);
             if (!peerData) {
-                peerData = { pc, audioEl: null, musicEl: null, remoteStream: null, isSharingMusic: false, musicTrackName: '' };
+                peerData = { pc, audioEl: null, remoteStream: null };
                 this.peers.set(peerId, peerData);
             }
 
-            // Eğer peer müzik paylaşıyorsa VE zaten bir voice audio elementi varsa → yeni track müziktir
-            const isMusicTrack = peerData.isSharingMusic && peerData.audioEl && peerData.audioEl.srcObject;
-
-            if (isMusicTrack) {
-                // Müzik track — ayrı bir audio elementi oluştur
-                let musicEl = peerData.musicEl;
-                if (!musicEl) {
-                    musicEl = document.createElement('audio');
-                    musicEl.id = `music-${peerId}`;
-                    musicEl.autoplay = true;
-                    musicEl.playsInline = true;
-                    // Müzik için kaydedilmiş ses seviyesini uygula (default 0.7)
-                    const musicVol = this.peerMusicVolumes.has(peerId) ? this.peerMusicVolumes.get(peerId) : 0.7;
-                    musicEl.volume = musicVol;
-                    document.body.appendChild(musicEl);
-                    peerData.musicEl = musicEl;
-                }
-                musicEl.srcObject = stream;
-                // === AUDIO SYNC FIX === - tarayıcı autoplay politikası nedeniyle .play() çağır
-                this.forcePlayAudio(musicEl);
-            } else {
-                // Voice track — mevcut davranış
-                let audioEl = peerData.audioEl;
-                if (!audioEl) {
-                    audioEl = document.createElement('audio');
-                    audioEl.id = `audio-${peerId}`;
-                    audioEl.autoplay = true;
-                    audioEl.playsInline = true;
-                    // Kaydedilmiş ses seviyesini uygula
-                    const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
-                    audioEl.volume = volValue;
-                    document.body.appendChild(audioEl);
-                    peerData.audioEl = audioEl;
-                }
-                audioEl.srcObject = stream;
-                // === AUDIO SYNC FIX === - tarayıcı autoplay politikası nedeniyle .play() çağır
-                this.forcePlayAudio(audioEl);
-                peerData.remoteStream = stream;
+            let audioEl = peerData.audioEl;
+            if (!audioEl) {
+                audioEl = document.createElement('audio');
+                audioEl.id = `audio-${peerId}`;
+                audioEl.autoplay = true;
+                audioEl.playsInline = true;
+                // Kaydedilmiş ses seviyesini uygula
+                const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
+                audioEl.volume = volValue;
+                document.body.appendChild(audioEl);
+                peerData.audioEl = audioEl;
             }
+            audioEl.srcObject = stream;
+            // === AUDIO SYNC FIX === - tarayıcı autoplay politikası nedeniyle .play() çağır
+            this.forcePlayAudio(audioEl);
+            peerData.remoteStream = stream;
         };
 
         pc.onconnectionstatechange = () => {
@@ -1132,22 +1132,16 @@ class VoiceChatApp {
             // === AUDIO SYNC FIX === - bağlantı "failed" olursa peer'ı temizle, "connected" olursa audio'yu yeniden çal
             if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
                 const pd = this.peers.get(peerId);
-                if (pd) {
-                    if (pd.audioEl) { try { pd.audioEl.pause(); } catch (_) {} }
-                    if (pd.musicEl) { try { pd.musicEl.pause(); } catch (_) {} }
-                }
+                if (pd && pd.audioEl) { try { pd.audioEl.pause(); } catch (_) {} }
             } else if (pc.connectionState === 'connected') {
                 const pd = this.peers.get(peerId);
-                if (pd) {
-                    if (pd.audioEl) this.forcePlayAudio(pd.audioEl);
-                    if (pd.musicEl) this.forcePlayAudio(pd.musicEl);
-                }
+                if (pd && pd.audioEl) this.forcePlayAudio(pd.audioEl);
             }
         };
 
         // Peer datasını başlat (yoksa)
         if (!this.peers.has(peerId)) {
-            this.peers.set(peerId, { pc, audioEl: null, musicEl: null, remoteStream: null, isSharingMusic: false, musicTrackName: '' });
+            this.peers.set(peerId, { pc, audioEl: null, remoteStream: null });
         }
 
         // Teklif oluştur (initiator ise)
@@ -1871,156 +1865,292 @@ class VoiceChatApp {
     }
 
     // =========================================
-    // MÜZİK PLAYER — DJ TARAFI
+    // YOUTUBE MÜZİK PLAYER — YARDIMCI FONKSİYONLAR
     // =========================================
-    loadMusicFromFile(file) {
-        if (!file) return;
-        if (file.size > 50 * 1024 * 1024) {
-            this.showToast('⚠️', 'Dosya çok büyük (maks 50MB).');
-            return;
-        }
-        const url = URL.createObjectURL(file);
-        this.loadMusicFromUrl(url, file.name);
+    /** YouTube URL'inden video ID'sini ayıkla */
+    extractYouTubeId(url) {
+        if (!url) return null;
+        // youtu.be/VIDEOID
+        let m = url.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/);
+        if (m) return m[1];
+        // youtube.com/watch?v=VIDEOID
+        m = url.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+        if (m) return m[1];
+        // youtube.com/embed/VIDEOID
+        m = url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/);
+        if (m) return m[1];
+        // sadece ID (11 karakter)
+        if (/^[A-Za-z0-9_-]{11}$/.test(url)) return url;
+        return null;
     }
 
-    loadMusicFromUrl(url, trackName) {
-        if (!url) return;
-        // Önce eski müziği tamamen durdur
-        this.stopMusicShare();
+    formatTime(seconds) {
+        if (!seconds || isNaN(seconds) || seconds < 0) return '0:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
 
-        if (!this.musicAudio) return;
-        this.musicAudio.crossOrigin = 'anonymous';
-        this.musicAudio.src = url;
-        this.musicAudio.volume = this.isMusicLocallyMuted ? 0 : parseFloat(this.musicLocalVolume.value || 0.7);
-        this.musicTrackLabel.textContent = trackName || url.split('/').pop() || 'Müzik';
-
-        // Yüklenince metadata'yı göster ve hazır hale getir
-        this.musicAudio.addEventListener('loadedmetadata', () => {
-            if (this.musicDuration) this.musicDuration.textContent = this.formatTime(this.musicAudio.duration);
-            if (this.musicProgress) {
-                this.musicProgress.max = Math.floor(this.musicAudio.duration || 0);
-                this.musicProgress.value = 0;
+    // =========================================
+    // YOUTUBE IFRAME API
+    // =========================================
+    /** youtube/iframe_api script'i yüklendiğinde çağrılır */
+    onYtApiReady() {
+        this.ytApiReady = true;
+        // Eğer DJ player'ı bekleyen bir video varsa, şimdi yükle
+        if (this.ytPendingVideoId) {
+            this.createDjPlayer(this.ytPendingVideoId);
+            this.ytPendingVideoId = null;
+        }
+        // Listener player'lar için de bekleyen DJ varsa
+        this.listenerPlayers.forEach((data, djId) => {
+            if (data.pendingVideoId && !data.player) {
+                this.createListenerPlayer(djId, data.pendingVideoId);
             }
-        }, { once: true });
-
-        this.showToast('🎵', 'Müzik yüklendi. "Çal" ile başlatın.');
+        });
     }
 
-    async toggleMusicPlay() {
-        if (!this.musicAudio || !this.musicAudio.src) {
-            this.showToast('⚠️', 'Önce bir müzik yükle.');
+    /** DJ player'ı oluştur (lazy — butona basınca veya video yüklenince) */
+    ensureYtPlayerReady() {
+        if (this.ytPlayer || !this.ytApiReady) return;
+        if (!this.ytPlayerDjContainer) return;
+        // Boş player oluştur, video yüklenmemiş
+        try {
+            // eslint-disable-next-line no-undef
+            this.ytPlayer = new YT.Player(this.ytPlayerDjContainer, {
+                height: '200',
+                width: '356',
+                videoId: '',
+                playerVars: {
+                    autoplay: 0,
+                    controls: 1,
+                    rel: 0,
+                    modestbranding: 1,
+                    playsinline: 1
+                },
+                events: {
+                    onReady: () => { this.ytPlayerReady = true; },
+                    onStateChange: (e) => this.onDjPlayerStateChange(e)
+                }
+            });
+        } catch (e) { console.warn('YT player oluşturulamadı:', e); }
+    }
+
+    /** DJ player durumu değişti — oynatıyor/durdu/bitti */
+    onDjPlayerStateChange(event) {
+        // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
+        if (event.data === 1) {
+            // Çalmaya başladı → paylaşımı başlat
+            if (!this.isSharingMusic) {
+                this.startMusicShare();
+            } else {
+                // Sadece status güncelle
+                this.sendMusicStatus(true, this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
+            }
+            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '⏸ Duraklat';
+        } else if (event.data === 2) {
+            // Durdu
+            if (this.isSharingMusic && this.ytPlayer) {
+                this.sendMusicStatus(false, this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
+            }
+            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶ Çal & Paylaş';
+        } else if (event.data === 0) {
+            // Bitti → paylaşımı durdur
+            this.stopMusicShare();
+        }
+        // Progress bar güncelle (interval zaten çalışıyor ama burada da update yapalım)
+        this.updateDjProgressUI();
+    }
+
+    updateDjProgressUI() {
+        if (!this.ytPlayer || !this.ytPlayerReady) return;
+        try {
+            const cur = this.ytPlayer.getCurrentTime() || 0;
+            const dur = this.ytPlayer.getDuration() || 0;
+            if (this.musicCurrentTime) this.musicCurrentTime.textContent = this.formatTime(cur);
+            if (this.musicDuration) this.musicDuration.textContent = this.formatTime(dur);
+            if (this.musicProgress && !this.pendingMusicSeek) {
+                this.musicProgress.max = Math.floor(dur);
+                this.musicProgress.value = Math.floor(cur);
+            }
+        } catch (_) {}
+    }
+
+    // =========================================
+    // YOUTUBE ARAMA
+    // =========================================
+    async youtubeSearch() {
+        const q = (this.ytSearchInput.value || '').trim();
+        if (!q) return;
+        if (!this.youtubeSearchEnabled) {
+            this.showToast('⚠️', 'Arama kapalı. Render Dashboard\'tan YOUTUBE_API_KEY ekleyin veya link yapıştırın.');
             return;
         }
-        if (this.musicAudio.paused) {
-            await this.startMusicShare();
-        } else {
-            // Duraklat — sadece DJ'nin çalmayı durdurması; peer'lara haber ver
-            this.musicAudio.pause();
-            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
-            this.sendMusicStatus(false, this.musicAudio.currentTime, this.musicAudio.duration);
+        if (this.ytSearchStatus) {
+            this.ytSearchStatus.textContent = '🔍 Aranıyor...';
+            this.ytSearchStatus.style.color = 'var(--text-secondary)';
+        }
+        try {
+            const res = await fetch('/youtube-search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ q })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (this.ytSearchStatus) {
+                    this.ytSearchStatus.textContent = '❌ ' + (data.error || 'Arama hatası');
+                    this.ytSearchStatus.style.color = 'var(--red)';
+                }
+                return;
+            }
+            this.renderYoutubeResults(data.items || []);
+            if (this.ytSearchStatus) {
+                this.ytSearchStatus.textContent = `${(data.items || []).length} sonuç`;
+                this.ytSearchStatus.style.color = 'var(--text-secondary)';
+            }
+        } catch (e) {
+            if (this.ytSearchStatus) {
+                this.ytSearchStatus.textContent = '❌ Ağ hatası';
+                this.ytSearchStatus.style.color = 'var(--red)';
+            }
         }
     }
 
-    async startMusicShare() {
-        if (!this.musicAudio || !this.musicAudio.src) return;
+    renderYoutubeResults(items) {
+        if (!this.ytSearchResults) return;
+        this.ytSearchResults.innerHTML = '';
+        if (!items.length) {
+            this.ytSearchResults.innerHTML = '<div class="yt-no-results">Sonuç yok.</div>';
+            return;
+        }
+        items.forEach(item => {
+            if (!item.videoId) return;
+            const el = document.createElement('div');
+            el.className = 'yt-result-item';
+            el.innerHTML = `
+                ${item.thumbnail ? `<img src="${this.escapeHtml(item.thumbnail)}" alt="" class="yt-thumb">` : ''}
+                <div class="yt-info">
+                    <div class="yt-title">${this.escapeHtml(item.title || 'Başlıksız')}</div>
+                    <div class="yt-channel">${this.escapeHtml(item.channelTitle || '')}</div>
+                </div>
+            `;
+            el.addEventListener('click', () => {
+                this.loadYouTubeVideo(item.videoId, item.title);
+                // Seçili sonucu işaretle
+                this.ytSearchResults.querySelectorAll('.yt-result-item').forEach(x => x.classList.remove('selected'));
+                el.classList.add('selected');
+            });
+            this.ytSearchResults.appendChild(el);
+        });
+    }
+
+    /** Bir YouTube videosu yükle (DJ tarafı) — link yapıştırma veya arama sonucu seçme */
+    loadYouTubeVideo(videoId, title) {
+        if (!videoId) return;
+        this.currentVideoId = videoId;
+        this.currentTrackName = title || `YouTube: ${videoId}`;
+        if (this.musicTrackLabel) this.musicTrackLabel.textContent = this.currentTrackName;
+
+        // Önce eski paylaşımı durdur (yeni video seçildi)
+        if (this.isSharingMusic) {
+            this.stopMusicShare();
+        }
+
+        // Player'ı hazırla ve videoyu yükle
+        this.ensureYtPlayerReady();
+        if (this.ytApiReady && this.ytPlayer) {
+            // Player zaten oluşturulmuş, yeni video yükle
+            this.ytPlayer.loadVideoById(videoId);
+            // Müzik panelinde player wrapper'ı göster
+            if (this.ytPlayerWrapper) this.ytPlayerWrapper.classList.remove('hidden');
+        } else {
+            // API hazır değil, bekle
+            this.ytPendingVideoId = videoId;
+            if (this.ytPlayerWrapper) this.ytPlayerWrapper.classList.remove('hidden');
+        }
+        this.showToast('🎵', 'Video yüklendi. "Çal & Paylaş" ile başlat.');
+    }
+
+    // =========================================
+    // MÜZİK PAYLAŞIMI — DJ TARAFI
+    // =========================================
+    async toggleMusicPlay() {
+        if (!this.currentVideoId) {
+            this.showToast('⚠️', 'Önce bir video yükle (ara veya link yapıştır).');
+            return;
+        }
+        if (!this.ytPlayer || !this.ytPlayerReady) {
+            // Player henüz hazır değil — oluştur ve video yükle
+            this.ensureYtPlayerReady();
+            if (this.ytApiReady && this.ytPlayer) {
+                this.ytPlayer.loadVideoById(this.currentVideoId);
+            } else {
+                this.ytPendingVideoId = this.currentVideoId;
+                this.showToast('⏳', 'Player yükleniyor, lütfen bekleyin...');
+            }
+            return;
+        }
+        // Player hazır — oynat/duraklat
+        const state = this.ytPlayer.getPlayerState();
+        if (state === 1) {
+            // Çalıyor → duraklat
+            this.ytPlayer.pauseVideo();
+        } else {
+            // Duraklatılmış/başlamamış → oynat
+            this.ytPlayer.playVideo();
+        }
+    }
+
+    /** DJ müziği çalmaya başladı → odadakilere "music-start" + videoId gönder */
+    startMusicShare() {
+        if (!this.currentVideoId) return;
         if (!this.currentRoom) {
             this.showToast('⚠️', 'Önce bir sesli odaya katıl.');
             return;
         }
+        this.isSharingMusic = true;
+        if (this.musicPlayBtn) this.musicPlayBtn.textContent = '⏸ Duraklat';
 
-        try {
-            // AudioContext'i hazırla (müzik yakalama)
-            if (!this.musicAudioContext) {
-                this.musicAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (this.musicAudioContext.state === 'suspended') {
-                await this.musicAudioContext.resume();
-            }
-
-            // MediaElementSource — sadece 1 kez oluşturulabilir
-            if (!this.musicSourceNode) {
-                this.musicSourceNode = this.musicAudioContext.createMediaElementSource(this.musicAudio);
-                this.musicDestNode = this.musicAudioContext.createMediaStreamDestination();
-                // Source → hem hedefe (peer'lara) hem de hoparlöre (DJ'nin duyması için)
-                this.musicSourceNode.connect(this.musicDestNode);
-                this.musicSourceNode.connect(this.musicAudioContext.destination);
-            }
-            this.musicStream = this.musicDestNode.stream;
-
-            // Müzik track'i tüm mevcut peer'lara ekle
-            const musicTrack = this.musicStream.getAudioTracks()[0];
-            this.peers.forEach((peer) => {
-                if (peer.musicSender) {
-                    // Zaten eklenmiş, atla
-                    return;
-                }
-                try {
-                    const sender = peer.pc.addTrack(musicTrack, this.musicStream);
-                    peer.musicSender = sender;
-                } catch (e) {
-                    console.warn('Müzik track eklenemedi:', e);
-                }
-            });
-
-            // Müziği çal
-            await this.musicAudio.play();
-            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '⏸';
-
-            // Sunucuya müzik başladı bildirimi gönder (server odadakilere 'music-start' yayınlar)
-            this.isSharingMusic = true;
+        // Server'a music-start gönder (server odadakilere yayar)
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({
                 type: 'music-start',
-                trackName: this.musicTrackLabel.textContent || 'Müzik'
+                trackName: this.currentTrackName,
+                youtubeVideoId: this.currentVideoId
             }));
-
-            // Periyodik olarak durum bilgisi gönder (süre ilerlemesi için)
-            if (this.musicStatusInterval) clearInterval(this.musicStatusInterval);
-            this.musicStatusInterval = setInterval(() => {
-                if (this.isSharingMusic && this.musicAudio && !this.musicAudio.paused) {
-                    this.sendMusicStatus(true, this.musicAudio.currentTime, this.musicAudio.duration);
-                }
-            }, 1000);
-
-            this.showToast('🎵', 'Müzik paylaşıma başladı!');
-        } catch (err) {
-            console.error('Müzik başlatma hatası:', err);
-            this.showToast('❌', 'Müzik başlatılamadı: ' + (err.message || 'bilinmeyen hata'));
         }
+
+        // Periyodik status gönder (süre ilerlemesi)
+        if (this.musicStatusInterval) clearInterval(this.musicStatusInterval);
+        this.musicStatusInterval = setInterval(() => {
+            if (this.isSharingMusic && this.ytPlayer && this.ytPlayerReady) {
+                const state = this.ytPlayer.getPlayerState();
+                this.sendMusicStatus(state === 1, this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
+                this.updateDjProgressUI();
+            }
+        }, 1000);
+
+        this.showToast('🎵', 'Müzik paylaşıma başladı!');
     }
 
     stopMusicShare() {
         if (!this.isSharingMusic) {
-            // Sadece yerel audio'yu durdur yeter
-            if (this.musicAudio) {
-                try { this.musicAudio.pause(); } catch (_) {}
+            // Sadece player'ı durdur
+            if (this.ytPlayer && this.ytPlayerReady) {
+                try { this.ytPlayer.pauseVideo(); } catch (_) {}
             }
-            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
+            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶ Çal & Paylaş';
             return;
         }
         this.isSharingMusic = false;
-        if (this.musicAudio) {
-            try { this.musicAudio.pause(); } catch (_) {}
-            try { this.musicAudio.currentTime = 0; } catch (_) {}
+        if (this.ytPlayer && this.ytPlayerReady) {
+            try { this.ytPlayer.pauseVideo(); } catch (_) {}
         }
-        if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
-
-        // Peer'lardan müzik track'ini çıkar
-        this.peers.forEach((peer) => {
-            if (peer.musicSender) {
-                try {
-                    peer.pc.removeTrack(peer.musicSender);
-                } catch (e) {
-                    console.warn('Müzik track çıkarılamadı:', e);
-                }
-                peer.musicSender = null;
-            }
-        });
-
-        // Sunucuya haber ver
+        if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶ Çal & Paylaş';
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({ type: 'music-stop' }));
         }
-
         if (this.musicStatusInterval) {
             clearInterval(this.musicStatusInterval);
             this.musicStatusInterval = null;
@@ -2033,98 +2163,113 @@ class VoiceChatApp {
         if (!this.isSharingMusic) return;
         this.ws.send(JSON.stringify({
             type: 'music-status',
-            isPlaying: isPlaying,
+            isPlaying: !!isPlaying,
             currentTime: currentTime || 0,
             duration: duration || 0
         }));
     }
 
-    formatTime(seconds) {
-        if (!seconds || isNaN(seconds) || seconds < 0) return '0:00';
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-
     // =========================================
     // MÜZİK PLAYER — DİNLEYİCİ TARAFI
     // =========================================
-    // Server'dan 'music-start' geldi: bir DJ müzik paylaşıyor
+    /** Server'dan 'music-start' geldi: bir DJ video paylaşıyor */
     onMusicStartFromPeer(message) {
-        const peer = this.peers.get(message.djId);
-        if (peer) {
-            peer.isSharingMusic = true;
-            peer.musicTrackName = message.trackName || 'Müzik';
-        } else {
-            // Henüz peer yoksa (yeni DJ katıldı ve hemen müzik başlattı)
-            // Bir sonraki ontrack eventinde kullanılmak üzere bekleyen bir state tut
-            this.pendingMusicDJs = this.pendingMusicDJs || new Map();
-            this.pendingMusicDJs.set(message.djId, { trackName: message.trackName || 'Müzik', djName: message.djName });
+        const djId = message.djId;
+        const djName = message.djName || 'DJ';
+        const trackName = message.trackName || 'Müzik';
+        const videoId = message.youtubeVideoId || '';
+        if (!videoId) {
+            // Eski tip mesaj (videoId yok) — yok say
+            return;
         }
-        this.renderMusicControlsForPeer(message.djId, message.djName, message.trackName);
-        this.showToast('🎵', `${message.djName} müzik çalmaya başladı: ${message.trackName}`);
+        // Listener player'ı oluştur veya mevcut videoyu güncelle
+        this.renderListenerMusicBox(djId, djName, trackName, videoId);
+        this.showToast('🎵', `${djName} müzik açtı: ${trackName}`);
     }
 
     onMusicStopFromPeer(message) {
-        const peer = this.peers.get(message.djId);
-        if (peer) {
-            peer.isSharingMusic = false;
-            peer.musicTrackName = '';
-            if (peer.musicEl) {
-                try { peer.musicEl.srcObject = null; } catch (_) {}
-                try { peer.musicEl.pause(); } catch (_) {}
-                try { peer.musicEl.remove(); } catch (_) {}
-                peer.musicEl = null;
-            }
+        const djId = message.djId;
+        // Listener player'ı kaldır
+        const data = this.listenerPlayers.get(djId);
+        if (data) {
+            try { if (data.player && data.player.destroy) data.player.destroy(); } catch (_) {}
+            if (data.wrapper && data.wrapper.parentNode) data.wrapper.parentNode.removeChild(data.wrapper);
+            this.listenerPlayers.delete(djId);
         }
-        // UI'daki müzik kontrollerini kaldır
-        const controls = document.getElementById(`music-controls-${message.djId}`);
+        // UI'da kutu kalmışsa onu da kaldır
+        const controls = document.getElementById(`music-controls-${djId}`);
         if (controls) controls.remove();
-        const toast = this.showToast('⏹️', 'Müzik durduruldu.');
+        this.showToast('⏹️', 'Müzik durduruldu.');
     }
 
     onMusicStatusFromPeer(message) {
-        // Dinleyici tarafında DJ'nin çalma durumu UI'sını güncelle
-        const controls = document.getElementById(`music-controls-${message.djId}`);
-        if (controls) {
-            const playIcon = controls.querySelector('.music-dj-play-icon');
-            if (playIcon) playIcon.textContent = message.isPlaying ? '🎵' : '⏸';
-            const timeEl = controls.querySelector('.music-dj-time');
-            if (timeEl) {
-                timeEl.textContent = `${this.formatTime(message.currentTime)} / ${this.formatTime(message.duration)}`;
+        const djId = message.djId;
+        const data = this.listenerPlayers.get(djId);
+        if (!data || !data.player || !data.ready) return;
+        // Süre senkronu — 2 saniyeden fazla sapma varsa seek yap
+        try {
+            const localTime = data.player.getCurrentTime() || 0;
+            const remoteTime = message.currentTime || 0;
+            const drift = Math.abs(localTime - remoteTime);
+            if (drift > 2) {
+                data.player.seekTo(remoteTime, true);
             }
-            const progress = controls.querySelector('.music-dj-progress');
-            if (progress) {
-                progress.value = message.currentTime || 0;
-                progress.max = message.duration || 0;
+            // Play/pause durumunu senkronize et
+            if (message.isPlaying) {
+                const state = data.player.getPlayerState();
+                if (state !== 1) data.player.playVideo();
+            } else {
+                const state = data.player.getPlayerState();
+                if (state === 1) data.player.pauseVideo();
             }
-        }
+            // UI güncelle
+            const box = document.getElementById(`music-controls-${djId}`);
+            if (box) {
+                const playIcon = box.querySelector('.music-dj-play-icon');
+                if (playIcon) playIcon.textContent = message.isPlaying ? '🎵' : '⏸';
+                const timeEl = box.querySelector('.music-dj-time');
+                if (timeEl) {
+                    timeEl.textContent = `${this.formatTime(message.currentTime)} / ${this.formatTime(message.duration)}`;
+                }
+                const progress = box.querySelector('.music-dj-progress');
+                if (progress) {
+                    progress.max = Math.floor(message.duration || 0);
+                    progress.value = Math.floor(message.currentTime || 0);
+                }
+            }
+        } catch (_) {}
     }
 
-    // Dinleyici tarafında her DJ için bir "müzik kutusu" oluştur (volume + mute)
-    renderMusicControlsForPeer(djId, djName, trackName) {
-        // Eğer zaten varsa, sadece track adını güncelle
-        let controls = document.getElementById(`music-controls-${djId}`);
-        if (controls) {
-            const t = controls.querySelector('.music-dj-track');
-            if (t && trackName) t.textContent = trackName;
+    /** Dinleyici tarafında bir DJ için müzik kutusu oluştur */
+    renderListenerMusicBox(djId, djName, trackName, videoId) {
+        // Eğer zaten varsa, sadece videoyu güncelle
+        let existing = this.listenerPlayers.get(djId);
+        if (existing && existing.ready && existing.player) {
+            try { existing.player.loadVideoById(videoId); } catch (_) {}
+            // Track adı güncelle
+            const box = document.getElementById(`music-controls-${djId}`);
+            if (box) {
+                const t = box.querySelector('.music-dj-track');
+                if (t && trackName) t.textContent = trackName;
+            }
             return;
         }
 
-        // Konteynır: voice-participants üstüne veya chat-panel üstüne ekle
-        // En güzeli voice-participants içinde DJ'nin kartının yanına eklemek olurdu
-        // ama şimdilik ayrı bir kutu olarak sesli görünümün üstüne ekleyelim
         const container = document.querySelector('.voice-body') || this.voiceParticipants.parentNode;
-        controls = document.createElement('div');
-        controls.id = `music-controls-${djId}`;
-        controls.className = 'music-listener-controls';
-        controls.innerHTML = `
+        const box = document.createElement('div');
+        box.id = `music-controls-${djId}`;
+        box.className = 'music-listener-controls';
+        box.innerHTML = `
             <div class="music-dj-info">
                 <span class="music-dj-play-icon">🎵</span>
                 <div>
                     <div class="music-dj-title">🎧 ${this.escapeHtml(djName || 'DJ')} çalıyor</div>
                     <div class="music-dj-track">${this.escapeHtml(trackName || 'Müzik')}</div>
                 </div>
+                <button class="music-dj-hide-video-btn" title="Video klibini gizle (sadece müzik dinle)">🎬 Klibi Gizle</button>
+            </div>
+            <div class="yt-listener-player-wrapper">
+                <div id="yt-listener-${djId}"></div>
             </div>
             <div class="music-dj-progress-row">
                 <input type="range" class="music-dj-progress" min="0" max="100" value="0" disabled>
@@ -2132,41 +2277,122 @@ class VoiceChatApp {
             </div>
             <div class="music-dj-controls">
                 <span class="volume-icon music-dj-vol-icon">🔊</span>
-                <input type="range" class="music-dj-volume" min="0" max="1" step="0.05" value="0.7">
-                <button class="music-dj-mute-btn" title="Müziği Sustur (sadece sizin için)">🔇</button>
+                <input type="range" class="music-dj-volume" min="0" max="100" step="1" value="70">
+                <button class="music-dj-mute-btn" title="Müziği Sustur (sadece sizin için)">🔊</button>
             </div>
         `;
-        container.appendChild(controls);
+        container.appendChild(box);
 
-        // Volume slider — sadece bu DJ'nin müziğini etkiler
-        const volSlider = controls.querySelector('.music-dj-volume');
-        const volIcon = controls.querySelector('.music-dj-vol-icon');
-        const muteBtn = controls.querySelector('.music-dj-mute-btn');
+        // Volume slider — bu DJ'nin YouTube player sesini etkiler
+        const volSlider = box.querySelector('.music-dj-volume');
+        const volIcon = box.querySelector('.music-dj-vol-icon');
+        const muteBtn = box.querySelector('.music-dj-mute-btn');
+        const hideVideoBtn = box.querySelector('.music-dj-hide-video-btn');
+        const playerWrapper = box.querySelector('.yt-listener-player-wrapper');
         let userMuted = false;
+        let videoHidden = false;
+
+        const applyVolume = (vol) => {
+            const data = this.listenerPlayers.get(djId);
+            if (data && data.player && data.ready) {
+                if (userMuted) {
+                    data.player.mute();
+                } else {
+                    data.player.unMute();
+                    data.player.setVolume(vol);
+                }
+            }
+        };
 
         volSlider.addEventListener('input', (e) => {
-            const v = parseFloat(e.target.value);
-            this.peerMusicVolumes.set(djId, v);
-            const peer = this.peers.get(djId);
-            if (peer && peer.musicEl && !userMuted) {
-                peer.musicEl.volume = v;
-            }
+            const v = parseInt(e.target.value, 10);
+            applyVolume(v);
             if (v === 0) volIcon.textContent = '🔇';
-            else if (v < 0.5) volIcon.textContent = '🔉';
+            else if (v < 50) volIcon.textContent = '🔉';
             else volIcon.textContent = '🔊';
         });
 
         muteBtn.addEventListener('click', () => {
             userMuted = !userMuted;
-            const peer = this.peers.get(djId);
-            if (peer && peer.musicEl) {
-                peer.musicEl.muted = userMuted;
-            }
+            applyVolume(parseInt(volSlider.value, 10));
             muteBtn.textContent = userMuted ? '🔇' : '🔊';
             muteBtn.title = userMuted ? 'Müzik susturuldu (sizin için)' : 'Müziği sustur';
         });
+
+        hideVideoBtn.addEventListener('click', () => {
+            videoHidden = !videoHidden;
+            if (videoHidden) {
+                playerWrapper.classList.add('video-hidden');
+                hideVideoBtn.textContent = '🎬 Klibi Göster';
+                hideVideoBtn.title = 'Video klibini tekrar göster';
+            } else {
+                playerWrapper.classList.remove('video-hidden');
+                hideVideoBtn.textContent = '🎬 Klibi Gizle';
+                hideVideoBtn.title = 'Video klibini gizle (sadece müzik dinle)';
+            }
+        });
+
+        // Listener player datasını oluştur
+        this.listenerPlayers.set(djId, {
+            wrapper: box,
+            player: null,
+            ready: false,
+            videoHidden: false,
+            userMuted: false,
+            pendingVideoId: videoId
+        });
+
+        // YouTube player'ı oluştur
+        if (this.ytApiReady) {
+            this.createListenerPlayer(djId, videoId);
+        } else {
+            // API hazır değil — onYtApiReady'de oluşturulacak
+        }
+    }
+
+    /** Dinleyici tarafı için bir YouTube IFrame Player oluştur */
+    createListenerPlayer(djId, videoId) {
+        const data = this.listenerPlayers.get(djId);
+        if (!data) return;
+        const containerId = `yt-listener-${djId}`;
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        try {
+            // eslint-disable-next-line no-undef
+            const player = new YT.Player(containerId, {
+                height: '180',
+                width: '320',
+                videoId: videoId,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 1,
+                    rel: 0,
+                    modestbranding: 1,
+                    playsinline: 1
+                },
+                events: {
+                    onReady: (e) => {
+                        data.ready = true;
+                        data.player = e.target;
+                        // Başlangıç ses seviyesi
+                        e.target.setVolume(70);
+                        // Autoplay başarılıysa mute durumunu uygula
+                        if (data.userMuted) e.target.mute();
+                    },
+                    onStateChange: (e) => {
+                        // Dinleyici tarafı kendi video'sunu yönetir — DJ status'u override edebilir
+                        // Boş bırakıyoruz; sync onMusicStatusFromPeer'da yönetiliyor
+                    }
+                }
+            });
+            data.player = player;
+        } catch (e) {
+            console.warn('Listener YT player oluşturulamadı:', e);
+        }
     }
 }
 
 // Uygulamayı başlat
 const app = new VoiceChatApp();
+// window.app — YouTube IFrame API'nin onYouTubeIframeAPIReady callback'i bunu kullanır
+window.app = app;
