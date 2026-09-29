@@ -485,8 +485,7 @@
 
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <!-- SoundTouchJS — ses pitch shifting için (admin voice changer) -->
-    <script src="https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js"></script>
-    <script src="app.js?v=4.0.0"></script>
+    <!-- SoundTouchJS artık dynamic import ile yükleniyor (ES module olduğu için script tag ile global exposure olmuyor) -->
+    <script src="app.js?v=5.0.0"></script>
 </body>
 </html>
