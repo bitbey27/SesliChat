@@ -2,8 +2,15 @@ services:
   - type: web
     name: seslichat
     runtime: node
+    plan: free
     buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
+      # Admin şifresini burada DEĞİL, Render Dashboard → Environment bölümünden ekleyin
+      # (Güvenlik için kod içinde tutmayın)
+      - key: ADMIN_PASSWORD
+        sync: false  # değer Render'da manuel girilmeli
+    healthCheckPath: /health
+    autoDeploy: true

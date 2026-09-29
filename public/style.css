@@ -1621,3 +1621,270 @@ body {
         display: flex !important;
     }
 }
+
+/* =========================================
+   MÜZİK PLAYER STİLLERİ (DJ paneli + dinleyici kutuları)
+   ========================================= */
+
+/* DJ paneli — voice-body içinde, chat panelinin üstünde */
+.music-panel {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--bg-active);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--shadow-low);
+}
+
+.music-panel.hidden { display: none; }
+
+.music-panel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+}
+
+.music-panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--yellow);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.music-panel-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.music-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.music-track-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124, 92, 252, 0.08);
+    border: 1px solid rgba(124, 92, 252, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+}
+
+.music-track-label {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.music-source-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.music-file-btn {
+    background: var(--bg-active);
+    color: var(--text-primary);
+    border: 1px solid var(--bg-hover);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+}
+.music-file-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--brand-primary);
+}
+
+.music-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.music-progress {
+    flex: 1;
+    accent-color: var(--brand-primary);
+    cursor: pointer;
+}
+
+.music-time, .music-dj-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+    text-align: center;
+}
+
+.music-time-sep {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.music-controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.music-play-btn, .music-stop-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.music-volume-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.music-local-volume {
+    width: 100px;
+    accent-color: var(--yellow);
+    cursor: pointer;
+}
+
+.music-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+}
+
+/* === DİNLEYİCİ TARAFI — her DJ için bir kutu === */
+.music-listener-controls {
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.08) 0%, rgba(88, 101, 242, 0.08) 100%);
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-low);
+    animation: musicSlideIn 0.3s ease;
+}
+
+@keyframes musicSlideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.music-dj-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.music-dj-play-icon {
+    font-size: 22px;
+    animation: musicBeat 1.5s ease-in-out infinite;
+}
+
+@keyframes musicBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.music-dj-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.music-dj-track {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.music-dj-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.music-dj-progress {
+    flex: 1;
+    accent-color: var(--brand-primary);
+    opacity: 0.7;
+}
+
+.music-dj-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.music-dj-volume {
+    flex: 1;
+    accent-color: var(--brand-primary);
+    cursor: pointer;
+    min-width: 100px;
+}
+
+.music-dj-mute-btn {
+    background: transparent;
+    border: 1px solid var(--bg-hover);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition-fast);
+}
+.music-dj-mute-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Mobil uyumluluk için müzik paneli */
+@media (max-width: 700px) {
+    .music-panel {
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    .music-source-row {
+        flex-wrap: wrap;
+    }
+    .music-source-row > * {
+        width: 100%;
+    }
+    .music-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .music-volume-group {
+        margin-left: 0;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .music-local-volume {
+        flex: 1;
+    }
+}

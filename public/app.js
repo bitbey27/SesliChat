@@ -9,12 +9,23 @@ class VoiceChatApp {
         this.username = null;
         this.role = 'user'; // 'user' veya 'admin'
         this.currentRoom = null;
-        this.peers = new Map(); // userId -> { pc: RTCPeerConnection, stream: MediaStream }
+        this.peers = new Map(); // userId -> { pc, audioEl, musicEl, remoteStream, isSharingMusic, musicTrackName }
         this.peerVolumes = new Map(); // userId -> volume (0.0 to 1.0)
+        this.peerMusicVolumes = new Map(); // userId -> music volume (0.0 to 1.0) - sadece dinleyici tarafı
         this.roomPasswords = JSON.parse(localStorage.getItem('roomPasswords') || '{}');
         this.localStream = null;
         this.isMuted = false;
         this.isDeafened = false;
+
+        // === SAYFA YENİLEME OTOMATİK GİRİŞ ===
+        // localStorage'da kalıcı clientId (UUID) — server bu ID'den aynı kişi tanıyor
+        if (!localStorage.getItem('clientId')) {
+            localStorage.setItem('clientId', 'cl-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10));
+        }
+        this.clientId = localStorage.getItem('clientId');
+        // Sayfa yenilenince girilen son odayı hatırla
+        this.savedRoom = localStorage.getItem('currentRoom') || null;
+
         
         // Ses Ayarları (Kullanıcı tarafından değiştirilebilir)
         this.audioConstraints = {
@@ -145,6 +156,32 @@ class VoiceChatApp {
         this.isCameraOn = false;
         this.screenStream = null;
         this.cameraStream = null;
+
+        // === MÜZİK PLAYER ELEMENTLERİ ===
+        this.musicBtn = document.getElementById('music-btn');
+        this.musicPanel = document.getElementById('music-panel');
+        this.musicFileInput = document.getElementById('music-file-input');
+        this.musicUrlInput = document.getElementById('music-url-input');
+        this.musicLoadUrlBtn = document.getElementById('music-load-url-btn');
+        this.musicAudio = document.getElementById('music-audio');           // DJ'nin yerel <audio> elementi
+        this.musicPlayBtn = document.getElementById('music-play-btn');
+        this.musicStopBtn = document.getElementById('music-stop-btn');
+        this.musicTrackLabel = document.getElementById('music-track-label');
+        this.musicProgress = document.getElementById('music-progress');
+        this.musicCurrentTime = document.getElementById('music-current-time');
+        this.musicDuration = document.getElementById('music-duration');
+        this.musicLocalVolume = document.getElementById('music-local-volume');
+        this.musicLocalMuteBtn = document.getElementById('music-local-mute-btn');
+
+        // Müzik durumu
+        this.isSharingMusic = false;
+        this.musicStream = null;            // Müziği peer'lara gönderen MediaStream
+        this.musicAudioContext = null;      // Müziği yakalamak için AudioContext
+        this.musicSourceNode = null;
+        this.musicDestNode = null;
+        this.musicStatusInterval = null;
+        this.isMusicLocallyMuted = false;
+        this.pendingMusicSeek = null;
     }
 
     initEventListeners() {
@@ -318,6 +355,102 @@ class VoiceChatApp {
                 this.ws.close();
             }
         });
+
+        // === MÜZİK PLAYER OLAYLARI ===
+        if (this.musicBtn) {
+            this.musicBtn.addEventListener('click', () => {
+                if (this.musicPanel) {
+                    this.musicPanel.classList.toggle('hidden');
+                }
+            });
+        }
+        if (this.musicFileInput) {
+            this.musicFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.loadMusicFromFile(file);
+                }
+            });
+        }
+        if (this.musicLoadUrlBtn) {
+            this.musicLoadUrlBtn.addEventListener('click', () => {
+                const url = (this.musicUrlInput.value || '').trim();
+                if (url) {
+                    this.loadMusicFromUrl(url);
+                }
+            });
+        }
+        if (this.musicPlayBtn) {
+            this.musicPlayBtn.addEventListener('click', () => this.toggleMusicPlay());
+        }
+        if (this.musicStopBtn) {
+            this.musicStopBtn.addEventListener('click', () => this.stopMusicShare());
+        }
+        if (this.musicProgress) {
+            this.musicProgress.addEventListener('input', (e) => {
+                // DJ seeking — anlık değil, change'de uygula
+                this.pendingMusicSeek = parseFloat(e.target.value);
+                if (this.musicAudio && this.musicAudio.duration) {
+                    this.musicAudio.currentTime = this.pendingMusicSeek;
+                    this.pendingMusicSeek = null;
+                }
+            });
+        }
+        if (this.musicLocalVolume) {
+            this.musicLocalVolume.addEventListener('input', (e) => {
+                const vol = parseFloat(e.target.value);
+                // Sadece DJ'nin kendi duyduğu ses seviyesini değiştir (peer'lara giden stream etkilenmez)
+                if (this.musicAudio) {
+                    this.musicAudio.volume = this.isMusicLocallyMuted ? 0 : vol;
+                }
+                this.musicLocalVolume.dataset.value = vol;
+            });
+        }
+        if (this.musicLocalMuteBtn) {
+            this.musicLocalMuteBtn.addEventListener('click', () => {
+                this.isMusicLocallyMuted = !this.isMusicLocallyMuted;
+                if (this.musicAudio) {
+                    this.musicAudio.volume = this.isMusicLocallyMuted ? 0 : parseFloat(this.musicLocalVolume.value);
+                }
+                this.musicLocalMuteBtn.textContent = this.isMusicLocallyMuted ? '🔇' : '🔊';
+            });
+        }
+        // Müzik audio elementi olayları
+        if (this.musicAudio) {
+            this.musicAudio.addEventListener('loadedmetadata', () => {
+                if (this.musicDuration) {
+                    this.musicDuration.textContent = this.formatTime(this.musicAudio.duration);
+                }
+                if (this.musicProgress) {
+                    this.musicProgress.max = Math.floor(this.musicAudio.duration || 0);
+                }
+            });
+            this.musicAudio.addEventListener('timeupdate', () => {
+                if (this.musicCurrentTime) {
+                    this.musicCurrentTime.textContent = this.formatTime(this.musicAudio.currentTime);
+                }
+                if (this.musicProgress && !this.pendingMusicSeek) {
+                    this.musicProgress.value = Math.floor(this.musicAudio.currentTime || 0);
+                }
+            });
+            this.musicAudio.addEventListener('ended', () => {
+                this.musicAudio.currentTime = 0;
+                this.sendMusicStatus(false, 0, this.musicAudio.duration);
+                if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
+            });
+        }
+
+        // === SAYFA YENİLEME OTOMATİK GİRİŞ ===
+        // Eğer kullanıcı adı kayıtlıysa otomatik giriş yap
+        const savedUsername = localStorage.getItem('username');
+        if (savedUsername) {
+            // Input'u doldur ve login() fonksiyonunu çağır
+            // Kısa bir gecikme ile, DOM tamamen hazır olsun
+            setTimeout(() => {
+                if (this.usernameInput) this.usernameInput.value = savedUsername;
+                this.login();
+            }, 200);
+        }
     }
 
     // =========================================
@@ -414,10 +547,13 @@ class VoiceChatApp {
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
+            // === clientId ile giriş ===
+            // Bu, sayfa yenilenince sunucunun "aynı kişi" tanıması için kullanılır
             this.ws.send(JSON.stringify({
                 type: 'join',
                 username: this.username,
-                color: this.avatarColor
+                color: this.avatarColor,
+                clientId: this.clientId
             }));
 
             // Client-side heartbeat: Her 20 saniyede ping gönder
@@ -440,7 +576,7 @@ class VoiceChatApp {
                 this.heartbeatInterval = null;
             }
             // Bağlantı koparsa daha hızlı yeniden bağlan
-            const previousRoom = this.currentRoom;
+            const previousRoom = this.currentRoom || this.savedRoom;
             this.showToast('⚠️', 'Bağlantı kesildi. Yeniden bağlanılıyor...');
             setTimeout(() => {
                 this.reconnectRoom = previousRoom;
@@ -549,6 +685,40 @@ class VoiceChatApp {
 
             case 'speaking':
                 this.handleSpeakingState(message);
+                break;
+
+            // === SAYFA YENİLEME / DUPLICATE USER ===
+            // Sunucu, aynı username'le yeni giriş yapıldığında eski bağlantıya bunu gönderir
+            case 'force-disconnect':
+                // Bu istemci kapatılıyor — ama sayfa yenileniyorsa zaten yeni bağlantı açılmış olacak
+                // Sadece info göster, reconnect döngüsünü tetikleme
+                if (this.ws) {
+                    // onclose tetiklenmesin diye handler'ları temizle
+                    this.ws.onclose = null;
+                    try { this.ws.close(); } catch (_) {}
+                    this.ws = null;
+                }
+                this.showToast('ℹ️', message.message || 'Bu oturum kapatıldı.');
+                break;
+
+            // === MÜZİK PLAYER ===
+            // DJ müzik başlattı — müzik track'i peer bağlantısından gelecek, hazır ol
+            case 'music-start':
+                this.onMusicStartFromPeer(message);
+                break;
+
+            // DJ müziği durdurdu
+            case 'music-stop':
+                this.onMusicStopFromPeer(message);
+                break;
+
+            // DJ müzik durum güncellemesi (çalıyor/duraklatıldı/süre)
+            case 'music-status':
+                this.onMusicStatusFromPeer(message);
+                break;
+
+            case 'pong':
+                // Sunucudan heartbeat cevabı — bir şey yapma
                 break;
         }
     }
@@ -732,6 +902,8 @@ class VoiceChatApp {
 
     onRoomJoined(message) {
         this.currentRoom = message.roomId;
+        // === SAYFA YENİLEME === - son girilen odayı localStorage'a kaydet
+        localStorage.setItem('currentRoom', message.roomId);
 
         // UI güncelle
         this.welcomeView.classList.add('hidden');
@@ -757,12 +929,25 @@ class VoiceChatApp {
     leaveRoom() {
         if (!this.currentRoom) return;
 
+        // === MÜZİK PLAYER === - odadan çıkınca müziği durdur
+        if (this.isSharingMusic) {
+            this.stopMusicShare();
+        }
+
         // Tüm peer bağlantılarını kapat
         this.peers.forEach((peer, peerId) => {
-            peer.pc.close();
+            try { peer.pc.close(); } catch (_) {}
+            // Ses elementini temizle
             if (peer.audioEl) {
-                peer.audioEl.srcObject = null;
-                peer.audioEl.remove();
+                try { peer.audioEl.srcObject = null; } catch (_) {}
+                try { peer.audioEl.pause(); } catch (_) {}
+                try { peer.audioEl.remove(); } catch (_) {}
+            }
+            // Müzik elementini de temizle
+            if (peer.musicEl) {
+                try { peer.musicEl.srcObject = null; } catch (_) {}
+                try { peer.musicEl.pause(); } catch (_) {}
+                try { peer.musicEl.remove(); } catch (_) {}
             }
         });
         this.peers.clear();
@@ -772,6 +957,9 @@ class VoiceChatApp {
 
     onRoomLeft() {
         this.currentRoom = null;
+        // === SAYFA YENİLEME === - odadan çıkınca kaydı temizle
+        localStorage.removeItem('currentRoom');
+        this.savedRoom = null;
         this.voiceView.classList.add('hidden');
         this.welcomeView.classList.remove('hidden');
         this.disconnectBtn.style.display = 'none';
@@ -804,13 +992,23 @@ class VoiceChatApp {
         this.playSound('leave');
         const peer = this.peers.get(message.userId);
         if (peer) {
-            peer.pc.close();
+            try { peer.pc.close(); } catch (_) {}
             if (peer.audioEl) {
-                peer.audioEl.srcObject = null;
-                peer.audioEl.remove();
+                try { peer.audioEl.srcObject = null; } catch (_) {}
+                try { peer.audioEl.pause(); } catch (_) {}
+                try { peer.audioEl.remove(); } catch (_) {}
+            }
+            // === MÜZİK PLAYER === - müzik elementini de temizle
+            if (peer.musicEl) {
+                try { peer.musicEl.srcObject = null; } catch (_) {}
+                try { peer.musicEl.pause(); } catch (_) {}
+                try { peer.musicEl.remove(); } catch (_) {}
             }
             this.peers.delete(message.userId);
         }
+        // UI'daki müzik kontrollerini de kaldır
+        const musicControls = document.getElementById(`music-controls-${message.userId}`);
+        if (musicControls) musicControls.remove();
         this.showToast('👋', `${message.username} ayrıldı.`);
     }
 
@@ -878,34 +1076,79 @@ class VoiceChatApp {
                 return;
             }
 
-            let audioEl = document.getElementById(`audio-${peerId}`);
-            if (!audioEl) {
-                audioEl = document.createElement('audio');
-                audioEl.id = `audio-${peerId}`;
-                audioEl.autoplay = true;
-                audioEl.playsInline = true;
-                
-                // Kaydedilmiş ses seviyesini uygula
-                const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
-                audioEl.volume = volValue;
-                
-                document.body.appendChild(audioEl);
+            // === AUDIO TRACK ===
+            // İlk audio track = sesli konuşma (voice)
+            // İkinci audio track = müzik (eğer DJ müzik paylaşıyorsa)
+            // Peer datasını al
+            let peerData = this.peers.get(peerId);
+            if (!peerData) {
+                peerData = { pc, audioEl: null, musicEl: null, remoteStream: null, isSharingMusic: false, musicTrackName: '' };
+                this.peers.set(peerId, peerData);
             }
-            audioEl.srcObject = stream;
 
-            const peerData = this.peers.get(peerId);
-            if (peerData) {
-                peerData.audioEl = audioEl;
+            // Eğer peer müzik paylaşıyorsa VE zaten bir voice audio elementi varsa → yeni track müziktir
+            const isMusicTrack = peerData.isSharingMusic && peerData.audioEl && peerData.audioEl.srcObject;
+
+            if (isMusicTrack) {
+                // Müzik track — ayrı bir audio elementi oluştur
+                let musicEl = peerData.musicEl;
+                if (!musicEl) {
+                    musicEl = document.createElement('audio');
+                    musicEl.id = `music-${peerId}`;
+                    musicEl.autoplay = true;
+                    musicEl.playsInline = true;
+                    // Müzik için kaydedilmiş ses seviyesini uygula (default 0.7)
+                    const musicVol = this.peerMusicVolumes.has(peerId) ? this.peerMusicVolumes.get(peerId) : 0.7;
+                    musicEl.volume = musicVol;
+                    document.body.appendChild(musicEl);
+                    peerData.musicEl = musicEl;
+                }
+                musicEl.srcObject = stream;
+                // === AUDIO SYNC FIX === - tarayıcı autoplay politikası nedeniyle .play() çağır
+                this.forcePlayAudio(musicEl);
+            } else {
+                // Voice track — mevcut davranış
+                let audioEl = peerData.audioEl;
+                if (!audioEl) {
+                    audioEl = document.createElement('audio');
+                    audioEl.id = `audio-${peerId}`;
+                    audioEl.autoplay = true;
+                    audioEl.playsInline = true;
+                    // Kaydedilmiş ses seviyesini uygula
+                    const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
+                    audioEl.volume = volValue;
+                    document.body.appendChild(audioEl);
+                    peerData.audioEl = audioEl;
+                }
+                audioEl.srcObject = stream;
+                // === AUDIO SYNC FIX === - tarayıcı autoplay politikası nedeniyle .play() çağır
+                this.forcePlayAudio(audioEl);
                 peerData.remoteStream = stream;
             }
         };
 
         pc.onconnectionstatechange = () => {
             console.log(`Peer ${peerId} bağlantı durumu: ${pc.connectionState}`);
+            // === AUDIO SYNC FIX === - bağlantı "failed" olursa peer'ı temizle, "connected" olursa audio'yu yeniden çal
+            if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                const pd = this.peers.get(peerId);
+                if (pd) {
+                    if (pd.audioEl) { try { pd.audioEl.pause(); } catch (_) {} }
+                    if (pd.musicEl) { try { pd.musicEl.pause(); } catch (_) {} }
+                }
+            } else if (pc.connectionState === 'connected') {
+                const pd = this.peers.get(peerId);
+                if (pd) {
+                    if (pd.audioEl) this.forcePlayAudio(pd.audioEl);
+                    if (pd.musicEl) this.forcePlayAudio(pd.musicEl);
+                }
+            }
         };
 
-        const peerData = { pc, audioEl: null, remoteStream: null };
-        this.peers.set(peerId, peerData);
+        // Peer datasını başlat (yoksa)
+        if (!this.peers.has(peerId)) {
+            this.peers.set(peerId, { pc, audioEl: null, musicEl: null, remoteStream: null, isSharingMusic: false, musicTrackName: '' });
+        }
 
         // Teklif oluştur (initiator ise)
         if (isInitiator) {
@@ -913,6 +1156,32 @@ class VoiceChatApp {
         }
 
         return pc;
+    }
+
+    // === AUDIO SYNC FIX ===
+    // Tarayıcı autoplay politikası bazen <audio>.play()'i engeller.
+    // Bu metod .play()'i dener, başarısız olursa kullanıcı etkileşiminde tekrar dener.
+    forcePlayAudio(audioEl) {
+        if (!audioEl) return;
+        try {
+            const p = audioEl.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(() => {
+                    // Autoplay engellendi — bir sonraki kullanıcı tıklaması/klavyede sesi çal
+                    const resume = () => {
+                        try { audioEl.play().catch(() => {}); } catch (_) {}
+                        document.removeEventListener('click', resume);
+                        document.removeEventListener('keydown', resume);
+                        document.removeEventListener('touchstart', resume);
+                    };
+                    document.addEventListener('click', resume, { once: true });
+                    document.addEventListener('keydown', resume, { once: true });
+                    document.addEventListener('touchstart', resume, { once: true });
+                });
+            }
+        } catch (e) {
+            console.warn('Audio play hatası:', e);
+        }
     }
 
     async createOffer(peerId, pc) {
@@ -1599,6 +1868,303 @@ class VoiceChatApp {
             toast.classList.add('toast-exit');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+
+    // =========================================
+    // MÜZİK PLAYER — DJ TARAFI
+    // =========================================
+    loadMusicFromFile(file) {
+        if (!file) return;
+        if (file.size > 50 * 1024 * 1024) {
+            this.showToast('⚠️', 'Dosya çok büyük (maks 50MB).');
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        this.loadMusicFromUrl(url, file.name);
+    }
+
+    loadMusicFromUrl(url, trackName) {
+        if (!url) return;
+        // Önce eski müziği tamamen durdur
+        this.stopMusicShare();
+
+        if (!this.musicAudio) return;
+        this.musicAudio.crossOrigin = 'anonymous';
+        this.musicAudio.src = url;
+        this.musicAudio.volume = this.isMusicLocallyMuted ? 0 : parseFloat(this.musicLocalVolume.value || 0.7);
+        this.musicTrackLabel.textContent = trackName || url.split('/').pop() || 'Müzik';
+
+        // Yüklenince metadata'yı göster ve hazır hale getir
+        this.musicAudio.addEventListener('loadedmetadata', () => {
+            if (this.musicDuration) this.musicDuration.textContent = this.formatTime(this.musicAudio.duration);
+            if (this.musicProgress) {
+                this.musicProgress.max = Math.floor(this.musicAudio.duration || 0);
+                this.musicProgress.value = 0;
+            }
+        }, { once: true });
+
+        this.showToast('🎵', 'Müzik yüklendi. "Çal" ile başlatın.');
+    }
+
+    async toggleMusicPlay() {
+        if (!this.musicAudio || !this.musicAudio.src) {
+            this.showToast('⚠️', 'Önce bir müzik yükle.');
+            return;
+        }
+        if (this.musicAudio.paused) {
+            await this.startMusicShare();
+        } else {
+            // Duraklat — sadece DJ'nin çalmayı durdurması; peer'lara haber ver
+            this.musicAudio.pause();
+            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
+            this.sendMusicStatus(false, this.musicAudio.currentTime, this.musicAudio.duration);
+        }
+    }
+
+    async startMusicShare() {
+        if (!this.musicAudio || !this.musicAudio.src) return;
+        if (!this.currentRoom) {
+            this.showToast('⚠️', 'Önce bir sesli odaya katıl.');
+            return;
+        }
+
+        try {
+            // AudioContext'i hazırla (müzik yakalama)
+            if (!this.musicAudioContext) {
+                this.musicAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.musicAudioContext.state === 'suspended') {
+                await this.musicAudioContext.resume();
+            }
+
+            // MediaElementSource — sadece 1 kez oluşturulabilir
+            if (!this.musicSourceNode) {
+                this.musicSourceNode = this.musicAudioContext.createMediaElementSource(this.musicAudio);
+                this.musicDestNode = this.musicAudioContext.createMediaStreamDestination();
+                // Source → hem hedefe (peer'lara) hem de hoparlöre (DJ'nin duyması için)
+                this.musicSourceNode.connect(this.musicDestNode);
+                this.musicSourceNode.connect(this.musicAudioContext.destination);
+            }
+            this.musicStream = this.musicDestNode.stream;
+
+            // Müzik track'i tüm mevcut peer'lara ekle
+            const musicTrack = this.musicStream.getAudioTracks()[0];
+            this.peers.forEach((peer) => {
+                if (peer.musicSender) {
+                    // Zaten eklenmiş, atla
+                    return;
+                }
+                try {
+                    const sender = peer.pc.addTrack(musicTrack, this.musicStream);
+                    peer.musicSender = sender;
+                } catch (e) {
+                    console.warn('Müzik track eklenemedi:', e);
+                }
+            });
+
+            // Müziği çal
+            await this.musicAudio.play();
+            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '⏸';
+
+            // Sunucuya müzik başladı bildirimi gönder (server odadakilere 'music-start' yayınlar)
+            this.isSharingMusic = true;
+            this.ws.send(JSON.stringify({
+                type: 'music-start',
+                trackName: this.musicTrackLabel.textContent || 'Müzik'
+            }));
+
+            // Periyodik olarak durum bilgisi gönder (süre ilerlemesi için)
+            if (this.musicStatusInterval) clearInterval(this.musicStatusInterval);
+            this.musicStatusInterval = setInterval(() => {
+                if (this.isSharingMusic && this.musicAudio && !this.musicAudio.paused) {
+                    this.sendMusicStatus(true, this.musicAudio.currentTime, this.musicAudio.duration);
+                }
+            }, 1000);
+
+            this.showToast('🎵', 'Müzik paylaşıma başladı!');
+        } catch (err) {
+            console.error('Müzik başlatma hatası:', err);
+            this.showToast('❌', 'Müzik başlatılamadı: ' + (err.message || 'bilinmeyen hata'));
+        }
+    }
+
+    stopMusicShare() {
+        if (!this.isSharingMusic) {
+            // Sadece yerel audio'yu durdur yeter
+            if (this.musicAudio) {
+                try { this.musicAudio.pause(); } catch (_) {}
+            }
+            if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
+            return;
+        }
+        this.isSharingMusic = false;
+        if (this.musicAudio) {
+            try { this.musicAudio.pause(); } catch (_) {}
+            try { this.musicAudio.currentTime = 0; } catch (_) {}
+        }
+        if (this.musicPlayBtn) this.musicPlayBtn.textContent = '▶';
+
+        // Peer'lardan müzik track'ini çıkar
+        this.peers.forEach((peer) => {
+            if (peer.musicSender) {
+                try {
+                    peer.pc.removeTrack(peer.musicSender);
+                } catch (e) {
+                    console.warn('Müzik track çıkarılamadı:', e);
+                }
+                peer.musicSender = null;
+            }
+        });
+
+        // Sunucuya haber ver
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: 'music-stop' }));
+        }
+
+        if (this.musicStatusInterval) {
+            clearInterval(this.musicStatusInterval);
+            this.musicStatusInterval = null;
+        }
+        this.showToast('⏹️', 'Müzik durduruldu.');
+    }
+
+    sendMusicStatus(isPlaying, currentTime, duration) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (!this.isSharingMusic) return;
+        this.ws.send(JSON.stringify({
+            type: 'music-status',
+            isPlaying: isPlaying,
+            currentTime: currentTime || 0,
+            duration: duration || 0
+        }));
+    }
+
+    formatTime(seconds) {
+        if (!seconds || isNaN(seconds) || seconds < 0) return '0:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // =========================================
+    // MÜZİK PLAYER — DİNLEYİCİ TARAFI
+    // =========================================
+    // Server'dan 'music-start' geldi: bir DJ müzik paylaşıyor
+    onMusicStartFromPeer(message) {
+        const peer = this.peers.get(message.djId);
+        if (peer) {
+            peer.isSharingMusic = true;
+            peer.musicTrackName = message.trackName || 'Müzik';
+        } else {
+            // Henüz peer yoksa (yeni DJ katıldı ve hemen müzik başlattı)
+            // Bir sonraki ontrack eventinde kullanılmak üzere bekleyen bir state tut
+            this.pendingMusicDJs = this.pendingMusicDJs || new Map();
+            this.pendingMusicDJs.set(message.djId, { trackName: message.trackName || 'Müzik', djName: message.djName });
+        }
+        this.renderMusicControlsForPeer(message.djId, message.djName, message.trackName);
+        this.showToast('🎵', `${message.djName} müzik çalmaya başladı: ${message.trackName}`);
+    }
+
+    onMusicStopFromPeer(message) {
+        const peer = this.peers.get(message.djId);
+        if (peer) {
+            peer.isSharingMusic = false;
+            peer.musicTrackName = '';
+            if (peer.musicEl) {
+                try { peer.musicEl.srcObject = null; } catch (_) {}
+                try { peer.musicEl.pause(); } catch (_) {}
+                try { peer.musicEl.remove(); } catch (_) {}
+                peer.musicEl = null;
+            }
+        }
+        // UI'daki müzik kontrollerini kaldır
+        const controls = document.getElementById(`music-controls-${message.djId}`);
+        if (controls) controls.remove();
+        const toast = this.showToast('⏹️', 'Müzik durduruldu.');
+    }
+
+    onMusicStatusFromPeer(message) {
+        // Dinleyici tarafında DJ'nin çalma durumu UI'sını güncelle
+        const controls = document.getElementById(`music-controls-${message.djId}`);
+        if (controls) {
+            const playIcon = controls.querySelector('.music-dj-play-icon');
+            if (playIcon) playIcon.textContent = message.isPlaying ? '🎵' : '⏸';
+            const timeEl = controls.querySelector('.music-dj-time');
+            if (timeEl) {
+                timeEl.textContent = `${this.formatTime(message.currentTime)} / ${this.formatTime(message.duration)}`;
+            }
+            const progress = controls.querySelector('.music-dj-progress');
+            if (progress) {
+                progress.value = message.currentTime || 0;
+                progress.max = message.duration || 0;
+            }
+        }
+    }
+
+    // Dinleyici tarafında her DJ için bir "müzik kutusu" oluştur (volume + mute)
+    renderMusicControlsForPeer(djId, djName, trackName) {
+        // Eğer zaten varsa, sadece track adını güncelle
+        let controls = document.getElementById(`music-controls-${djId}`);
+        if (controls) {
+            const t = controls.querySelector('.music-dj-track');
+            if (t && trackName) t.textContent = trackName;
+            return;
+        }
+
+        // Konteynır: voice-participants üstüne veya chat-panel üstüne ekle
+        // En güzeli voice-participants içinde DJ'nin kartının yanına eklemek olurdu
+        // ama şimdilik ayrı bir kutu olarak sesli görünümün üstüne ekleyelim
+        const container = document.querySelector('.voice-body') || this.voiceParticipants.parentNode;
+        controls = document.createElement('div');
+        controls.id = `music-controls-${djId}`;
+        controls.className = 'music-listener-controls';
+        controls.innerHTML = `
+            <div class="music-dj-info">
+                <span class="music-dj-play-icon">🎵</span>
+                <div>
+                    <div class="music-dj-title">🎧 ${this.escapeHtml(djName || 'DJ')} çalıyor</div>
+                    <div class="music-dj-track">${this.escapeHtml(trackName || 'Müzik')}</div>
+                </div>
+            </div>
+            <div class="music-dj-progress-row">
+                <input type="range" class="music-dj-progress" min="0" max="100" value="0" disabled>
+                <span class="music-dj-time">0:00 / 0:00</span>
+            </div>
+            <div class="music-dj-controls">
+                <span class="volume-icon music-dj-vol-icon">🔊</span>
+                <input type="range" class="music-dj-volume" min="0" max="1" step="0.05" value="0.7">
+                <button class="music-dj-mute-btn" title="Müziği Sustur (sadece sizin için)">🔇</button>
+            </div>
+        `;
+        container.appendChild(controls);
+
+        // Volume slider — sadece bu DJ'nin müziğini etkiler
+        const volSlider = controls.querySelector('.music-dj-volume');
+        const volIcon = controls.querySelector('.music-dj-vol-icon');
+        const muteBtn = controls.querySelector('.music-dj-mute-btn');
+        let userMuted = false;
+
+        volSlider.addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            this.peerMusicVolumes.set(djId, v);
+            const peer = this.peers.get(djId);
+            if (peer && peer.musicEl && !userMuted) {
+                peer.musicEl.volume = v;
+            }
+            if (v === 0) volIcon.textContent = '🔇';
+            else if (v < 0.5) volIcon.textContent = '🔉';
+            else volIcon.textContent = '🔊';
+        });
+
+        muteBtn.addEventListener('click', () => {
+            userMuted = !userMuted;
+            const peer = this.peers.get(djId);
+            if (peer && peer.musicEl) {
+                peer.musicEl.muted = userMuted;
+            }
+            muteBtn.textContent = userMuted ? '🔇' : '🔊';
+            muteBtn.title = userMuted ? 'Müzik susturuldu (sizin için)' : 'Müziği sustur';
+        });
     }
 }
 

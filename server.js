@@ -128,16 +128,59 @@ wss.on('connection', (ws) => {
 
       switch (message.type) {
         case 'join': {
+          // === DUPLICATE USER FIX ===
+          // Aynı username ile başka bir aktif bağlantı varsa, eski bağlantıyı kapat.
+          // Bu, sayfa yenileme / kopma / tekrar bağlanma anında "çift kullanıcı" sorununu çözer.
+          // İstemci clientId de gönderebilir (localStorage'da saklanan UUID); aynı clientId gelirse kesin aynı kişi.
+          const incomingClientId = message.clientId || null;
+          for (const [existingId, existingUser] of connectedUsers.entries()) {
+            const sameClient = incomingClientId && existingUser.clientId === incomingClientId;
+            const sameUsername = existingUser.username === message.username;
+            if (sameClient || sameUsername) {
+              // Eski bağlantıya "force-disconnect" bildir
+              try {
+                if (existingUser.ws.readyState === WebSocket.OPEN) {
+                  existingUser.ws.send(JSON.stringify({
+                    type: 'force-disconnect',
+                    message: 'Aynı kullanıcı adıyla yeni bir bağlantı açıldı. Eski oturum kapatılıyor.'
+                  }));
+                  setTimeout(() => {
+                    try { existingUser.ws.close(); } catch (_) {}
+                  }, 400);
+                }
+              } catch (_) {}
+              // Eski kullanıcıyı odalar ve global listeden temizle
+              if (existingUser.currentRoom && rooms[existingUser.currentRoom]) {
+                rooms[existingUser.currentRoom].users.delete(existingId);
+                // Odadaki diğer kullanıcılara peer-left bildir
+                rooms[existingUser.currentRoom].users.forEach((otherUser) => {
+                  if (otherUser.ws.readyState === WebSocket.OPEN) {
+                    otherUser.ws.send(JSON.stringify({
+                      type: 'peer-left',
+                      userId: existingId,
+                      username: existingUser.username
+                    }));
+                  }
+                });
+              }
+              connectedUsers.delete(existingId);
+            }
+          }
+
+          // Yeni kullanıcıyı oluştur
           userId = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
           const user = {
             id: userId,
+            clientId: incomingClientId,
             username: message.username,
             role: 'user', // varsayılan rol
             color: message.color || '#5865F2',
             ws: ws,
             currentRoom: null,
             isMuted: false,
-            isDeafened: false
+            isDeafened: false,
+            isSharingMusic: false, // müzik paylaşıyor mu?
+            musicTrackName: ''     // çaldığı müziğin adı
           };
           connectedUsers.set(userId, user);
 
@@ -147,10 +190,81 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        // === MÜZİK PLAYER RELAY ===
+        // DJ müzik başlattığında odadaki herkese haber ver
+        case 'music-start': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          user.isSharingMusic = true;
+          user.musicTrackName = (message.trackName || 'Müzik').substring(0, 80);
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'music-start',
+            djId: userId,
+            djName: user.username,
+            trackName: user.musicTrackName
+          });
+          room.users.forEach((u) => {
+            if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
+        // DJ müziği durdurduğunda odadaki herkese haber ver
+        case 'music-stop': {
+          const user = connectedUsers.get(userId);
+          if (!user) return;
+          user.isSharingMusic = false;
+          user.musicTrackName = '';
+          if (user.currentRoom && rooms[user.currentRoom]) {
+            const payload = JSON.stringify({ type: 'music-stop', djId: userId });
+            rooms[user.currentRoom].users.forEach((u) => {
+              if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+                u.ws.send(payload);
+              }
+            });
+          }
+          break;
+        }
+
+        // DJ müzik durum güncellemesi (çalıyor/duraklatıldı, süre ilerlemesi)
+        case 'music-status': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'music-status',
+            djId: userId,
+            isPlaying: !!message.isPlaying,
+            currentTime: message.currentTime || 0,
+            duration: message.duration || 0
+          });
+          room.users.forEach((u) => {
+            if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
+        // İstemciden sunucuya ping (heartbeat) — sessizce cevap ver
+        case 'ping': {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'pong' }));
+          }
+          break;
+        }
+
         case 'admin-login': {
           const user = connectedUsers.get(userId);
           if (!user) return;
-          if (message.password === 'admin123') { // Basit şifre kontrolü
+          // ADMIN_PASSWORD env var'dan oku; yoksa fallback 'admin123' (sadece geliştirme için)
+          const adminPwd = process.env.ADMIN_PASSWORD || 'admin123';
+          if (message.password === adminPwd) {
             user.role = 'admin';
             ws.send(JSON.stringify({ type: 'admin-success' }));
             broadcastRoomUpdate();
