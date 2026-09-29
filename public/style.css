@@ -2387,3 +2387,143 @@ body {
         max-height: 160px;
     }
 }
+
+/* =========================================
+   VOICE CHANGER (Ses Değiştirici) STİLLERİ
+   ========================================= */
+
+.vc-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.vc-preset-btn {
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-hover);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: var(--transition-fast);
+    text-align: center;
+}
+.vc-preset-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--brand-primary);
+    transform: translateY(-1px);
+}
+.vc-preset-btn.active {
+    background: var(--brand-gradient);
+    border-color: var(--brand-primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124, 92, 252, 0.35);
+}
+
+.vc-pitch-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+}
+.vc-pitch-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.vc-pitch-slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    cursor: pointer;
+    outline: none;
+}
+.vc-pitch-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(124, 92, 252, 0.5);
+}
+.vc-pitch-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    cursor: pointer;
+}
+.vc-pitch-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    min-width: 22px;
+    text-align: right;
+}
+.vc-pitch-unit {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.vc-monitor-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.vc-monitor-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(59, 165, 93, 0.15);
+    border: 1px solid rgba(59, 165, 93, 0.4);
+    border-radius: 8px;
+    color: var(--green);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: var(--transition-fast);
+}
+.vc-monitor-btn:hover {
+    background: rgba(59, 165, 93, 0.25);
+    color: #fff;
+}
+.vc-monitor-btn.active {
+    background: var(--green);
+    color: #fff;
+}
+.vc-status {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+}
+.vc-status.active {
+    color: var(--green);
+    background: rgba(59, 165, 93, 0.15);
+}
+
+/* === Diğer kullanıcıların voice changer indicator'ü === */
+.voice-effect-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-left: 4px;
+    background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+    color: #fff;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 600;
+}

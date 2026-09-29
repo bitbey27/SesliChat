@@ -345,6 +345,34 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        // === VOICE CHANGER (Admin only) ===
+        // Admin sesini değiştirdi — odadakilere haber ver (UI indicator için)
+        case 'voice-effect-change': {
+          const user = connectedUsers.get(userId);
+          if (!user) return;
+          // Sadece admin voice changer kullanabilir
+          if (user.role !== 'admin') {
+            ws.send(JSON.stringify({ type: 'admin-error', message: 'Ses değiştirici sadece adminler içindir!' }));
+            return;
+          }
+          const preset = (message.preset || 'normal').toString().substring(0, 30);
+          user.voiceEffect = preset;
+          if (user.currentRoom && rooms[user.currentRoom]) {
+            const payload = JSON.stringify({
+              type: 'voice-effect-change',
+              userId: userId,
+              username: user.username,
+              preset: preset
+            });
+            rooms[user.currentRoom].users.forEach((u) => {
+              if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+                u.ws.send(payload);
+              }
+            });
+          }
+          break;
+        }
+
         case 'admin-login': {
           const user = connectedUsers.get(userId);
           if (!user) return;

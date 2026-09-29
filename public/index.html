@@ -439,6 +439,39 @@
                 </div>
             </div>
 
+            <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1);">
+
+            <!-- === VOICE CHANGER (Admin only) === -->
+            <div class="settings-group">
+                <h4>🎭 Ses Değiştirici</h4>
+                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 10px;">Sadece adminler kullanabilir. Sesin anında değişir, karşı taraf duyar.</p>
+
+                <!-- Preset Butonları -->
+                <div class="vc-presets" id="vc-presets">
+                    <button class="vc-preset-btn active" data-preset="normal">🎤 Normal</button>
+                    <button class="vc-preset-btn" data-preset="deep_male">🧔 Kalın Erkek</button>
+                    <button class="vc-preset-btn" data-preset="thin_male">👨 İnce Erkek</button>
+                    <button class="vc-preset-btn" data-preset="female">👩 Kadın</button>
+                    <button class="vc-preset-btn" data-preset="child">👧 Çocuk</button>
+                    <button class="vc-preset-btn" data-preset="robot">🤖 Robot</button>
+                    <button class="vc-preset-btn" data-preset="alien">👽 Yabancı</button>
+                </div>
+
+                <!-- Custom Pitch Slider -->
+                <div class="vc-pitch-row">
+                    <span class="vc-pitch-label">Pitch:</span>
+                    <input type="range" id="vc-pitch-slider" class="vc-pitch-slider" min="-12" max="12" step="1" value="0">
+                    <span class="vc-pitch-value" id="vc-pitch-value">0</span>
+                    <span class="vc-pitch-unit">semitone</span>
+                </div>
+
+                <!-- Monitor (lokal test) -->
+                <div class="vc-monitor-row">
+                    <button id="vc-monitor-btn" class="vc-monitor-btn" title="Sesinizi lokal olarak dinleyin (karşı tarafa gitmez)">🔊 Kendi Sesimi Dinle</button>
+                    <span class="vc-status" id="vc-status">Pasif</span>
+                </div>
+            </div>
+
             <div class="modal-actions mt-4">
                 <button id="close-admin-btn" class="btn-secondary" style="width: 100%;">Kapat</button>
             </div>
@@ -452,6 +485,8 @@
 
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="app.js?v=3.0.0"></script>
+    <!-- SoundTouchJS — ses pitch shifting için (admin voice changer) -->
+    <script src="https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js"></script>
+    <script src="app.js?v=4.0.0"></script>
 </body>
 </html>

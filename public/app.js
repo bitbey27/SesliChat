@@ -202,6 +202,27 @@ class VoiceChatApp {
         this.currentThumbUrl = '';
         this.youtubeSearchEnabled = false;
         this.listenerPlayers = new Map();
+
+        // === VOICE CHANGER (admin only) ===
+        // SoundTouchJS ile ses pitch shifting — sadece admin kullanır
+        this.vcPresetsContainer = document.getElementById('vc-presets');
+        this.vcPitchSlider = document.getElementById('vc-pitch-slider');
+        this.vcPitchValue = document.getElementById('vc-pitch-value');
+        this.vcMonitorBtn = document.getElementById('vc-monitor-btn');
+        this.vcStatus = document.getElementById('vc-status');
+        this.currentVoicePreset = 'normal';
+        this.currentPitch = 0;
+        this.vcAudioContext = null;       // AudioContext
+        this.vcSourceNode = null;         // mic → AudioContext source
+        this.vcScriptProcessor = null;   // ScriptProcessorNode (real-time processing)
+        this.vcDestNode = null;           // MediaStreamAudioDestinationNode → WebRTC
+        this.vcSoundTouch = null;         // SoundTouch instance
+        this.vcFilter = null;            // SimpleFilter
+        this.vcBufferSource = null;       // WebAudioBufferSource (soundtouch input adapter)
+        this.vcMonitorGain = null;       // monitor modu için gain node (lokal playback)
+        this.vcMonitorActive = false;
+        this.vcProcessedStream = null;   // WebRTC'ye gönderilen stream
+        this.vcActive = false;           // voice changer aktif mi?
     }
 
     initEventListeners() {
@@ -286,6 +307,45 @@ class VoiceChatApp {
                     this.adminModal.classList.add('hidden');
                 }
             });
+        }
+
+        // === VOICE CHANGER (Admin only) ===
+        // Preset butonları
+        if (this.vcPresetsContainer) {
+            const presets = this.vcPresetsContainer.querySelectorAll('.vc-preset-btn');
+            presets.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const preset = btn.dataset.preset;
+                    this.applyVoicePreset(preset);
+                    presets.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+            });
+        }
+        // Pitch slider
+        if (this.vcPitchSlider) {
+            this.vcPitchSlider.addEventListener('input', (e) => {
+                const pitch = parseInt(e.target.value, 10);
+                this.currentPitch = pitch;
+                if (this.vcPitchValue) this.vcPitchValue.textContent = (pitch > 0 ? '+' : '') + pitch;
+                this.applyPitchToSoundTouch(pitch);
+                // Preset seçimini kaldır (custom pitch)
+                if (this.vcPresetsContainer) {
+                    this.vcPresetsContainer.querySelectorAll('.vc-preset-btn').forEach(b => b.classList.remove('active'));
+                    if (pitch === 0) {
+                        // Normal preset'i işaretle
+                        const normalBtn = this.vcPresetsContainer.querySelector('[data-preset="normal"]');
+                        if (normalBtn) normalBtn.classList.add('active');
+                        this.currentVoicePreset = 'normal';
+                    } else {
+                        this.currentVoicePreset = 'custom';
+                    }
+                }
+            });
+        }
+        // Monitor butonu (lokal dinleme)
+        if (this.vcMonitorBtn) {
+            this.vcMonitorBtn.addEventListener('click', () => this.toggleVoiceMonitor());
         }
 
         // Oda Şifresi
@@ -815,6 +875,12 @@ class VoiceChatApp {
             case 'pong':
                 // Sunucudan heartbeat cevabı — bir şey yapma
                 break;
+
+            // === VOICE CHANGER ===
+            // Karşı taraf (admin) sesini değiştirdi — UI'da indicator göster
+            case 'voice-effect-change':
+                this.onVoiceEffectChange(message);
+                break;
         }
     }
 
@@ -972,10 +1038,16 @@ class VoiceChatApp {
         try {
             // Mikrofon erişimi al - Kullanıcının ses ayarlarını uygula
             if (!this.localStream) {
-                this.localStream = await navigator.mediaDevices.getUserMedia({
+                const rawMicStream = await navigator.mediaDevices.getUserMedia({
                     audio: this.audioConstraints,
                     video: false
                 });
+
+                // === VOICE CHANGER HAZIRLIĞI ===
+                // Mikrofonu AudioContext + SoundTouch zincirinden geçir
+                // Bu, admin sesini değiştirdiğinde anında karşı tarafa gitmesini sağlar
+                this.localStream = await this.initVoiceChangerChain(rawMicStream);
+                this.rawMicStream = rawMicStream;
             }
 
             this.ws.send(JSON.stringify({
@@ -2601,6 +2673,247 @@ class VoiceChatApp {
             data.player = player;
         } catch (e) {
             console.warn('Listener YT player oluşturulamadı:', e);
+        }
+    }
+
+    // =========================================
+    // VOICE CHANGER (Ses Değiştirici - Admin only)
+    // =========================================
+    // Preset değerleri (semitone cinsinden pitch + ekstra efektler)
+    static VOICE_PRESETS = {
+        'normal':    { pitch: 0,  effect: null },
+        'deep_male': { pitch: -5, effect: 'lowpass', freq: 4000 },
+        'thin_male': { pitch: -2, effect: null },
+        'female':    { pitch: 4,  effect: 'highshelf', freq: 2000, gain: 3 },
+        'child':     { pitch: 7,  effect: null },
+        'robot':     { pitch: 0,  effect: 'ringmod' },
+        'alien':     { pitch: 3,  effect: 'delay' }
+    };
+
+    /** Mikrofonu AudioContext + SoundTouch zincirinden geçir
+     *  Bu fonksiyon gerçek ses yakalama zincirini kurar — voice changer aktif değilse bile
+     *  ham ses "processed stream" olarak çıkar ama pitch=0 (yani aynı ses).
+     *  Voice changer aktifleştiğinde sadece SoundTouch parametreleri değişir, peer'lara replaceTrack gerekmez. */
+    async initVoiceChangerChain(rawMicStream) {
+        try {
+            // SoundTouchJS kütüphanesi yüklü mü kontrol et
+            if (typeof SoundTouch === 'undefined' || typeof SimpleFilter === 'undefined' || typeof WebAudioBufferSource === 'undefined') {
+                console.warn('[VC] SoundTouchJS yüklenemedi — raw mic kullanılacak');
+                return rawMicStream;
+            }
+
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            this.vcAudioContext = new AudioContextClass();
+
+            // Eğer askıdaysa resume
+            if (this.vcAudioContext.state === 'suspended') {
+                try { await this.vcAudioContext.resume(); } catch (_) {}
+            }
+
+            // Mikrofon → AudioContext source
+            this.vcSourceNode = this.vcAudioContext.createMediaStreamSource(rawMicStream);
+
+            // SoundTouch instance — pitch=0 başlangıçta (yani ham ses)
+            this.vcSoundTouch = new SoundTouch();
+            this.vcSoundTouch.pitch = 1;  // 1 = pitch değişikliği yok
+            this.vcSoundTouch.tempo = 1;
+            this.vcSoundTouch.rate = 1;
+
+            // WebAudioBufferSource — SoundTouch'a input'u besler
+            this.vcBufferSource = new WebAudioBufferSource();
+
+            // SimpleFilter — SoundTouch + bufferSource bağla
+            this.vcFilter = new SimpleFilter(this.vcBufferSource, this.vcSoundTouch);
+
+            // ScriptProcessorNode — real-time ses işleme (4096 samples buffer)
+            // (AudioWorklet daha modern ama ScriptProcessor daha uyumlu)
+            const BUFFER_SIZE = 4096;
+            this.vcScriptProcessor = this.vcAudioContext.createScriptProcessor(BUFFER_SIZE, 2, 2);
+
+            // onaudioprocess — input → SoundTouch → output
+            this.vcScriptProcessor.onaudioprocess = (e) => {
+                try {
+                    const inBuf = e.inputBuffer;
+                    const outBuf = e.outputBuffer;
+                    const leftIn = inBuf.getChannelData(0);
+                    const rightIn = inBuf.numberOfChannels > 1 ? inBuf.getChannelData(1) : leftIn;
+
+                    // SoundTouch'a input besle
+                    this.vcBufferSource.onaudioprocess(leftIn, rightIn);
+
+                    // SoundTouch'tan output al
+                    const samples = new Float32Array(leftIn.length * 2);
+                    this.vcFilter.extract(samples, leftIn.length);
+
+                    // De-interleave: stereo samples → ayrı kanallar
+                    const leftOut = outBuf.getChannelData(0);
+                    const rightOut = outBuf.numberOfChannels > 1 ? outBuf.getChannelData(1) : leftOut;
+                    for (let i = 0; i < leftIn.length; i++) {
+                        leftOut[i] = samples[i * 2];
+                        rightOut[i] = samples[i * 2 + 1];
+                    }
+                } catch (err) {
+                    console.error('[VC] onaudioprocess hatası:', err);
+                }
+            };
+
+            // MediaStreamAudioDestinationNode — WebRTC'ye gönderilecek yeni stream
+            this.vcDestNode = this.vcAudioContext.createMediaStreamDestination();
+
+            // Monitor için gain node (lokal dinleme — varsayılan 0)
+            this.vcMonitorGain = this.vcAudioContext.createGain();
+            this.vcMonitorGain.gain.value = 0;
+
+            // Bağlantı zinciri:
+            // source → scriptProcessor → destNode (WebRTC)
+            //                       → monitorGain → speakers (lokal test)
+            this.vcSourceNode.connect(this.vcScriptProcessor);
+            this.vcScriptProcessor.connect(this.vcDestNode);
+            this.vcScriptProcessor.connect(this.vcMonitorGain);
+            this.vcMonitorGain.connect(this.vcAudioContext.destination);
+
+            this.vcProcessedStream = this.vcDestNode.stream;
+            this.vcActive = true;
+            console.log('[VC] Voice changer zinciri kuruldu — pitch=0 (pasif)');
+            return this.vcProcessedStream;
+        } catch (e) {
+            console.error('[VC] Voice changer zinciri kurulamadı:', e);
+            return rawMicStream; // fallback — en azından çalışsın
+        }
+    }
+
+    /** Pitch değerini SoundTouch'a uygula (semitone → ratio) */
+    applyPitchToSoundTouch(semitones) {
+        if (!this.vcSoundTouch || !this.vcActive) return;
+        // semitone → pitch ratio: 2^(semitones/12)
+        // 0 semitone = ratio 1 (değişiklik yok)
+        // +12 semitone = ratio 2 (bir oktav yukarı)
+        // -12 semitone = ratio 0.5 (bir oktav aşağı)
+        const pitchRatio = Math.pow(2, semitones / 12);
+        this.vcSoundTouch.pitch = pitchRatio;
+        console.log('[VC] Pitch uygulandı:', semitones, 'semitone → ratio', pitchRatio);
+    }
+
+    /** Bir preset uygula (admin butona bastığında) */
+    applyVoicePreset(presetName) {
+        const preset = VoiceChatApp.VOICE_PRESETS[presetName];
+        if (!preset) {
+            console.warn('[VC] Bilinmeyen preset:', presetName);
+            return;
+        }
+        if (!this.vcActive) {
+            this.showToast('⚠️', 'Voice changer hazır değil — önce odaya katıl.');
+            return;
+        }
+
+        this.currentVoicePreset = presetName;
+        this.currentPitch = preset.pitch;
+        // UI güncelle
+        if (this.vcPitchSlider) this.vcPitchSlider.value = preset.pitch;
+        if (this.vcPitchValue) this.vcPitchValue.textContent = (preset.pitch > 0 ? '+' : '') + preset.pitch;
+
+        // Pitch'i uygula
+        this.applyPitchToSoundTouch(preset.pitch);
+
+        // Sunucuya + odadakilere haber ver
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'voice-effect-change',
+                preset: presetName
+            }));
+        }
+
+        // UI status güncelle
+        if (this.vcStatus) {
+            if (presetName === 'normal') {
+                this.vcStatus.textContent = 'Pasif';
+                this.vcStatus.classList.remove('active');
+            } else {
+                const labels = {
+                    'deep_male': 'Kalın Erkek',
+                    'thin_male': 'İnce Erkek',
+                    'female': 'Kadın',
+                    'child': 'Çocuk',
+                    'robot': 'Robot',
+                    'alien': 'Yabancı'
+                };
+                this.vcStatus.textContent = labels[presetName] || presetName;
+                this.vcStatus.classList.add('active');
+            }
+        }
+
+        const toastMessages = {
+            'normal':    '🎤 Ses normal',
+            'deep_male': '🧔 Kalın erkek sesi aktif!',
+            'thin_male': '👨 İnce erkek sesi aktif!',
+            'female':    '👩 Kadın sesi aktif!',
+            'child':     '👧 Çocuk sesi aktif!',
+            'robot':     '🤖 Robot sesi aktif!',
+            'alien':     '👽 Yabancı sesi aktif!'
+        };
+        this.showToast('🎭', toastMessages[presetName] || 'Ses değiştirildi');
+    }
+
+    /** Monitor (lokal dinleme) aç/kapat — sadece admin kendi sesini duyarak test eder */
+    toggleVoiceMonitor() {
+        if (!this.vcActive || !this.vcMonitorGain) {
+            this.showToast('⚠️', 'Voice changer hazır değil — önce odaya katıl.');
+            return;
+        }
+        this.vcMonitorActive = !this.vcMonitorActive;
+        // 0.6 = yüksek ses (kendi sesini duyabilmek için)
+        this.vcMonitorGain.gain.value = this.vcMonitorActive ? 0.6 : 0;
+        if (this.vcMonitorBtn) {
+            this.vcMonitorBtn.classList.toggle('active', this.vcMonitorActive);
+            this.vcMonitorBtn.textContent = this.vcMonitorActive ? '🔇 Monitörü Kapat' : '🔊 Kendi Sesimi Dinle';
+        }
+        if (this.vcMonitorActive) {
+            this.showToast('🔊', 'Sesinizi duyuyorsunuz — pitch efektini test edin!');
+        } else {
+            this.showToast('🔇', 'Monitör kapatıldı.');
+        }
+    }
+
+    /** Karşı tarafın voice effect'i değişti — UI'da indicator göster */
+    onVoiceEffectChange(message) {
+        // message.userId, message.preset
+        const labels = {
+            'normal': null,
+            'deep_male': '🧔 Kalın',
+            'thin_male': '👨 İnce',
+            'female': '👩 Kadın',
+            'child': '👧 Çocuk',
+            'robot': '🤖 Robot',
+            'alien': '👽 Alien'
+        };
+        const label = labels[message.preset];
+        if (!label) return; // normal ise gösterme
+
+        // voice-participants içindeki kullanıcı kartında indicator ekle
+        const card = document.getElementById(`participant-${message.userId}`);
+        if (card) {
+            let badge = card.querySelector('.voice-effect-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'voice-effect-badge';
+                card.appendChild(badge);
+            }
+            badge.textContent = label;
+        }
+        // Sidebar'daki kullanıcı listesinde de
+        const sidebarItems = document.querySelectorAll(`.channel-user-item[data-user-id="${message.userId}"]`);
+        sidebarItems.forEach(item => {
+            let badge = item.querySelector('.voice-effect-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'voice-effect-badge';
+                item.appendChild(badge);
+            }
+            badge.textContent = label;
+        });
+        // Toast
+        if (message.username) {
+            this.showToast('🎭', `${message.username} sesini değiştirdi: ${label}`);
         }
     }
 }
