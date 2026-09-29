@@ -103,7 +103,7 @@
 
             <!-- Kullanıcı Paneli -->
             <div class="user-panel" id="user-panel">
-                <div class="user-info">
+                <div class="user-info" id="user-info-clickable" style="cursor: pointer;" title="Nick değiştirmek için tıkla">
                     <div class="user-avatar" id="user-avatar">
                         <span id="user-avatar-letter"></span>
                         <span class="avatar-status-dot online"></span>
@@ -486,9 +486,34 @@
         <div class="emoji-grid" id="emoji-grid"></div>
     </div>
 
+    <!-- === NICK DEĞİŞTİRME MODALI === -->
+    <div id="nick-change-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3>✏️ Nick Değiştir</h3>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 8px 0 16px;">Yeni nick'inizi girin. Bu nick tüm odadakiler tarafından görülecek.</p>
+            <input type="text" id="nick-change-input" class="modern-input" placeholder="Yeni nick..." maxlength="20" style="width: 100%; margin-bottom: 16px;">
+            <div class="modal-actions">
+                <button id="cancel-nick-change-btn" class="btn-secondary" style="flex:1;">İptal</button>
+                <button id="submit-nick-change-btn" class="btn-primary" style="flex:1;">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === MOBİL MENÜ BUTONU === -->
+    <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Menü">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- === MOBİL ARKA PLAN OVERLAY === -->
+    <div id="mobile-overlay" class="mobile-overlay hidden"></div>
+
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- SoundTouchJS artık dynamic import ile yükleniyor (ES module olduğu için script tag ile global exposure olmuyor) -->
-    <script src="app.js?v=11.0.0"></script>
+    <script src="app.js?v=12.0.0"></script>
 </body>
 </html>

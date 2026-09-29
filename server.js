@@ -345,6 +345,64 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        // === NICK DEĞİŞTİRME ===
+        // Kullanıcı nick'ini değiştirir — tüm odadakilere + online listesine haber ver
+        case 'change-nick': {
+          const user = connectedUsers.get(userId);
+          if (!user) return;
+          const newUsername = (message.newUsername || '').trim().substring(0, 20);
+          if (!newUsername) {
+            ws.send(JSON.stringify({ type: 'nick-change-error', message: 'Nick boş olamaz.' }));
+            return;
+          }
+          if (newUsername === user.username) {
+            ws.send(JSON.stringify({ type: 'nick-change-error', message: 'Bu zaten senin nickin.' }));
+            return;
+          }
+          // Aynı nick kullanımda mı kontrol et
+          let isTaken = false;
+          for (const [, existingUser] of connectedUsers.entries()) {
+            if (existingUser.id !== userId && existingUser.username === newUsername) {
+              isTaken = true;
+              break;
+            }
+          }
+          if (isTaken) {
+            ws.send(JSON.stringify({ type: 'nick-change-error', message: 'Bu nick zaten kullanılıyor.' }));
+            return;
+          }
+
+          const oldUsername = user.username;
+          user.username = newUsername;
+
+          // Kullanıcıya onay
+          ws.send(JSON.stringify({
+            type: 'nick-changed',
+            userId,
+            oldUsername,
+            newUsername,
+            you: true
+          }));
+
+          // Tüm bağlı kullanıcılara haber ver
+          const broadcast = JSON.stringify({
+            type: 'nick-changed',
+            userId,
+            oldUsername,
+            newUsername,
+            you: false
+          });
+          connectedUsers.forEach((u) => {
+            if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(broadcast);
+            }
+          });
+
+          broadcastRoomUpdate();
+          broadcastOnlineUsers();
+          break;
+        }
+
         // === VOICE CHANGER (Admin only) ===
         // Admin sesini değiştirdi — odadakilere haber ver (UI indicator için)
         case 'voice-effect-change': {

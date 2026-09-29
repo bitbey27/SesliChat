@@ -203,8 +203,18 @@ class VoiceChatApp {
         this.youtubeSearchEnabled = false;
         this.listenerPlayers = new Map();
 
-        // === VOICE CHANGER (admin only) ===
-        // SoundTouchJS ile ses pitch shifting — sadece admin kullanır
+        // === NICK DEĞİŞTİRME + MOBİL MENÜ ===
+        this.nickChangeModal = document.getElementById('nick-change-modal');
+        this.nickChangeInput = document.getElementById('nick-change-input');
+        this.submitNickChangeBtn = document.getElementById('submit-nick-change-btn');
+        this.cancelNickChangeBtn = document.getElementById('cancel-nick-change-btn');
+        this.userInfoClickable = document.getElementById('user-info-clickable');
+        this.mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        this.mobileOverlay = document.getElementById('mobile-overlay');
+        this.channelSidebar = document.querySelector('.channel-sidebar');
+        this.membersSidebar = document.querySelector('.members-sidebar');
+
+        // Voice changer state
         this.vcPresetsContainer = document.getElementById('vc-presets');
         this.vcPitchSlider = document.getElementById('vc-pitch-slider');
         this.vcPitchValue = document.getElementById('vc-pitch-value');
@@ -587,6 +597,39 @@ class VoiceChatApp {
             }
         }).catch(() => {});
 
+        // === NICK DEĞİŞTİRME ===
+        // Profile kartına tıkla → modal aç
+        if (this.userInfoClickable) {
+            this.userInfoClickable.addEventListener('click', () => {
+                if (this.nickChangeModal && this.nickChangeInput) {
+                    this.nickChangeInput.value = this.username || '';
+                    this.nickChangeModal.classList.remove('hidden');
+                    setTimeout(() => this.nickChangeInput.focus(), 100);
+                }
+            });
+        }
+        if (this.cancelNickChangeBtn) {
+            this.cancelNickChangeBtn.addEventListener('click', () => {
+                if (this.nickChangeModal) this.nickChangeModal.classList.add('hidden');
+            });
+        }
+        if (this.submitNickChangeBtn) {
+            this.submitNickChangeBtn.addEventListener('click', () => this.submitNickChange());
+        }
+        if (this.nickChangeInput) {
+            this.nickChangeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.submitNickChange();
+            });
+        }
+
+        // === MOBİL MENÜ TOGGLE ===
+        if (this.mobileMenuToggle) {
+            this.mobileMenuToggle.addEventListener('click', () => this.toggleMobileSidebar());
+        }
+        if (this.mobileOverlay) {
+            this.mobileOverlay.addEventListener('click', () => this.toggleMobileSidebar(false));
+        }
+
         // === SAYFA YENİLEME OTOMATİK GİRİŞ ===
         const savedUsername = localStorage.getItem('username');
         if (savedUsername) {
@@ -916,6 +959,15 @@ class VoiceChatApp {
                 // Sunucudan heartbeat cevabı — bir şey yapma
                 break;
 
+            // === NICK DEĞİŞTİRME ===
+            case 'nick-changed':
+                this.onNickChanged(message);
+                break;
+
+            case 'nick-change-error':
+                this.showToast('❌', message.message || 'Nick değiştirilemedi.');
+                break;
+
             // === VOICE CHANGER ===
             // Karşı taraf (admin) sesini değiştirdi — UI'da indicator göster
             case 'voice-effect-change':
@@ -1058,7 +1110,12 @@ class VoiceChatApp {
     // =========================================
     async joinRoom(roomId) {
         if (this.currentRoom === roomId) return;
-        
+
+        // === MOBİL: Kanal seçince sidebar otomatik kapanır ===
+        if (document.body.classList.contains('mobile-sidebar-open')) {
+            this.toggleMobileSidebar(false);
+        }
+
         const roomInfo = this.roomsList && this.roomsList[roomId];
         if (roomInfo && roomInfo.isLocked && this.role !== 'admin') {
             // Kayıtlı şifre var mı kontrol et
@@ -3152,6 +3209,98 @@ class VoiceChatApp {
         // Toast
         if (message.username) {
             this.showToast('🎭', `${message.username} sesini değiştirdi: ${label}`);
+        }
+    }
+
+    // =========================================
+    // NICK DEĞİŞTİRME
+    // =========================================
+
+    /** Nick değiştirme gönder → server'a change-nick mesajı */
+    submitNickChange() {
+        const newNick = (this.nickChangeInput.value || '').trim();
+        if (!newNick) {
+            this.showToast('⚠️', 'Nick boş olamaz.');
+            return;
+        }
+        if (newNick === this.username) {
+            this.showToast('ℹ️', 'Bu zaten senin nickin.');
+            if (this.nickChangeModal) this.nickChangeModal.classList.add('hidden');
+            return;
+        }
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'change-nick',
+                newUsername: newNick
+            }));
+        }
+        // Modal'ı kapat — hata gelirse toast ile haber verir
+        if (this.nickChangeModal) this.nickChangeModal.classList.add('hidden');
+    }
+
+    /** Server'dan nick-changed mesajı geldi → UI'ı güncelle */
+    onNickChanged(message) {
+        const { userId, oldUsername, newUsername, you } = message;
+
+        if (you) {
+            // Bu benim nick değişikliğim
+            this.username = newUsername;
+            localStorage.setItem('username', newUsername);
+            if (this.displayName) this.displayName.textContent = newUsername;
+            if (this.userAvatarLetter) this.userAvatarLetter.textContent = newUsername.charAt(0).toUpperCase();
+            this.showToast('✏️', `Nick'iniz değiştirildi: ${newUsername}`);
+        } else {
+            // Başka bir kullanıcı nick değiştirdi
+            this.showToast('✏️', `${oldUsername} → ${newUsername}`);
+        }
+
+        // Voice participant kartındaki ismi güncelle
+        const card = document.getElementById(`participant-${userId}`);
+        if (card) {
+            const nameEl = card.querySelector('.participant-name');
+            if (nameEl) nameEl.textContent = newUsername;
+        }
+
+        // Channel sidebar'daki kullanıcı isimlerini güncelle
+        const sidebarItems = document.querySelectorAll(`.channel-user-item[data-user-id="${userId}"]`);
+        sidebarItems.forEach(item => {
+            const nameEl = item.querySelector('.channel-user-name');
+            if (nameEl) {
+                // Admin crown varsa koru
+                const crown = nameEl.querySelector('.admin-crown');
+                nameEl.textContent = newUsername;
+                if (crown) nameEl.appendChild(crown);
+            }
+        });
+
+        // Online members listesindeki ismi güncelle
+        const memberItems = document.querySelectorAll('.member-item');
+        memberItems.forEach(item => {
+            const nameEl = item.querySelector('.member-name');
+            if (nameEl && nameEl.textContent === oldUsername) {
+                nameEl.textContent = newUsername;
+                const avatarEl = item.querySelector('.member-avatar');
+                if (avatarEl) avatarEl.textContent = newUsername.charAt(0).toUpperCase();
+            }
+        });
+    }
+
+    // =========================================
+    // MOBİL MENÜ TOGGLE
+    // =========================================
+
+    /** Mobil cihazlarda sidebar'ı aç/kapat */
+    toggleMobileSidebar(forceOpen) {
+        const shouldOpen = forceOpen !== undefined ? forceOpen : !document.body.classList.contains('mobile-sidebar-open');
+
+        if (shouldOpen) {
+            document.body.classList.add('mobile-sidebar-open');
+            if (this.channelSidebar) this.channelSidebar.classList.add('mobile-visible');
+            if (this.mobileOverlay) this.mobileOverlay.classList.remove('hidden');
+        } else {
+            document.body.classList.remove('mobile-sidebar-open');
+            if (this.channelSidebar) this.channelSidebar.classList.remove('mobile-visible');
+            if (this.mobileOverlay) this.mobileOverlay.classList.add('hidden');
         }
     }
 }

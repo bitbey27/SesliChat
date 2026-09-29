@@ -2527,3 +2527,349 @@ body {
     font-size: 9px;
     font-weight: 600;
 }
+
+/* =========================================
+   NICK DEĞİŞTİRME + MOBİL + MODERN POLISH
+   ========================================= */
+
+/* === MOBİL MENÜ TOGGLE BUTONU === */
+.mobile-menu-toggle {
+    display: none; /* Masaüstünde gizli, mobilde görünür */
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 200;
+    width: 44px;
+    height: 44px;
+    background: var(--brand-gradient);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: var(--transition-fast);
+}
+.mobile-menu-toggle:active {
+    transform: scale(0.92);
+}
+
+/* === MOBİL OVERLAY === */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 150;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+.mobile-overlay.hidden { display: none; }
+.mobile-overlay:not(.hidden) { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* === USER PANEL — MODERN KART === */
+.user-panel {
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.05) 0%, rgba(88, 101, 242, 0.03) 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 12px;
+    backdrop-filter: blur(8px);
+}
+
+.user-info {
+    border-radius: 10px;
+    padding: 6px 8px;
+    transition: var(--transition-fast);
+}
+.user-info:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: var(--transition-fast);
+}
+.user-info:hover .user-avatar {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(124, 92, 252, 0.3);
+}
+
+.avatar-status-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--green);
+    border: 2px solid var(--bg-sidebar);
+}
+
+.user-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-status {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.user-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.user-controls .control-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+.user-controls .control-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+.user-controls .control-btn:active {
+    transform: scale(0.92);
+}
+
+/* === KANAL SIDEBAR — MOBİL === */
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    .server-sidebar {
+        display: none;
+    }
+    
+    .channel-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 85vw;
+        z-index: 160;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+    .channel-sidebar.mobile-visible {
+        transform: translateX(0);
+    }
+    
+    .members-sidebar {
+        display: none;
+    }
+    
+    .main-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    /* Kanal seçince mobil sidebar otomatik kapanmalı (JS ile yapılır) */
+    .channel-item {
+        padding: 12px 14px;
+    }
+    
+    /* User panel daha kompakt */
+    .user-panel {
+        padding: 8px 10px;
+    }
+    .user-controls {
+        gap: 2px;
+    }
+    .user-controls .control-btn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .channel-sidebar {
+        width: 260px;
+    }
+    
+    /* Voice view daha kompakt */
+    .voice-body {
+        flex-direction: column;
+    }
+    
+    .voice-participants {
+        width: 100%;
+        min-height: auto;
+    }
+    
+    .chat-panel {
+        width: 100%;
+        min-width: unset;
+        height: 200px;
+    }
+    
+    /* Müzik paneli daha kompakt */
+    .mp-results {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        max-height: 200px;
+    }
+    
+    .mp-controls-row {
+        gap: 4px;
+    }
+    
+    .mp-play-pause-btn,
+    .mp-vol-btn,
+    .mp-mute-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .mp-stop-btn {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+}
+
+/* === NICK DEĞİŞTİRME MODALI === */
+#nick-change-modal .modal-content {
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+#nick-change-modal h3 {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+#nick-change-input {
+    background: var(--bg-input);
+    border: 1px solid var(--bg-hover);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    transition: var(--transition-fast);
+}
+#nick-change-input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.15);
+}
+
+/* === MODERN POLISH — BUTONLAR === */
+.btn-primary, .btn-secondary, .btn-leave {
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 92, 252, 0.35);
+}
+.btn-primary:active {
+    transform: scale(0.96);
+}
+.btn-secondary:hover {
+    background: var(--bg-hover);
+}
+
+/* === MODERN POLISH — KANAL LİSTESİ === */
+.channel-item {
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+.channel-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(2px);
+}
+.channel-item.active {
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.15) 0%, rgba(88, 101, 242, 0.1) 100%);
+    border-left: 3px solid var(--brand-primary);
+}
+
+/* === MODERN POLISH — TOAST === */
+.toast {
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    animation: toastSlideIn 0.3s ease;
+}
+@keyframes toastSlideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === MODERN POLISH — MODAL === */
+.modal-content {
+    border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    animation: modalSlideIn 0.25s ease;
+}
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === MODERN POLISH — LOGIN === */
+.login-card {
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+}
+
+.login-screen {
+    background: radial-gradient(ellipse at top, rgba(124, 92, 252, 0.08) 0%, var(--bg-tertiary) 50%);
+}
+
+/* === MOBİL — CHANNEL SELECTION AUTO-CLOSE === */
+@media (max-width: 768px) {
+    /* Kanala tıklayınca mobil sidebar kapanır (JS ile handle edilir) */
+    .channel-item:active {
+        transform: scale(0.97);
+    }
+}
