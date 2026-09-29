@@ -441,13 +441,38 @@
 
             <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1);">
 
-            <!-- === VOICE CHANGER (geçici olarak devre dışı) === -->
+            <!-- === VOICE CHANGER (Admin only) === -->
             <div class="settings-group">
                 <h4>🎭 Ses Değiştirici</h4>
-                <p style="font-size: 11px; color: var(--text-secondary); margin: 0;">
-                    🔧 Geçici olarak devre dışı. SoundTouchJS kütüphanesinin API'si değişti, 
-                    yakında düzeltilecek.
-                </p>
+                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 12px;">Sadece adminler kullanabilir. 10 kaliteli efekt. Ses anında değişir, karşı taraf duyar.</p>
+
+                <!-- Preset Butonları (10 tane) -->
+                <div class="vc-presets" id="vc-presets">
+                    <button class="vc-preset-btn active" data-preset="normal">🎤 Normal</button>
+                    <button class="vc-preset-btn" data-preset="deep_male">🧔 Kalın Erkek</button>
+                    <button class="vc-preset-btn" data-preset="thin_male">👨 İnce Erkek</button>
+                    <button class="vc-preset-btn" data-preset="female">👩 Kadın</button>
+                    <button class="vc-preset-btn" data-preset="child">👧 Çocuk</button>
+                    <button class="vc-preset-btn" data-preset="robot">🤖 Robot</button>
+                    <button class="vc-preset-btn" data-preset="alien">👽 Yabancı</button>
+                    <button class="vc-preset-btn" data-preset="ghost">🎃 Hayalet</button>
+                    <button class="vc-preset-btn" data-preset="santa">🎅 Noel Baba</button>
+                    <button class="vc-preset-btn" data-preset="squeak">📣 Çığlık</button>
+                </div>
+
+                <!-- Custom Pitch Slider -->
+                <div class="vc-pitch-row">
+                    <span class="vc-pitch-label">Pitch:</span>
+                    <input type="range" id="vc-pitch-slider" class="vc-pitch-slider" min="-12" max="12" step="1" value="0">
+                    <span class="vc-pitch-value" id="vc-pitch-value">0</span>
+                    <span class="vc-pitch-unit">semitone</span>
+                </div>
+
+                <!-- Monitor (lokal test) -->
+                <div class="vc-monitor-row">
+                    <button id="vc-monitor-btn" class="vc-monitor-btn" title="Sesinizi lokal olarak dinleyin (karşı tarafa gitmez)">🔊 Kendi Sesimi Dinle</button>
+                    <span class="vc-status" id="vc-status">Pasif</span>
+                </div>
             </div>
 
             <div class="modal-actions mt-4">
@@ -464,6 +489,6 @@
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- SoundTouchJS artık dynamic import ile yükleniyor (ES module olduğu için script tag ile global exposure olmuyor) -->
-    <script src="app.js?v=6.0.0"></script>
+    <script src="app.js?v=7.0.0"></script>
 </body>
 </html>
