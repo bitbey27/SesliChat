@@ -3419,6 +3419,8 @@ class VoiceChatApp {
             if (musicPanel) musicPanel.style.setProperty('display', 'none', 'important');
             if (voiceView) voiceView.classList.remove('hidden');
             if (chatPanel) {
+                // chatPanel'i body'ye TAŞI — parent'lardan kurtar
+                document.body.appendChild(chatPanel);
                 chatPanel.style.setProperty('display', 'flex', 'important');
                 chatPanel.style.setProperty('position', 'fixed', 'important');
                 chatPanel.style.setProperty('top', '0', 'important');
@@ -3426,21 +3428,16 @@ class VoiceChatApp {
                 chatPanel.style.setProperty('right', '0', 'important');
                 chatPanel.style.setProperty('bottom', '56px', 'important');
                 chatPanel.style.setProperty('z-index', '9999', 'important');
+                chatPanel.style.setProperty('flex-direction', 'column', 'important');
                 chatPanel.style.setProperty('background', '#0B0E14', 'important');
+                chatPanel.style.setProperty('height', 'auto', 'important');
+                chatPanel.style.setProperty('max-height', 'none', 'important');
+                chatPanel.style.setProperty('overflow', 'hidden', 'important');
+                chatPanel.style.setProperty('width', '100%', 'important');
             }
-            // DEBUG: YENI element yarat — body'e direkt ekle
+            // Debug div'ı kaldır
             var debugDiv = document.getElementById('mobile-chat-debug');
             if (debugDiv) debugDiv.remove();
-            debugDiv = document.createElement('div');
-            debugDiv.id = 'mobile-chat-debug';
-            debugDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:56px;background:red;z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:bold;padding:20px;';
-            debugDiv.innerHTML = '<div>SOHBET PANELI TEST<br>Eger bunu goruyorsan JavaScript calisiyor<br>ama chat-panel gorunmuyor</div>';
-            document.body.appendChild(debugDiv);
-            // Eski chat content'i de debugDiv'e tasi
-            if (chatPanel) {
-                var chatContent = chatPanel.innerHTML;
-                debugDiv.innerHTML += '<div style="margin-top:20px;font-size:14px;color:yellow;">Chat icerigi:<br>' + chatContent.substring(0, 200) + '</div>';
-            }
             this.toggleMobileSidebar(false);
         } else if (tabName === 'people') {
             // İnsanlar TAM EKRAN
