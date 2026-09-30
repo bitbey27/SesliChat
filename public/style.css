@@ -763,6 +763,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    background: transparent !important;
 }
 
 .voice-header {
@@ -819,6 +820,7 @@ body {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    background: transparent !important;
 }
 
 /* Katılımcı Grid */
@@ -3750,8 +3752,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bg-surface);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(11, 14, 20, 0.4);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border-bottom: 1px solid rgba(124, 92, 252, 0.1);
 }
 
 /* === ONLINE MEMBERS — Modern === */
@@ -3843,8 +3847,10 @@ body {
 /* === VOICE CONNECTION INFO — Modern === */
 .voice-connection-info {
     padding: 8px 16px;
-    background: var(--bg-surface);
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(11, 14, 20, 0.4);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border-top: 1px solid rgba(124, 92, 252, 0.1);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -3857,14 +3863,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* === APP SCREEN BACKGROUND === */
+/* === APP SCREEN BACKGROUND — transparent, aura görünür === */
 .app-screen {
-    background: var(--bg-base);
+    background: transparent !important;
 }
 
-/* === MAIN CONTENT === */
+/* === MAIN CONTENT — transparent, aura arkadan görünür === */
 .main-content {
-    background: var(--bg-base);
+    background: transparent !important;
 }
 
 /* === CHANNEL HEADER === */
