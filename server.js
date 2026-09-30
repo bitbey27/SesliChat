@@ -17,8 +17,16 @@ app.use(express.json());
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
 
-// Statik dosyaları sun
-app.use(express.static(path.join(__dirname, 'public')));
+// Statik dosyaları sun — NO CACHE (mobil Chrome cache sorununu önle)
+app.use(express.static(path.join(__dirname, 'public'), {
+    etag: false,
+    lastModified: false,
+    setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+}));
 
 // Sağlık kontrolü (Render.com için)
 app.get('/health', (req, res) => {
