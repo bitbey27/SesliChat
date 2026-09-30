@@ -133,60 +133,74 @@
 
         <!-- Ana İçerik -->
         <div class="main-content">
-            <!-- Oda Bilgi Ekranı -->
-            <div id="welcome-view" class="welcome-view">
-                <div class="welcome-content">
-                    <div class="welcome-illustration">
-                        <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-                            <circle cx="100" cy="100" r="80" fill="url(#welcomeGrad)" opacity="0.1"/>
-                            <circle cx="100" cy="100" r="50" fill="url(#welcomeGrad)" opacity="0.15"/>
-                            <path d="M80 85C80 78.3726 85.3726 73 92 73H108C114.627 73 120 78.3726 120 85V100C120 106.627 114.627 112 108 112H92C85.3726 112 80 106.627 80 100V85Z" fill="url(#welcomeGrad)" opacity="0.8"/>
-                            <path d="M90 112V130" stroke="url(#welcomeGrad)" stroke-width="4" stroke-linecap="round"/>
-                            <path d="M110 112V130" stroke="url(#welcomeGrad)" stroke-width="4" stroke-linecap="round"/>
-                            <path d="M75 130H125" stroke="url(#welcomeGrad)" stroke-width="4" stroke-linecap="round"/>
-                            <!-- Ses dalgaları -->
-                            <path d="M130 85C135 85 140 90 140 100C140 110 135 115 130 115" stroke="url(#welcomeGrad)" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
-                            <path d="M140 75C150 80 155 90 155 100C155 110 150 120 140 125" stroke="url(#welcomeGrad)" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
-                            <defs>
-                                <linearGradient id="welcomeGrad" x1="20" y1="20" x2="180" y2="180">
-                                    <stop stop-color="#7C5CFC"/>
-                                    <stop offset="1" stop-color="#5865F2"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <h2>Sesli Bir Kanala Katıl</h2>
-                    <p>Sol taraftaki sesli kanallardan birine tıklayarak arkadaşlarınla konuşmaya başla!</p>
-                </div>
-            </div>
-
             <!-- Sesli Oda Görünümü -->
             <div id="voice-view" class="voice-view hidden">
-                <div class="voice-header">
-                    <div class="voice-header-info">
-                        <span class="voice-room-icon" id="voice-room-icon">🔊</span>
-                        <h2 id="voice-room-name">Oda Adı</h2>
-                    </div>
-                    <div class="voice-header-actions">
-                        <button class="btn-leave" id="leave-room-btn">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                                <path d="M13 9H5M5 9L8 6M5 9L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Kanaldan Ayrıl
-                        </button>
-                    </div>
-                </div>
-
                 <div class="voice-body">
-                    <div id="video-stage" class="video-stage hidden" style="flex: 2; margin-right: 15px; background: #000; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; position: relative;">
-                    </div>
-                    <div class="voice-participants" id="voice-participants">
-                        <!-- Katılımcılar JS ile doldurulacak -->
+                    <!-- === VOICE ROOM CARD (büyük, belirgin) === -->
+                    <div class="voice-room-card">
+                        <div class="vrc-header">
+                            <span class="vrc-icon" id="voice-room-icon">🔊</span>
+                            <h2 id="voice-room-name">Oda Adı</h2>
+                            <button class="vrc-leave-btn" id="leave-room-btn" title="Kanaldan Ayrıl">
+                                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                                    <path d="M13 9H5M5 9L8 6M5 9L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Ayrıl
+                            </button>
+                        </div>
+
+                        <!-- Video stage (hidden by default) -->
+                        <div id="video-stage" class="video-stage hidden"></div>
+
+                        <!-- Katılımcılar -->
+                        <div class="voice-participants" id="voice-participants"></div>
+
+                        <!-- === BÜYÜK KONTROL BUTONLARI === -->
+                        <div class="vrc-controls">
+                            <button class="vrc-btn" id="vrc-mic-btn" title="Mikrofon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                    <line x1="12" y1="19" x2="12" y2="22"/>
+                                </svg>
+                                <span>Mikrofon</span>
+                            </button>
+                            <button class="vrc-btn" id="vrc-deafen-btn" title="Kulaklık">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+                                </svg>
+                                <span>Kulaklık</span>
+                            </button>
+                            <button class="vrc-btn" id="vrc-screen-btn" title="Ekran Paylaş">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                                <span>Ekran</span>
+                            </button>
+                            <button class="vrc-btn" id="vrc-music-btn" title="Müzik">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 18V5l12-2v13"/>
+                                    <circle cx="6" cy="18" r="3"/>
+                                    <circle cx="18" cy="16" r="3"/>
+                                </svg>
+                                <span>Müzik</span>
+                            </button>
+                            <button class="vrc-btn" id="vrc-menu-btn" title="Menü">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <circle cx="12" cy="5" r="1.5"/>
+                                    <circle cx="12" cy="12" r="1.5"/>
+                                    <circle cx="12" cy="19" r="1.5"/>
+                                </svg>
+                                <span>Menü</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- === YOUTUBE MÜZİK PLAYER (yeni modern tasarım) === -->
+                    <!-- === YOUTUBE MÜZİK PLAYER === -->
                     <div id="music-panel" class="music-panel hidden">
-                        <!-- Header -->
                         <div class="mp-header">
                             <div class="mp-header-title">
                                 <span class="mp-icon">🎵</span>
@@ -194,33 +208,23 @@
                             </div>
                             <button id="music-close-btn" class="mp-close-btn" title="Kapat">✕</button>
                         </div>
-
-                        <!-- Arama kutusu (büyük + ikon buton) -->
                         <div class="mp-search-row">
                             <input type="text" id="yt-search-input" class="mp-search-input" placeholder="Şarkı veya sanatçı ara..." autocomplete="off">
                             <button id="yt-search-btn" class="mp-search-btn" title="Ara">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                                 </svg>
                             </button>
                             <button id="yt-link-toggle-btn" class="mp-link-btn" title="YouTube linki yapıştır" style="display:none;">🔗</button>
                         </div>
-                        <!-- Link yapıştırma (varsayılan gizli) -->
                         <div id="yt-link-row" class="mp-link-row hidden">
                             <input type="text" id="music-url-input" class="mp-link-input" placeholder="https://youtu.be/...">
                             <button id="music-load-url-btn" class="mp-link-load-btn">Yükle</button>
                         </div>
-
-                        <!-- Arama durumu -->
                         <div id="yt-search-status" class="mp-search-status"></div>
-
-                        <!-- Sonuçlar (yatay kaydırma + grid) -->
                         <div id="yt-search-results" class="mp-results"></div>
-
-                        <!-- Şu an çalıyor alanı -->
                         <div id="mp-now-playing" class="mp-now-playing hidden">
-                            <!-- YouTube player (görünür — klip gösterilir) -->
                             <div id="yt-player-wrapper" class="mp-player-wrapper">
                                 <div id="yt-player-dj"></div>
                                 <div id="mp-loading-overlay" class="mp-loading-overlay hidden">
@@ -238,8 +242,6 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Volume + mute + play/pause + stop -->
                             <div class="mp-controls-row">
                                 <button id="music-play-pause-btn" class="mp-play-pause-btn" title="Çal / Duraklat">▶</button>
                                 <button id="music-vol-down" class="mp-vol-btn" title="Sesi Kıs">−</button>
@@ -252,14 +254,14 @@
                         </div>
                     </div>
 
-                    <!-- Mini Chat Alanı -->
+                    <!-- === CHAT PANEL === -->
                     <div class="chat-panel" id="chat-panel">
-                        <div class="chat-header" style="display:flex; justify-content: space-between; align-items: center; padding-right: 10px;">
+                        <div class="chat-header">
                             <div>
                                 <span class="chat-header-icon">💬</span>
                                 <span class="chat-header-title">Sohbet</span>
                             </div>
-                            <button id="clear-chat-btn" class="hidden" title="Sohbet Geçmişini Temizle (Admin)" style="background:none; border:none; cursor:pointer; color:#ED4245; font-size:18px;">🗑️</button>
+                            <button id="clear-chat-btn" class="hidden" title="Sohbet Geçmişini Temizle (Admin)" style="background:none; border:none; cursor:pointer; color:var(--red); font-size:18px;">🗑️</button>
                         </div>
                         <div class="chat-messages" id="chat-messages">
                             <div class="chat-welcome-msg">
@@ -275,19 +277,6 @@
                                 </svg>
                             </button>
                         </form>
-                    </div>
-                </div>
-
-                <!-- Bağlantı Bilgisi -->
-                <div class="voice-connection-info" id="voice-connection-info">
-                    <div class="connection-quality">
-                        <div class="quality-bars">
-                            <span class="bar active"></span>
-                            <span class="bar active"></span>
-                            <span class="bar active"></span>
-                            <span class="bar"></span>
-                        </div>
-                        <span class="quality-text">Ses Bağlantısı</span>
                     </div>
                 </div>
             </div>
@@ -565,12 +554,40 @@
         </svg>
     </button>
 
+    <!-- === MOBİL ALT TAB BAR === -->
+    <div id="mobile-tab-bar" class="mobile-tab-bar hidden">
+        <button class="tab-btn active" data-tab="channels">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9h18M9 21V9"/>
+                <path d="M3 3h18v18H3z" stroke="none" fill="none"/>
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
+            <span>Kanallar</span>
+        </button>
+        <button class="tab-btn" data-tab="chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Sohbet</span>
+        </button>
+        <button class="tab-btn" data-tab="people">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>İnsanlar</span>
+        </button>
+    </div>
+
     <!-- === MOBİL ARKA PLAN OVERLAY === -->
     <div id="mobile-overlay" class="mobile-overlay hidden"></div>
 
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- SoundTouchJS artık dynamic import ile yükleniyor (ES module olduğu için script tag ile global exposure olmuyor) -->
-    <script src="app.js?v=14.0.0"></script>
+    <script src="app.js?v=15.0.0"></script>
 </body>
 </html>

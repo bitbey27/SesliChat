@@ -3777,3 +3777,201 @@ body {
     color: #fff;
     transition: all var(--transition-fast);
 }
+
+/* =========================================
+   VOICE ROOM CARD + VRC BUTTONS + MOBIL TAB BAR
+   ========================================= */
+
+/* === VOICE ROOM CARD — Büyük, belirgin kart === */
+.voice-room-card {
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    margin: var(--sp-3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.vrc-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-4) var(--sp-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.vrc-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    flex: 1;
+}
+.vrc-icon {
+    font-size: 24px;
+}
+.vrc-leave-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(248, 81, 73, 0.12);
+    border: 1px solid rgba(248, 81, 73, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--red);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+.vrc-leave-btn:hover {
+    background: rgba(248, 81, 73, 0.2);
+    color: #fff;
+}
+
+/* Voice participants inside the card */
+.voice-room-card .voice-participants {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    overflow-y: auto;
+    min-height: 120px;
+}
+
+/* Video stage inside the card */
+.voice-room-card .video-stage {
+    flex: 1;
+    min-height: 100px;
+    background: #000;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin: var(--sp-3);
+}
+
+/* === VRC CONTROL BUTTONS — Büyük, belirgin === */
+.vrc-controls {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(0, 0, 0, 0.15);
+    flex-wrap: wrap;
+}
+
+.vrc-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    justify-content: center;
+}
+.vrc-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    box-shadow: 0 0 12px var(--accent-glow);
+    transform: translateY(-2px);
+}
+.vrc-btn:active {
+    transform: scale(0.92);
+}
+.vrc-btn.active-red {
+    background: rgba(248, 81, 73, 0.15);
+    border-color: rgba(248, 81, 73, 0.4);
+    color: var(--red);
+}
+.vrc-btn.active-red:hover {
+    box-shadow: 0 0 12px rgba(248, 81, 73, 0.2);
+}
+.vrc-btn span {
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* === CHAT PANEL — Below the room card === */
+.voice-body .chat-panel {
+    flex-shrink: 0;
+    height: 200px;
+    max-height: 35vh;
+    margin: 0 var(--sp-3) var(--sp-3);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+/* === MOBIL TAB BAR === */
+.mobile-tab-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(11, 14, 20, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 250;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.mobile-tab-bar.hidden { display: none; }
+
+.tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+.tab-btn.active {
+    color: var(--accent);
+}
+.tab-btn span {
+    font-size: 10px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .mobile-tab-bar {
+        display: flex;
+    }
+    .app-screen {
+        padding-bottom: 60px;
+    }
+    .vrc-btn {
+        width: 56px;
+        height: 56px;
+    }
+    .vrc-btn span {
+        font-size: 9px;
+    }
+    .voice-room-card {
+        margin: var(--sp-2);
+    }
+    .chat-panel {
+        height: 160px !important;
+        margin: 0 var(--sp-2) var(--sp-2) !important;
+    }
+}

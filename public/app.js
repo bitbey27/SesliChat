@@ -640,6 +640,29 @@ class VoiceChatApp {
                 if (this.menuModal) this.menuModal.classList.remove('hidden');
             });
         }
+        // VRC buttons (voice room card controls)
+        const vrcMicBtn = document.getElementById('vrc-mic-btn');
+        const vrcDeafenBtn = document.getElementById('vrc-deafen-btn');
+        const vrcScreenBtn = document.getElementById('vrc-screen-btn');
+        const vrcMusicBtn = document.getElementById('vrc-music-btn');
+        const vrcMenuBtn = document.getElementById('vrc-menu-btn');
+        if (vrcMicBtn) vrcMicBtn.addEventListener('click', () => this.toggleMute());
+        if (vrcDeafenBtn) vrcDeafenBtn.addEventListener('click', () => this.toggleDeafen());
+        if (vrcScreenBtn) vrcScreenBtn.addEventListener('click', () => this.toggleScreenShare());
+        if (vrcMusicBtn) vrcMusicBtn.addEventListener('click', () => {
+            if (this.musicPanel) this.musicPanel.classList.toggle('hidden');
+        });
+        if (vrcMenuBtn) vrcMenuBtn.addEventListener('click', () => {
+            if (this.menuModal) this.menuModal.classList.remove('hidden');
+        });
+
+        // === MOBİL TAB BAR ===
+        this.mobileTabBar = document.getElementById('mobile-tab-bar');
+        if (this.mobileTabBar) {
+            this.mobileTabBar.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.switchMobileTab(btn.dataset.tab));
+            });
+        }
         if (this.menuCloseBtn) {
             this.menuCloseBtn.addEventListener('click', () => {
                 if (this.menuModal) this.menuModal.classList.add('hidden');
@@ -1557,9 +1580,12 @@ class VoiceChatApp {
         }
 
         // UI güncelle
-        this.micBtn.classList.toggle('muted', this.isMuted);
-        this.micBtn.querySelector('.icon-mic-on').classList.toggle('hidden', this.isMuted);
-        this.micBtn.querySelector('.icon-mic-off').classList.toggle('hidden', !this.isMuted);
+        if (this.micBtn) {
+            this.micBtn.classList.toggle('muted', this.isMuted);
+            this.micBtn.querySelector('.icon-mic-on')?.classList.toggle('hidden', this.isMuted);
+            this.micBtn.querySelector('.icon-mic-off')?.classList.toggle('hidden', !this.isMuted);
+        }
+        this.updateVrcButtonState();
 
         // Sunucuya bildir
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -1588,9 +1614,12 @@ class VoiceChatApp {
         });
 
         // UI güncelle
-        this.deafenBtn.classList.toggle('muted', this.isDeafened);
-        this.deafenBtn.querySelector('.icon-headphone-on').classList.toggle('hidden', this.isDeafened);
-        this.deafenBtn.querySelector('.icon-headphone-off').classList.toggle('hidden', !this.isDeafened);
+        if (this.deafenBtn) {
+            this.deafenBtn.classList.toggle('muted', this.isDeafened);
+            this.deafenBtn.querySelector('.icon-headphone-on')?.classList.toggle('hidden', this.isDeafened);
+            this.deafenBtn.querySelector('.icon-headphone-off')?.classList.toggle('hidden', !this.isDeafened);
+        }
+        this.updateVrcButtonState();
 
         // Sunucuya bildir
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -3325,6 +3354,42 @@ class VoiceChatApp {
             if (this.channelSidebar) this.channelSidebar.classList.remove('mobile-visible');
             if (this.mobileOverlay) this.mobileOverlay.classList.add('hidden');
         }
+    }
+
+    /** Mobil tab değiştir (Kanallar/Sohbet/İnsanlar) */
+    switchMobileTab(tabName) {
+        // Tab butonlarını güncelle
+        if (this.mobileTabBar) {
+            this.mobileTabBar.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabName);
+            });
+        }
+        // İçerik göster/gizle
+        const channelSidebar = document.querySelector('.channel-sidebar');
+        const chatPanel = document.getElementById('chat-panel');
+        const membersSidebar = document.querySelector('.members-sidebar');
+
+        if (tabName === 'channels') {
+            if (channelSidebar) channelSidebar.style.display = '';
+            if (chatPanel) chatPanel.style.display = 'none';
+            if (membersSidebar) membersSidebar.style.display = 'none';
+        } else if (tabName === 'chat') {
+            if (channelSidebar) channelSidebar.style.display = 'none';
+            if (chatPanel) chatPanel.style.display = '';
+            if (membersSidebar) membersSidebar.style.display = 'none';
+        } else if (tabName === 'people') {
+            if (channelSidebar) channelSidebar.style.display = 'none';
+            if (chatPanel) chatPanel.style.display = 'none';
+            if (membersSidebar) membersSidebar.style.display = '';
+        }
+    }
+
+    /** VRC buton state güncelle (mute/deafen için) */
+    updateVrcButtonState() {
+        const vrcMicBtn = document.getElementById('vrc-mic-btn');
+        const vrcDeafenBtn = document.getElementById('vrc-deafen-btn');
+        if (vrcMicBtn) vrcMicBtn.classList.toggle('active-red', this.isMuted);
+        if (vrcDeafenBtn) vrcDeafenBtn.classList.toggle('active-red', this.isDeafened);
     }
 }
 
