@@ -23,7 +23,7 @@
     let activeCanvases = [];
 
     // ============================================
-    // SNOW — yağan kar taneleri
+    // SNOW — yağan kar taneleri (KRİSP ve belirgin)
     // ============================================
     function initSnow(canvas) {
         const ctx = canvas.getContext('2d');
@@ -32,37 +32,70 @@
         window.addEventListener('resize', resize);
 
         const flakes = [];
-        const flakeCount = window.innerWidth < 768 ? 60 : 120;
+        const flakeCount = window.innerWidth < 768 ? 80 : 160;
         for (let i = 0; i < flakeCount; i++) {
+            const big = Math.random() > 0.65;
             flakes.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                r: 1 + Math.random() * 4,
-                speedY: 0.5 + Math.random() * 2,
-                speedX: -0.5 + Math.random(),
-                opacity: 0.5 + Math.random() * 0.5,
+                r: big ? 3 + Math.random() * 3 : 1.5 + Math.random() * 1.5,
+                speedY: big ? 0.8 + Math.random() * 1.2 : 0.4 + Math.random() * 0.7,
+                speedX: -0.3 + Math.random() * 0.6,
+                opacity: big ? 0.85 + Math.random() * 0.15 : 0.55 + Math.random() * 0.4,
                 sway: Math.random() * Math.PI * 2,
-                swaySpeed: 0.01 + Math.random() * 0.02
+                swaySpeed: 0.005 + Math.random() * 0.015,
+                big: big,
+                sparkle: Math.random() * Math.PI * 2,
+                sparkleSpeed: 0.05 + Math.random() * 0.05
             });
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Hafif mavi atmosferik tını
+            ctx.fillStyle = 'rgba(15, 22, 40, 0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             flakes.forEach(f => {
                 f.sway += f.swaySpeed;
-                f.x += f.speedX + Math.sin(f.sway) * 0.5;
+                f.sparkle += f.sparkleSpeed;
+                f.x += f.speedX + Math.sin(f.sway) * 0.9;
                 f.y += f.speedY;
-                if (f.y > canvas.height) { f.y = -5; f.x = Math.random() * canvas.width; }
-                if (f.x > canvas.width + 5) f.x = -5;
-                if (f.x < -5) f.x = canvas.width + 5;
+                if (f.y > canvas.height + 10) { f.y = -10; f.x = Math.random() * canvas.width; }
+                if (f.x > canvas.width + 10) f.x = -10;
+                if (f.x < -10) f.x = canvas.width + 10;
 
+                // Solid beyaz daire - minimum blur, çok net
                 ctx.beginPath();
                 ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
-                ctx.shadowColor = 'rgba(200, 220, 255, 0.8)';
-                ctx.shadowBlur = 6;
                 ctx.fill();
+
+                // Büyük taneler için hafif parıltı (az blur)
+                if (f.big) {
+                    ctx.shadowColor = 'rgba(220, 235, 255, 0.9)';
+                    ctx.shadowBlur = 3;
+                    ctx.fill(); // ikinci dolgu parıltı için
+                    ctx.shadowBlur = 0;
+
+                    // Sparkle "+" işareti (parıltı çizgileri)
+                    const sparkleAlpha = (0.4 + 0.4 * Math.sin(f.sparkle)) * f.opacity;
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${sparkleAlpha})`;
+                    ctx.lineWidth = 0.7;
+                    ctx.beginPath();
+                    ctx.moveTo(f.x - f.r * 2, f.y);
+                    ctx.lineTo(f.x + f.r * 2, f.y);
+                    ctx.moveTo(f.x, f.y - f.r * 2);
+                    ctx.lineTo(f.x, f.y + f.r * 2);
+                    // Çapraz çizgiler (6-point sparkle)
+                    ctx.moveTo(f.x - f.r * 1.4, f.y - f.r * 1.4);
+                    ctx.lineTo(f.x + f.r * 1.4, f.y + f.r * 1.4);
+                    ctx.moveTo(f.x - f.r * 1.4, f.y + f.r * 1.4);
+                    ctx.lineTo(f.x + f.r * 1.4, f.y - f.r * 1.4);
+                    ctx.stroke();
+                }
             });
+            ctx.shadowBlur = 0;
+
             if (activeAnimation === 'snow') {
                 requestAnimationFrame(animate);
             }
@@ -71,7 +104,7 @@
     }
 
     // ============================================
-    // RAIN — yoğun yağmur + cama çarpan damlalar
+    // RAIN — yoğun yağmur + cama çarpan damlalar + camda damlacıklar
     // ============================================
     function initRain(canvas) {
         const ctx = canvas.getContext('2d');
@@ -79,57 +112,159 @@
         resize();
         window.addEventListener('resize', resize);
 
+        // 1. Yağmur damlaları (uzun, parlak, kalın)
         const drops = [];
-        const dropCount = window.innerWidth < 768 ? 150 : 280;
+        const dropCount = window.innerWidth < 768 ? 200 : 400;
         for (let i = 0; i < dropCount; i++) {
             drops.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                length: 8 + Math.random() * 18,
-                speed: 12 + Math.random() * 12,
-                opacity: 0.3 + Math.random() * 0.5
+                length: 18 + Math.random() * 30,  // uzun çizgiler
+                speed: 14 + Math.random() * 16,
+                thickness: 1.2 + Math.random() * 1.3,  // kalın
+                opacity: 0.6 + Math.random() * 0.4
             });
         }
 
-        // Cama çarpan damlalar (alt kısımda pool effect)
+        // 2. Cama çarpan splash efektleri
         const splashes = [];
-        const splashY = canvas.height - 40;
+        const splashY = canvas.height - 25;
+
+        // 3. Camda kalan damlacıklar (yavaşça aşağı kayar)
+        const droplets = [];
+        const dropletCount = window.innerWidth < 768 ? 25 : 50;
+        for (let i = 0; i < dropletCount; i++) {
+            droplets.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: 1.5 + Math.random() * 3.5,
+                speed: 0.15 + Math.random() * 0.6,
+                trail: 0,
+                opacity: 0.4 + Math.random() * 0.4,
+                stuck: Math.random() * 200 + 50  // bir süre sabit kalır
+            });
+        }
+
+        // 4. Şimşek flash'ı (rastgele)
+        let nextFlash = Date.now() + 5000 + Math.random() * 8000;
+        let flashOpacity = 0;
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Hafif koyu arka plan (fırtına bulutları hissi)
+            ctx.fillStyle = 'rgba(8, 10, 22, 0.18)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Yağmur damlaları (diagonal çizgiler)
-            ctx.strokeStyle = 'rgba(180, 200, 255, 0.6)';
-            ctx.lineWidth = 1.2;
+            // Şimşek flash
+            if (Date.now() > nextFlash) {
+                flashOpacity = 0.5 + Math.random() * 0.4;
+                nextFlash = Date.now() + 6000 + Math.random() * 10000;
+            }
+            if (flashOpacity > 0) {
+                ctx.fillStyle = `rgba(200, 220, 255, ${flashOpacity})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                flashOpacity -= 0.05;
+            }
+
+            // Yağmur damlaları — beyaz, kalın, çapraz
             drops.forEach(d => {
+                // Çizgi gradyanı (üstte şeffaf, altta parlak)
+                const grad = ctx.createLinearGradient(d.x, d.y, d.x - 5, d.y + d.length);
+                grad.addColorStop(0, `rgba(220, 235, 255, 0)`);
+                grad.addColorStop(0.5, `rgba(220, 235, 255, ${d.opacity * 0.7})`);
+                grad.addColorStop(1, `rgba(255, 255, 255, ${d.opacity})`);
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = d.thickness;
                 ctx.beginPath();
                 ctx.moveTo(d.x, d.y);
-                ctx.lineTo(d.x - 3, d.y + d.length); // hafif eğimli
-                ctx.globalAlpha = d.opacity;
+                ctx.lineTo(d.x - 5, d.y + d.length);  // 15° eğimli
                 ctx.stroke();
+
+                // Parlak baş noktası
+                ctx.fillStyle = `rgba(255, 255, 255, ${d.opacity})`;
+                ctx.beginPath();
+                ctx.arc(d.x - 5, d.y + d.length, d.thickness * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+
                 d.y += d.speed;
-                d.x -= 0.7;
+                d.x -= 1;
                 if (d.y > splashY) {
                     // Splash oluştur
-                    splashes.push({ x: d.x, y: splashY, r: 0, maxR: 4 + Math.random() * 3, opacity: 1 });
+                    splashes.push({
+                        x: d.x,
+                        y: splashY,
+                        r: 0,
+                        maxR: 5 + Math.random() * 4,
+                        opacity: 0.9
+                    });
                     d.y = -d.length;
-                    d.x = Math.random() * canvas.width;
+                    d.x = Math.random() * (canvas.width + 100);
                 }
             });
-            ctx.globalAlpha = 1;
 
             // Splash efektleri (cama çarpma)
             for (let i = splashes.length - 1; i >= 0; i--) {
                 const s = splashes[i];
+                // Yarım daire (üst kısım)
                 ctx.beginPath();
-                ctx.arc(s.x, s.y, s.r, 0, Math.PI);
-                ctx.strokeStyle = `rgba(200, 220, 255, ${s.opacity})`;
-                ctx.lineWidth = 1;
+                ctx.arc(s.x, s.y, s.r, Math.PI, 0);
+                ctx.strokeStyle = `rgba(220, 235, 255, ${s.opacity})`;
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
-                s.r += 0.5;
-                s.opacity -= 0.05;
-                if (s.opacity <= 0) splashes.splice(i, 1);
+
+                // Etrafa sıçrayan küçük damlalar
+                for (let j = 0; j < 4; j++) {
+                    const angle = -Math.PI/2 + (j - 1.5) * 0.5;
+                    const dist = s.r * 1.5;
+                    ctx.beginPath();
+                    ctx.arc(
+                        s.x + Math.cos(angle) * dist,
+                        s.y + Math.sin(angle) * dist - 2,
+                        0.7, 0, Math.PI * 2
+                    );
+                    ctx.fillStyle = `rgba(220, 235, 255, ${s.opacity * 0.8})`;
+                    ctx.fill();
+                }
+
+                s.r += 1;
+                s.opacity -= 0.04;
+                if (s.opacity <= 0 || s.r > s.maxR) splashes.splice(i, 1);
             }
+
+            // Camda kalan damlacıklar (yavaşça aşağı kayar + iz bırakır)
+            droplets.forEach(d => {
+                if (d.stuck > 0) {
+                    d.stuck--;
+                } else {
+                    // İz (trail)
+                    if (d.trail > 0) {
+                        const grad = ctx.createLinearGradient(d.x, d.y - d.trail, d.x, d.y);
+                        grad.addColorStop(0, 'rgba(180, 200, 230, 0)');
+                        grad.addColorStop(1, `rgba(200, 220, 255, ${d.opacity * 0.25})`);
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(d.x - 1, d.y - d.trail, 2, d.trail);
+                    }
+
+                    d.y += d.speed;
+                    d.trail += d.speed;
+                    if (d.y > canvas.height + 10) {
+                        d.y = -10;
+                        d.x = Math.random() * canvas.width;
+                        d.trail = 0;
+                        d.stuck = Math.random() * 200 + 50;
+                    }
+                }
+
+                // Damlacık gövdesi (cam efektli)
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(200, 220, 255, ${d.opacity * 0.6})`;
+                ctx.fill();
+                // Highlight (parlak nokta)
+                ctx.beginPath();
+                ctx.arc(d.x - d.r * 0.3, d.y - d.r * 0.3, d.r * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${d.opacity * 0.8})`;
+                ctx.fill();
+            });
 
             if (activeAnimation === 'rain') {
                 requestAnimationFrame(animate);
@@ -308,14 +443,17 @@
         });
 
         // Aurora orbs default görünür mü? (aurora hariç tüm temalarda orbs'ı azalt)
+        // Not: Canvas'lar artık aurora-bg DIŞINDA - opacity change canvas'ları etkilemez
         const auroraBg = document.querySelector('.aurora-bg');
         if (auroraBg) {
             if (themeId === 'aurora') {
                 auroraBg.style.opacity = '1';
             } else if (themeId === 'neon' || themeId === 'matrix') {
-                auroraBg.style.opacity = '0.15';
+                auroraBg.style.opacity = '0.2';  // Neon/Matrix için aurora çok parlak
+            } else if (themeId === 'rain' || themeId === 'lightning' || themeId === 'fog') {
+                auroraBg.style.opacity = '0.25';  // Fırtına temalarında aurora sönük
             } else {
-                auroraBg.style.opacity = '0.3';
+                auroraBg.style.opacity = '0.4';  // Snow, galaxy - aurora yardımcı
             }
         }
 
