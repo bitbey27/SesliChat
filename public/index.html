@@ -414,11 +414,23 @@
                     <input type="checkbox" id="setting-gain" checked>
                 </label>
                 <hr style="margin: 15px 0; border-color: rgba(255,255,255,0.1);">
+                <label class="setting-item" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>🎙️ Konuşma Duyarlılığı</span>
+                        <span id="sensitivity-value" style="font-size:13px; color:#7C5CFF; font-weight:600;">Orta</span>
+                    </div>
+                    <input type="range" id="setting-sensitivity" min="1" max="40" step="1" value="8" style="width: 100%; accent-color: #7C5CFF;">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary);">
+                        <span>Daha duyarlı (fısıltı yakalar)</span>
+                        <span>Daha az duyarlı (sadece yüksek ses)</span>
+                    </div>
+                </label>
+                <hr style="margin: 15px 0; border-color: rgba(255,255,255,0.1);">
                 <label class="setting-item" style="display: flex; align-items: center; justify-content: space-between;">
                     <span>Profil Rengi</span>
                     <input type="color" id="setting-color" value="#5865F2" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer; background: transparent; padding: 0;">
                 </label>
-                <p class="setting-hint" style="margin-top:10px; font-size:12px; color:var(--text-secondary);">Not: Oyun oynarken arka plandaki seslerin yankı yapmasını önlemek için Yankı Giderme'yi açık tutun ancak müzik deneyimi için Gürültü Engelleme'yi kapatmayı deneyin. Profil profil renginiz tüm odalarda geçerlidir.</p>
+                <p class="setting-hint" style="margin-top:10px; font-size:12px; color:var(--text-secondary);">Not: Oyun oynarken arka plandaki seslerin yankı yapmasını önlemek için Yankı Giderme'yi açık tutun ancak müzik deneyimi için Gürültü Engelleme'yi kapatmayı deneyin. Konuşma Duyarlılığı — ne kadar düşükse, o kadar hafif sesleri bile "konuşuyor" olarak algılar. Profil renginiz tüm odalarda geçerlidir.</p>
             </div>
             <div class="modal-actions">
                 <button id="close-settings-btn" class="btn-primary">Kaydet ve Kapat</button>
@@ -705,8 +717,8 @@
 
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <!-- v26: YENİ DOSYA ADI — cache kesin kırılır -->
-    <script src="app-v26.js"></script>
+    <!-- v27: VAD iyileştirildi + sensitivity slider (cache break) -->
+    <script src="app-v27.js"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
     <!-- Premium Temalar v3: galaxy default + gezegenler + realistic snow (no trails) -->
