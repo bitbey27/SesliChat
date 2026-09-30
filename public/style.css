@@ -4218,3 +4218,48 @@ body {
         width: 100% !important;
     }
 }
+
+/* =========================================
+   DESKTOP: Chat sağda, voice card solda
+   ========================================= */
+
+@media (min-width: 769px) {
+    /* Voice body ROW — voice card solda, chat sağda */
+    .voice-body {
+        flex-direction: row !important;
+    }
+    
+    /* Voice room card kalan alanı kapla */
+    .voice-room-card {
+        flex: 1 !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+    
+    /* Müzik paneli voice card içinde kalsın */
+    .music-panel {
+        max-height: none !important;
+    }
+    
+    /* Chat panel SAĞDA — sabit genişlik */
+    .voice-body .chat-panel {
+        flex: 0 0 320px !important;
+        width: 320px !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        margin: 0 !important;
+        border: none !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-radius: 0 !important;
+    }
+    
+    /* Members sidebar masaüstünde gizli — chat sağda */
+    .members-sidebar {
+        display: none !important;
+    }
+}
+
+/* Mobilde column layout korunur (zaten var) */
