@@ -206,10 +206,12 @@
         reset() {
             const cx = Math.floor(this.cols / 2);
             const cy = Math.floor(this.rows / 2);
+            // DİKKAT: snake[0] = head (baş), hareket yönü sağa olduğu için
+            // head en sağda olmalı, gövde sola doğru uzanmalı
             this.snake = [
-                {x: cx - 2, y: cy},
-                {x: cx - 1, y: cy},
-                {x: cx, y: cy}
+                {x: cx, y: cy},       // head (en sağda)
+                {x: cx - 1, y: cy},   // orta
+                {x: cx - 2, y: cy}    // tail (en solda)
             ];
             this.prevSnake = this.snake.map(s => ({...s}));
             this.direction = {x: 1, y: 0};
@@ -225,6 +227,7 @@
             this.particles = [];
             this.foodPulse = 0;
             this.deathAnim = 0;
+            this.restartShown = false;
             this.updateScoreUI();
         }
 
@@ -306,6 +309,7 @@
         die() {
             this.gameOver = true;
             this.deathAnim = 0;
+            this.restartShown = false;
             this.playDeathSound();
             if (this.score > this.bestScore) {
                 this.bestScore = this.score;
@@ -332,7 +336,14 @@
             if (!this.started || this.gameOver) {
                 // Particles yine de güncelle
                 this.updateParticles();
-                if (this.gameOver) this.deathAnim += 0.05;
+                if (this.gameOver) {
+                    this.deathAnim += 0.05;
+                    // 1.5 saniye sonra restart butonu göster (ölüm animasyonu bitsin)
+                    if (this.deathAnim > 1.5 && !this.restartShown) {
+                        this.restartShown = true;
+                        showSnakeRestartOverlay(this.score, this.bestScore);
+                    }
+                }
                 return;
             }
             if (this.paused) {
@@ -708,6 +719,26 @@
         const overlay = document.getElementById('snake-overlay');
         if (overlay) overlay.classList.add('hidden');
         snakeGame.start();
+    }
+
+    // Game over'da restart butonu göster
+    function showSnakeRestartOverlay(score, bestScore) {
+        const overlay = document.getElementById('snake-overlay');
+        const title = document.getElementById('snake-overlay-title');
+        const subtitle = document.getElementById('snake-overlay-subtitle');
+        const startBtn = document.getElementById('snake-start-btn');
+        if (overlay) overlay.classList.remove('hidden');
+        if (title) title.textContent = '💀 Oyun Bitti!';
+        if (subtitle) {
+            let txt = 'Skor: ' + score;
+            if (score === bestScore && score > 0) {
+                txt += ' · 🏆 Yeni Rekor!';
+            } else {
+                txt += ' · Rekor: ' + bestScore;
+            }
+            subtitle.textContent = txt;
+        }
+        if (startBtn) startBtn.textContent = '↻ Yeniden Başla';
     }
 
     // ============================================
