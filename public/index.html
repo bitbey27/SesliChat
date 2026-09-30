@@ -256,6 +256,14 @@
                                 <span style="font-size:24px;">🎨</span>
                                 <span>Tema</span>
                             </button>
+                            <button class="vrc-btn vrc-fun-btn" id="vrc-party-btn" title="🎉 Parti — konfeti yağmuru">
+                                <span style="font-size:24px;">🎉</span>
+                                <span>Parti</span>
+                            </button>
+                            <button class="vrc-btn vrc-fun-btn" id="vrc-game-btn" title="🐍 Snake Oyunu">
+                                <span style="font-size:24px;">🐍</span>
+                                <span>Oyun</span>
+                            </button>
                             <button class="vrc-btn" id="vrc-menu-btn" title="Menü">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                     <circle cx="12" cy="5" r="1.5"/>
@@ -654,6 +662,39 @@
     <!-- === MOBİL ARKA PLAN OVERLAY === -->
     <div id="mobile-overlay" class="mobile-overlay hidden"></div>
 
+    <!-- === SNAKE GAME MODAL === -->
+    <div id="snake-game-modal" class="snake-game-modal hidden">
+        <div class="sgm-card">
+            <div class="sgm-header">
+                <h3>🐍 Neon Snake</h3>
+                <div class="sgm-stats">
+                    <div class="sgm-score">Skor: <span id="snake-score">0</span></div>
+                    <div class="sgm-best">Rekor: <span id="snake-best">0</span></div>
+                </div>
+                <button class="sgm-close" id="snake-close-btn">✕</button>
+            </div>
+            <div class="sgm-canvas-wrap">
+                <canvas id="snake-canvas" width="400" height="400"></canvas>
+                <div class="sgm-overlay" id="snake-overlay">
+                    <div class="sgm-overlay-content">
+                        <div class="sgm-overlay-title" id="snake-overlay-title">Hazır mısın?</div>
+                        <div class="sgm-overlay-subtitle" id="snake-overlay-subtitle">Yön tuşları veya kaydır</div>
+                        <button class="sgm-start-btn" id="snake-start-btn">▶ Başla</button>
+                    </div>
+                </div>
+            </div>
+            <div class="sgm-controls">
+                <button class="sgm-dir-btn" data-dir="up" title="Yukarı">▲</button>
+                <div class="sgm-dir-row">
+                    <button class="sgm-dir-btn" data-dir="left" title="Sol">◀</button>
+                    <button class="sgm-dir-btn" data-dir="down" title="Aşağı">▼</button>
+                    <button class="sgm-dir-btn" data-dir="right" title="Sağ">▶</button>
+                </div>
+                <div class="sgm-hint">⌨️ Ok tuşları / WASD · 📱 Kaydır</div>
+            </div>
+        </div>
+    </div>
+
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- v26: YENİ DOSYA ADI — cache kesin kırılır -->
@@ -662,5 +703,7 @@
     <script src="fun-features-v2.js"></script>
     <!-- Premium Temalar v3: galaxy default + gezegenler + realistic snow (no trails) -->
     <script src="premium-themes.js?v3"></script>
+    <!-- Parti & Snake: konfeti yağmuru + neon snake oyunu -->
+    <script src="party-snake.js"></script>
 </body>
 </html>

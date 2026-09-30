@@ -5415,3 +5415,180 @@ body {
         height: 40px;
     }
 }
+
+/* =========================================
+   PARTI & SNAKE CSS
+   ========================================= */
+
+/* === SNAKE GAME MODAL === */
+.snake-game-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10002;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: menuPop 0.2s ease-out;
+}
+.sgm-card {
+    background: linear-gradient(135deg, #1A1D24 0%, #0B0E14 100%);
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    border-radius: 16px;
+    padding: 16px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(124, 92, 252, 0.15);
+}
+.sgm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+.sgm-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+}
+.sgm-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+}
+.sgm-score {
+    color: #7C5CFF;
+    font-weight: 600;
+}
+.sgm-best {
+    color: #FFD93D;
+    font-weight: 600;
+}
+.sgm-close {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.sgm-close:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+.sgm-canvas-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+#snake-canvas {
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(124, 92, 252, 0.2);
+    max-width: 100%;
+    height: auto;
+}
+.sgm-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+.sgm-overlay.hidden {
+    display: none;
+}
+.sgm-overlay-content {
+    text-align: center;
+}
+.sgm-overlay-title {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    text-shadow: 0 0 16px rgba(124, 92, 252, 0.8);
+}
+.sgm-overlay-subtitle {
+    color: #aaa;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+.sgm-start-btn {
+    background: linear-gradient(135deg, #7C5CFF 0%, #5C3ACC 100%);
+    border: none;
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(124, 92, 252, 0.4);
+    transition: all 0.15s;
+}
+.sgm-start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 92, 252, 0.6);
+}
+
+/* === D-PAD KONTROLLERİ === */
+.sgm-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.sgm-dir-btn {
+    width: 48px;
+    height: 48px;
+    background: rgba(124, 92, 252, 0.15);
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s;
+}
+.sgm-dir-btn:hover, .sgm-dir-btn:active {
+    background: rgba(124, 92, 252, 0.35);
+    transform: scale(1.05);
+}
+.sgm-dir-row {
+    display: flex;
+    gap: 8px;
+}
+.sgm-hint {
+    color: #666;
+    font-size: 11px;
+    margin-top: 4px;
+    text-align: center;
+}
+
+/* === MOBİL === */
+@media (max-width: 768px) {
+    .sgm-card {
+        padding: 12px;
+    }
+    .sgm-header h3 {
+        font-size: 16px;
+    }
+    .sgm-stats {
+        font-size: 12px;
+        gap: 8px;
+    }
+    .sgm-dir-btn {
+        width: 56px;
+        height: 56px;
+        font-size: 22px;
+    }
+}

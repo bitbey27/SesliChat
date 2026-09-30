@@ -853,7 +853,26 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        // 5. FAL BOTU — akıllı kategori bazlı cevap (keyword matching)
+        // 5. PARTI KONFETI — odaya broadcast
+        case 'party-confetti': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'party-confetti',
+            userId: userId,
+            username: user.username
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
+        // 6. FAL BOTU — akıllı kategori bazlı cevap (keyword matching)
         case 'fal-bot': {
           const user = connectedUsers.get(userId);
           if (!user || !user.currentRoom) return;
