@@ -4043,3 +4043,64 @@ body {
     /* Tab bar "Kanallar" seçili ise default (voice card + chat görünür) */
     /* Members sidebar default gizli (zaten display: none mobilde) */
 }
+
+/* =========================================
+   SPEAKING ANIMATION — GERİ GETİRİLDİ
+   ========================================= */
+
+/* Nick yanıp sönmesi (channel sidebar'da) */
+.channel-user-item.speaking .channel-user-name {
+    color: var(--green) !important;
+    text-shadow: 0 0 8px rgba(46, 160, 67, 0.5);
+    animation: nickGlow 1.2s ease-in-out infinite !important;
+}
+
+@keyframes nickGlow {
+    0%, 100% { 
+        text-shadow: 0 0 6px rgba(46, 160, 67, 0.4);
+        color: var(--green);
+    }
+    50% { 
+        text-shadow: 0 0 14px rgba(46, 160, 67, 0.8);
+        color: #57d67a;
+    }
+}
+
+/* Avatar pulse (sidebar'da küçük avatar) */
+.channel-user-item.speaking .mini-avatar {
+    box-shadow: 0 0 0 2px var(--green), 0 0 10px rgba(46, 160, 67, 0.4) !important;
+    animation: avatarPulse 1.2s ease-in-out infinite !important;
+}
+
+@keyframes avatarPulse {
+    0%, 100% { 
+        box-shadow: 0 0 0 2px var(--green), 0 0 8px rgba(46, 160, 67, 0.3);
+    }
+    50% { 
+        box-shadow: 0 0 0 3px var(--green), 0 0 16px rgba(46, 160, 67, 0.6);
+    }
+}
+
+/* Participant card — avatar ring pulse (orta alanda büyük kart) */
+.participant-card.speaking .participant-avatar {
+    animation: avatarPulse 1.2s ease-in-out infinite !important;
+    box-shadow: 0 0 0 3px var(--green), 0 0 16px rgba(46, 160, 67, 0.4) !important;
+}
+
+/* Participant card — nick yeşil parlama */
+.participant-card.speaking .participant-name {
+    color: var(--green) !important;
+    text-shadow: 0 0 8px rgba(46, 160, 67, 0.5);
+    animation: nickGlow 1.2s ease-in-out infinite !important;
+}
+
+/* Participant card — status text */
+.participant-card.speaking .participant-status {
+    color: var(--green) !important;
+}
+
+/* Sidebar kullanıcı arkaplanı */
+.channel-user-item.speaking {
+    background: rgba(46, 160, 67, 0.08) !important;
+    border-radius: var(--radius-sm);
+}
