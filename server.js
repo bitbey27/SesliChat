@@ -735,6 +735,169 @@ wss.on('connection', (ws) => {
           broadcastOnlineUsers();
           break;
         }
+
+        // === EĞLENCE ÖZELLİKLERİ (FUN FEATURES) ===
+
+        // 1. FISILTİ MODU — sadece hedef kullanıcıya relay
+        case 'whisper-target': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const targetUser = connectedUsers.get(message.targetId);
+          if (!targetUser) return;
+          // Hedefe: "X sana fısıldıyor"
+          targetUser.ws.send(JSON.stringify({
+            type: 'whisper-target',
+            fromUserId: userId,
+            fromUsername: user.username,
+            toUserId: message.targetId
+          }));
+          // Odaya bildir (görsel indikator için)
+          if (rooms[user.currentRoom]) {
+            const notify = JSON.stringify({
+              type: 'whisper-notify',
+              fromUserId: userId,
+              fromUsername: user.username,
+              toUserId: message.targetId,
+              toUsername: targetUser.username
+            });
+            rooms[user.currentRoom].users.forEach(u => {
+              if (u.id !== userId && u.id !== message.targetId && u.ws.readyState === WebSocket.OPEN) {
+                u.ws.send(notify);
+              }
+            });
+          }
+          break;
+        }
+
+        case 'whisper-stop': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const targetUser = connectedUsers.get(message.targetId);
+          if (targetUser && targetUser.ws.readyState === WebSocket.OPEN) {
+            targetUser.ws.send(JSON.stringify({
+              type: 'whisper-stop',
+              fromUserId: userId
+            }));
+          }
+          if (rooms[user.currentRoom]) {
+            const notify = JSON.stringify({
+              type: 'whisper-stop-notify',
+              fromUserId: userId
+            });
+            rooms[user.currentRoom].users.forEach(u => {
+              if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+                u.ws.send(notify);
+              }
+            });
+          }
+          break;
+        }
+
+        // 2. VOICE ROULETTE — odaya broadcast
+        case 'voice-roulette-start': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'voice-roulette-start',
+            userId: userId,
+            username: user.username,
+            preset: message.preset || 'robot',
+            duration: message.duration || 60
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
+        // 3. HAVAİ EMOJI REAKSİYONU — odaya broadcast
+        case 'emoji-reaction': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'emoji-reaction',
+            fromUserId: userId,
+            fromUsername: user.username,
+            toUserId: message.toUserId,
+            emoji: (message.emoji || '🔥').substring(0, 10)
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
+        // 4. AMBIENT SOUND — admin-only, odaya broadcast
+        case 'ambient-change': {
+          const user = connectedUsers.get(userId);
+          if (!user || user.role !== 'admin' || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'ambient-change',
+            mode: (message.mode || 'off').substring(0, 20)
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
+        // 5. FAL BOTU — server random cevap üretip chat olarak broadcast
+        case 'fal-bot': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const answers = [
+            'Kesinlikle evet, başka yolu yok.',
+            'Hayır, hiç sanmıyorum. Belki başka hayatında.',
+            'Belki... ama büyük ihtimalle değil. Fal işte, garantisi yok.',
+            'Tabii ki! Ne bekliyordun ki?',
+            'İmzalar tatlı, kalbin temiz, cevap: evet.',
+            'Sakla saklayabileceğin şeyi, fal da tutmadı bunu.',
+            'Yıldızlar diyor ki: bekle, sabret, gelecek.',
+            'Hocam bu fal tutmuyor gibi, tekrar dene.',
+            'Ay dede kafayı üzmüş, cevap bulanık.',
+            'Fal değil bu, muamma. Cevap: 42.',
+            'Bana kalırsa yapma, ama sen bilirsin.',
+            'Evet ama bir şartla: çoraplarını ters giyeceksin.',
+            'Kediler de evet diyor, kuşlar da. Tam konsensüs var.',
+            'Geçen hafta falıma baktım, tam tersini söyledi. İnanma bana.',
+            'Kader yolu garip, ama bu seferlik evet diyorum.',
+            'Kafam karıştı, fal biraz dumanlı bugün. Soruyu netle.',
+            'Açık söyle: EVET, derhal, hemen şimdi.',
+            'Karar veremedim, kahveyi içip tekrar gel.',
+            'Çok güzel bir soru, berbat bir cevap: hayır.',
+            'Son sözcük bende: KESİN evet. Gözünü kör edeyim, yine evet.'
+          ];
+          const answer = answers[Math.floor(Math.random() * answers.length)];
+          const question = (message.question || '').substring(0, 200);
+          const payload = JSON.stringify({
+            type: 'chat-message',
+            username: '🔮 Fal Botu',
+            color: '#FFD700',
+            message: '💬 ' + question + ' → ' + answer,
+            timestamp: Date.now()
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(payload);
+            }
+          });
+          break;
+        }
+
       }
     } catch (err) {
       console.error('Mesaj işleme hatası:', err);
