@@ -417,12 +417,13 @@
                 <label class="setting-item" style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <span>🎙️ Konuşma Duyarlılığı</span>
-                        <span id="sensitivity-value" style="font-size:13px; color:#7C5CFF; font-weight:600;">Orta</span>
+                        <span id="sensitivity-value" style="font-size:13px; color:#7C5CFF; font-weight:600;">Normal (25)</span>
                     </div>
-                    <input type="range" id="setting-sensitivity" min="1" max="40" step="1" value="8" style="width: 100%; accent-color: #7C5CFF;">
+                    <input type="range" id="setting-sensitivity" min="1" max="100" step="1" value="25" style="width: 100%; accent-color: #7C5CFF;">
                     <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary);">
-                        <span>Daha duyarlı (fısıltı yakalar)</span>
-                        <span>Daha az duyarlı (sadece yüksek ses)</span>
+                        <span>1 (fısıltı)</span>
+                        <span>50 (sadece yüksek ses)</span>
+                        <span>100 (bağırmak gerek)</span>
                     </div>
                 </label>
                 <hr style="margin: 15px 0; border-color: rgba(255,255,255,0.1);">
@@ -717,8 +718,8 @@
 
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <!-- v27: VAD iyileştirildi + sensitivity slider (cache break) -->
-    <script src="app-v27.js"></script>
+    <!-- v28: VAD daha doğru + slider 1-100 aralığı + noise floor takibi -->
+    <script src="app-v28.js"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
     <!-- Premium Temalar v3: galaxy default + gezegenler + realistic snow (no trails) -->
