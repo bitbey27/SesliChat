@@ -496,6 +496,10 @@ wss.on('connection', (ws) => {
           });
 
           user.currentRoom = roomId;
+          // Ses Hırsızı için rastgele voice signature (-6 to +6 semitones)
+          if (user.voiceSignature === undefined) {
+            user.voiceSignature = Math.floor(Math.random() * 13) - 6;
+          }
           rooms[roomId].users.set(userId, user);
 
           // Yeni kullanıcıya odadaki mevcut kullanıcıları bildir
@@ -871,6 +875,243 @@ wss.on('connection', (ws) => {
           });
           break;
         }
+
+        // === ÇILGIN FIKIRLER ===
+
+        // 6. SES HIRSIZI
+        case 'voice-steal': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const targetUser = connectedUsers.get(message.targetId);
+          if (!targetUser) return;
+          ws.send(JSON.stringify({
+            type: 'voice-steal-apply',
+            targetId: message.targetId,
+            targetUsername: targetUser.username,
+            voiceSignature: targetUser.voiceSignature || 0,
+            duration: 30
+          }));
+          if (rooms[user.currentRoom]) {
+            const notify = JSON.stringify({
+              type: 'voice-steal-notify',
+              fromUserId: userId,
+              fromUsername: user.username,
+              toUserId: message.targetId,
+              toUsername: targetUser.username
+            });
+            rooms[user.currentRoom].users.forEach(u => {
+              if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+                u.ws.send(notify);
+              }
+            });
+          }
+          break;
+        }
+
+        case 'voice-steal-stop': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          if (rooms[user.currentRoom]) {
+            const notify = JSON.stringify({
+              type: 'voice-steal-stop-notify',
+              fromUserId: userId
+            });
+            rooms[user.currentRoom].users.forEach(u => {
+              if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+                u.ws.send(notify);
+              }
+            });
+          }
+          break;
+        }
+
+        // 7. MAFIA OYUNU
+        case 'mafia-start': {
+          const user = connectedUsers.get(userId);
+          if (!user || user.role !== 'admin' || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const playerIds = Array.from(room.users.keys());
+          if (playerIds.length < 4) {
+            ws.send(JSON.stringify({ type: 'mafia-error', message: 'En az 4 oyuncu gerekli!' }));
+            return;
+          }
+          const numMafia = playerIds.length >= 8 ? 2 : 1;
+          const roles = [];
+          for (let i = 0; i < numMafia; i++) roles.push('mafia');
+          roles.push('doctor');
+          if (playerIds.length >= 5) roles.push('police');
+          while (roles.length < playerIds.length) roles.push('villager');
+          for (let i = roles.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [roles[i], roles[j]] = [roles[j], roles[i]];
+          }
+          const players = playerIds.map((pid, i) => ({
+            id: pid,
+            username: room.users.get(pid).username,
+            role: roles[i],
+            alive: true
+          }));
+          room.mafiaGame = {
+            active: true,
+            phase: 'night',
+            day: 1,
+            players: players,
+            nightActions: {},
+            votes: {},
+            nightDeadline: Date.now() + 30000
+          };
+          players.forEach(p => {
+            const u = room.users.get(p.id);
+            if (u && u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(JSON.stringify({
+                type: 'mafia-role',
+                role: p.role,
+                day: 1,
+                phase: 'night'
+              }));
+              if (p.role === 'mafia') {
+                const otherMafia = players.filter(x => x.role === 'mafia' && x.id !== p.id).map(x => x.username);
+                if (otherMafia.length > 0) {
+                  u.ws.send(JSON.stringify({
+                    type: 'mafia-info',
+                    message: '🦇 Mafya arkadaşların: ' + otherMafia.join(', ')
+                  }));
+                }
+              }
+            }
+          });
+          const stateMsg = JSON.stringify({
+            type: 'mafia-state',
+            phase: 'night',
+            day: 1,
+            players: players.map(p => ({ id: p.id, username: p.username, alive: p.alive })),
+            deadline: room.mafiaGame.nightDeadline
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) u.ws.send(stateMsg);
+          });
+          setTimeout(() => {
+            if (room.mafiaGame && room.mafiaGame.active && room.mafiaGame.phase === 'night') {
+              endMafiaNight(room);
+            }
+          }, 30000);
+          break;
+        }
+
+        case 'mafia-night-action': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room || !room.mafiaGame || room.mafiaGame.phase !== 'night') return;
+          const player = room.mafiaGame.players.find(p => p.id === userId && p.alive);
+          if (!player) return;
+          room.mafiaGame.nightActions[userId] = {
+            targetId: message.targetId,
+            action: player.role
+          };
+          const aliveByRole = {};
+          room.mafiaGame.players.filter(p => p.alive).forEach(p => {
+            aliveByRole[p.role] = (aliveByRole[p.role] || 0) + 1;
+          });
+          const submitted = Object.keys(room.mafiaGame.nightActions);
+          const expected = (aliveByRole['mafia'] || 0) + (aliveByRole['doctor'] || 0) + (aliveByRole['police'] || 0);
+          if (submitted.length >= expected) {
+            endMafiaNight(room);
+          }
+          break;
+        }
+
+        case 'mafia-vote': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room || !room.mafiaGame || room.mafiaGame.phase !== 'voting') return;
+          const player = room.mafiaGame.players.find(p => p.id === userId && p.alive);
+          if (!player) return;
+          room.mafiaGame.votes[userId] = message.targetId;
+          const aliveCount = room.mafiaGame.players.filter(p => p.alive).length;
+          if (Object.keys(room.mafiaGame.votes).length >= aliveCount) {
+            endMafiaVoting(room);
+          }
+          break;
+        }
+
+        case 'mafia-stop': {
+          const user = connectedUsers.get(userId);
+          if (!user || user.role !== 'admin' || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (room && room.mafiaGame) {
+            room.mafiaGame.active = false;
+            const endMsg = JSON.stringify({ type: 'mafia-end', reason: 'admin-iptal' });
+            room.users.forEach(u => {
+              if (u.ws.readyState === WebSocket.OPEN) u.ws.send(endMsg);
+            });
+            delete room.mafiaGame;
+          }
+          break;
+        }
+
+        // 8. UZAY YARISI
+        case 'space-race-start': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const players = Array.from(room.users.values()).map(u => ({
+            id: u.id, username: u.username, color: u.color || '#7C5CFF', progress: 0
+          }));
+          const payload = JSON.stringify({
+            type: 'space-race-start',
+            starterId: userId,
+            starterName: user.username,
+            players: players,
+            duration: 60
+          });
+          room.users.forEach(u => {
+            if (u.ws.readyState === WebSocket.OPEN) u.ws.send(payload);
+          });
+          setTimeout(() => {
+            if (rooms[user.currentRoom]) {
+              const endPayload = JSON.stringify({ type: 'space-race-end' });
+              rooms[user.currentRoom].users.forEach(u => {
+                if (u.ws.readyState === WebSocket.OPEN) u.ws.send(endPayload);
+              });
+            }
+          }, 60000);
+          break;
+        }
+
+        case 'space-race-progress': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const room = rooms[user.currentRoom];
+          if (!room) return;
+          const payload = JSON.stringify({
+            type: 'space-race-progress',
+            userId: userId,
+            username: user.username,
+            progress: Math.max(0, Math.min(100, message.progress || 0)),
+            color: user.color || '#7C5CFF'
+          });
+          room.users.forEach(u => {
+            if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) u.ws.send(payload);
+          });
+          if ((message.progress || 0) >= 100 && !room.raceWinner) {
+            room.raceWinner = userId;
+            const winPayload = JSON.stringify({
+              type: 'space-race-winner',
+              userId: userId,
+              username: user.username
+            });
+            room.users.forEach(u => {
+              if (u.ws.readyState === WebSocket.OPEN) u.ws.send(winPayload);
+            });
+            setTimeout(() => { if (room) room.raceWinner = null; }, 5000);
+          }
+          break;
+        }
+
       }
     } catch (err) {
       console.error('Mesaj işleme hatası:', err);
@@ -921,3 +1162,199 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐  Sağlık kontrolü: http://localhost:${PORT}/health`);
   console.log(`\n💡  Heartbeat aktif: Bağlantılar her 25 saniyede kontrol ediliyor.\n`);
 });
+
+// =========================================
+// MAFIA OYUNU — yardımcı fonksiyonlar
+// =========================================
+
+function endMafiaNight(room) {
+  if (!room.mafiaGame || room.mafiaGame.phase !== 'night') return;
+  const actions = room.mafiaGame.nightActions;
+
+  // Mafya öldürme hedefi
+  const mafiaAction = Object.values(actions).find(a => a.action === 'mafia');
+  const doctorAction = Object.values(actions).find(a => a.action === 'doctor');
+  const policeAction = Object.values(actions).find(a => a.action === 'police');
+
+  let killedPlayer = null;
+  let saved = false;
+
+  if (mafiaAction && mafiaAction.targetId) {
+    // Doktor aynı kişiyi kurtardı mı?
+    if (doctorAction && doctorAction.targetId === mafiaAction.targetId) {
+      saved = true;
+    } else {
+      killedPlayer = room.mafiaGame.players.find(p => p.id === mafiaAction.targetId);
+      if (killedPlayer) killedPlayer.alive = false;
+    }
+  }
+
+  // Polis kontrolü
+  if (policeAction && policeAction.targetId) {
+    const investigated = room.mafiaGame.players.find(p => p.id === policeAction.targetId);
+    const policeUser = room.users.get(Object.keys(actions).find(k => actions[k].action === 'police'));
+    if (investigated && policeUser) {
+      const isMafia = investigated.role === 'mafia';
+      policeUser.ws.send(JSON.stringify({
+        type: 'mafia-info',
+        message: '🔍 ' + investigated.username + ' ' + (isMafia ? '🦇 MAFYA!' : 'masum')
+      }));
+    }
+  }
+
+  // Gece sonu bildirimi
+  const nightEndMsg = JSON.stringify({
+    type: 'mafia-night-end',
+    killedUserId: killedPlayer ? killedPlayer.id : null,
+    killedUsername: killedPlayer ? killedPlayer.username : null,
+    killedRole: killedPlayer ? killedPlayer.role : null,
+    saved: saved,
+    day: room.mafiaGame.day
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) u.ws.send(nightEndMsg);
+  });
+
+  // Kazanma kontrolü
+  const winner = checkMafiaWin(room);
+  if (winner) {
+    endMafiaGame(room, winner);
+    return;
+  }
+
+  // Gündüz fazına geç
+  room.mafiaGame.phase = 'day';
+  room.mafiaGame.day = room.mafiaGame.day; // aynı gün
+  room.mafiaGame.dayDeadline = Date.now() + 60000;
+  const dayMsg = JSON.stringify({
+    type: 'mafia-state',
+    phase: 'day',
+    day: room.mafiaGame.day,
+    players: room.mafiaGame.players.map(p => ({ id: p.id, username: p.username, alive: p.alive })),
+    deadline: room.mafiaGame.dayDeadline
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) u.ws.send(dayMsg);
+  });
+
+  // 60sn sonra voting'e geç
+  setTimeout(() => {
+    if (room.mafiaGame && room.mafiaGame.active && room.mafiaGame.phase === 'day') {
+      startMafiaVoting(room);
+    }
+  }, 60000);
+}
+
+function startMafiaVoting(room) {
+  if (!room.mafiaGame) return;
+  room.mafiaGame.phase = 'voting';
+  room.mafiaGame.votes = {};
+  room.mafiaGame.votingDeadline = Date.now() + 30000;
+  const voteStartMsg = JSON.stringify({
+    type: 'mafia-state',
+    phase: 'voting',
+    day: room.mafiaGame.day,
+    players: room.mafiaGame.players.map(p => ({ id: p.id, username: p.username, alive: p.alive })),
+    deadline: room.mafiaGame.votingDeadline
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) u.ws.send(voteStartMsg);
+  });
+  setTimeout(() => {
+    if (room.mafiaGame && room.mafiaGame.active && room.mafiaGame.phase === 'voting') {
+      endMafiaVoting(room);
+    }
+  }, 30000);
+}
+
+function endMafiaVoting(room) {
+  if (!room.mafiaGame || room.mafiaGame.phase !== 'voting') return;
+
+  // Oyları say
+  const voteCount = {};
+  Object.values(room.mafiaGame.votes).forEach(targetId => {
+    if (targetId) {
+      voteCount[targetId] = (voteCount[targetId] || 0) + 1;
+    }
+  });
+
+  // En çok oy alanı bul
+  let maxVotes = 0;
+  let eliminatedId = null;
+  for (const [pid, count] of Object.entries(voteCount)) {
+    if (count > maxVotes) {
+      maxVotes = count;
+      eliminatedId = pid;
+    }
+  }
+
+  let eliminated = null;
+  if (eliminatedId && maxVotes > 0) {
+    eliminated = room.mafiaGame.players.find(p => p.id === eliminatedId);
+    if (eliminated) eliminated.alive = false;
+  }
+
+  const voteEndMsg = JSON.stringify({
+    type: 'mafia-vote-end',
+    eliminatedUserId: eliminated ? eliminated.id : null,
+    eliminatedUsername: eliminated ? eliminated.username : null,
+    eliminatedRole: eliminated ? eliminated.role : null,
+    day: room.mafiaGame.day,
+    votes: voteCount
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) u.ws.send(voteEndMsg);
+  });
+
+  // Kazanma kontrolü
+  const winner = checkMafiaWin(room);
+  if (winner) {
+    endMafiaGame(room, winner);
+    return;
+  }
+
+  // Yeni gece
+  room.mafiaGame.day += 1;
+  room.mafiaGame.phase = 'night';
+  room.mafiaGame.nightActions = {};
+  room.mafiaGame.votes = {};
+  room.mafiaGame.nightDeadline = Date.now() + 30000;
+  const newNightMsg = JSON.stringify({
+    type: 'mafia-state',
+    phase: 'night',
+    day: room.mafiaGame.day,
+    players: room.mafiaGame.players.map(p => ({ id: p.id, username: p.username, alive: p.alive })),
+    deadline: room.mafiaGame.nightDeadline
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) u.ws.send(newNightMsg);
+  });
+  setTimeout(() => {
+    if (room.mafiaGame && room.mafiaGame.active && room.mafiaGame.phase === 'night') {
+      endMafiaNight(room);
+    }
+  }, 30000);
+}
+
+function checkMafiaWin(room) {
+  if (!room.mafiaGame) return null;
+  const alivePlayers = room.mafiaGame.players.filter(p => p.alive);
+  const aliveMafia = alivePlayers.filter(p => p.role === 'mafia').length;
+  const aliveVillagers = alivePlayers.length - aliveMafia;
+  if (aliveMafia === 0) return 'villagers';
+  if (aliveMafia >= aliveVillagers) return 'mafia';
+  return null;
+}
+
+function endMafiaGame(room, winner) {
+  if (!room.mafiaGame) return;
+  const endMsg = JSON.stringify({
+    type: 'mafia-game-end',
+    winner: winner,
+    players: room.mafiaGame.players.map(p => ({ id: p.id, username: p.username, role: p.role, alive: p.alive }))
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) u.ws.send(endMsg);
+  });
+  delete room.mafiaGame;
+}
