@@ -3414,11 +3414,11 @@ class VoiceChatApp {
         });
         
         if (tabName === 'chat') {
-            // Chat panel DIREKT fixed full-screen (voice-view'e değil, kendine)
+            // Chat panel DIREKT fixed full-screen
             if (voiceRoomCard) voiceRoomCard.style.setProperty('display', 'none', 'important');
             if (musicPanel) musicPanel.style.setProperty('display', 'none', 'important');
             if (voiceView) voiceView.classList.remove('hidden');
-            // chat-panel'i members-sidebar gibi direkt fixed yap
+            // DEBUG: kırmızı arkaplan — element orada mı?
             if (chatPanel) {
                 chatPanel.style.setProperty('display', 'flex', 'important');
                 chatPanel.style.setProperty('position', 'fixed', 'important');
@@ -3426,11 +3426,18 @@ class VoiceChatApp {
                 chatPanel.style.setProperty('left', '0', 'important');
                 chatPanel.style.setProperty('right', '0', 'important');
                 chatPanel.style.setProperty('bottom', '56px', 'important');
-                chatPanel.style.setProperty('z-index', '250', 'important');
+                chatPanel.style.setProperty('z-index', '9999', 'important');
                 chatPanel.style.setProperty('flex-direction', 'column', 'important');
-                chatPanel.style.setProperty('background', '#0B0E14', 'important');
+                chatPanel.style.setProperty('background', 'red', 'important');
+                chatPanel.style.setProperty('width', '100%', 'important');
                 chatPanel.style.setProperty('height', 'auto', 'important');
                 chatPanel.style.setProperty('max-height', 'none', 'important');
+                chatPanel.style.setProperty('overflow', 'visible', 'important');
+                chatPanel.style.setProperty('padding', '20px', 'important');
+                chatPanel.style.setProperty('color', 'white', 'important');
+                chatPanel.style.setProperty('font-size', '24px', 'important');
+                // DEBUG: direkt text yaz
+                chatPanel.innerHTML = '<div style="color:white;font-size:24px;">CHAT PANEL BURADA! Eger bunu goruyorsan calisiyor.</div>';
             }
             this.toggleMobileSidebar(false);
         } else if (tabName === 'people') {
