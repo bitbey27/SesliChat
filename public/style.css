@@ -2873,3 +2873,332 @@ body {
         transform: scale(0.97);
     }
 }
+
+/* =========================================
+   GLASS MORPHISM + AURORA + NEON GLOW + MENU MODAL
+   ========================================= */
+
+/* === AURORA BACKGROUND === */
+.aurora-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+.aurora-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    animation: auroraFloat 20s ease-in-out infinite;
+}
+.aurora-orb-1 {
+    background: radial-gradient(circle, #7C5CFC 0%, transparent 70%);
+    top: -15%;
+    left: -10%;
+    width: 50%;
+    height: 50%;
+}
+.aurora-orb-2 {
+    background: radial-gradient(circle, #00B0F4 0%, transparent 70%);
+    bottom: -15%;
+    right: -10%;
+    width: 40%;
+    height: 40%;
+    animation-delay: -7s;
+}
+.aurora-orb-3 {
+    background: radial-gradient(circle, #F47B67 0%, transparent 70%);
+    top: 30%;
+    right: 30%;
+    width: 30%;
+    height: 30%;
+    animation-delay: -14s;
+}
+@keyframes auroraFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.15); }
+    66% { transform: translate(-30px, 40px) scale(0.9); }
+}
+
+/* === GLASS MORPHISM — Tüm paneller === */
+.app-screen {
+    position: relative;
+}
+.app-screen > .server-sidebar,
+.app-screen > .channel-sidebar,
+.app-screen > .members-sidebar {
+    background: rgba(16, 18, 28, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    position: relative;
+    z-index: 1;
+}
+.members-sidebar {
+    border-right: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+.main-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* === USER PANEL — Glass + Şık === */
+.user-panel {
+    background: rgba(10, 14, 26, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-open-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(124, 92, 252, 0.12);
+    border: 1px solid rgba(124, 92, 252, 0.25);
+    color: var(--brand-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.menu-open-btn:hover {
+    background: rgba(124, 92, 252, 0.25);
+    box-shadow: 0 0 16px rgba(124, 92, 252, 0.3);
+    transform: scale(1.05);
+}
+.menu-open-btn:active {
+    transform: scale(0.92);
+}
+
+/* === MENU MODAL — Glass Grid === */
+.menu-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+}
+.menu-modal.hidden { display: none; }
+
+.menu-modal-content {
+    background: rgba(20, 25, 40, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 92, 252, 0.15);
+    animation: menuSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes menuSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.menu-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.menu-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #7C5CFC, #00B0F4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.menu-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition-fast);
+}
+.menu-close-btn:hover {
+    background: var(--red);
+    color: #fff;
+}
+
+/* === MENU GRID === */
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    --accent: #7C5CFC;
+}
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(124, 92, 252, 0.2);
+    transform: translateY(-2px);
+}
+.menu-item:active {
+    transform: scale(0.95);
+}
+.menu-item.hidden { display: none; }
+
+.menu-item.menu-item-accent {
+    --accent: #FAA81A;
+    color: #FAA81A;
+}
+.menu-item.menu-item-accent:hover {
+    border-color: #FAA81A;
+    box-shadow: 0 0 16px rgba(250, 168, 26, 0.25);
+}
+
+.menu-item-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(124, 92, 252, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent, #7C5CFC);
+    transition: var(--transition-fast);
+}
+.menu-item:hover .menu-item-icon {
+    background: rgba(124, 92, 252, 0.2);
+    box-shadow: 0 0 12px rgba(124, 92, 252, 0.3);
+}
+
+.menu-item-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Active state for mic/deafen */
+.menu-item.muted .menu-item-icon {
+    background: rgba(237, 66, 69, 0.12);
+    color: #ED4245;
+}
+
+/* === NEON GLOW — Butonlar === */
+.btn-primary {
+    background: linear-gradient(135deg, #7C5CFC 0%, #5865F2 100%);
+    border: none;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(124, 92, 252, 0.25);
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(124, 92, 252, 0.4), 0 0 20px rgba(124, 92, 252, 0.2);
+}
+.btn-primary:active {
+    transform: scale(0.96);
+}
+
+/* === CHANNEL SIDEBAR — Glass === */
+.channel-header {
+    background: rgba(10, 14, 26, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* === GLASS MODALS === */
+.modal-content {
+    background: rgba(20, 25, 40, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 92, 252, 0.1);
+}
+
+/* === LOGIN — Aurora + Glass === */
+.login-screen {
+    background: radial-gradient(ellipse at 30% 20%, rgba(124, 92, 252, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(0, 176, 244, 0.08) 0%, transparent 50%),
+                var(--bg-tertiary);
+}
+.login-card {
+    background: rgba(20, 25, 40, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 92, 252, 0.1);
+}
+
+/* === VOICE VIEW — Glass === */
+.voice-header {
+    background: rgba(10, 14, 26, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* === MOBIL — Menu modal responsive === */
+@media (max-width: 480px) {
+    .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .menu-item {
+        padding: 14px 6px;
+    }
+    .menu-item-icon {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* === SCROLLBAR — Modern === */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(124, 92, 252, 0.3);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 92, 252, 0.5);
+}

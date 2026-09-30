@@ -203,7 +203,7 @@ class VoiceChatApp {
         this.youtubeSearchEnabled = false;
         this.listenerPlayers = new Map();
 
-        // === NICK DEĞİŞTİRME + MOBİL MENÜ ===
+        // === NICK DEĞİŞTİRME + MOBİL MENÜ + MENU MODAL ===
         this.nickChangeModal = document.getElementById('nick-change-modal');
         this.nickChangeInput = document.getElementById('nick-change-input');
         this.submitNickChangeBtn = document.getElementById('submit-nick-change-btn');
@@ -213,6 +213,10 @@ class VoiceChatApp {
         this.mobileOverlay = document.getElementById('mobile-overlay');
         this.channelSidebar = document.querySelector('.channel-sidebar');
         this.membersSidebar = document.querySelector('.members-sidebar');
+        // Menu modal
+        this.menuModal = document.getElementById('menu-modal');
+        this.menuOpenBtn = document.getElementById('menu-open-btn');
+        this.menuCloseBtn = document.getElementById('menu-close-btn');
 
         // Voice changer state
         this.vcPresetsContainer = document.getElementById('vc-presets');
@@ -628,6 +632,24 @@ class VoiceChatApp {
         }
         if (this.mobileOverlay) {
             this.mobileOverlay.addEventListener('click', () => this.toggleMobileSidebar(false));
+        }
+
+        // === MENU MODAL ===
+        if (this.menuOpenBtn) {
+            this.menuOpenBtn.addEventListener('click', () => {
+                if (this.menuModal) this.menuModal.classList.remove('hidden');
+            });
+        }
+        if (this.menuCloseBtn) {
+            this.menuCloseBtn.addEventListener('click', () => {
+                if (this.menuModal) this.menuModal.classList.add('hidden');
+            });
+        }
+        // Menu modal dışına tıklayınca kapat
+        if (this.menuModal) {
+            this.menuModal.addEventListener('click', (e) => {
+                if (e.target === this.menuModal) this.menuModal.classList.add('hidden');
+            });
         }
 
         // === SAYFA YENİLEME OTOMATİK GİRİŞ ===

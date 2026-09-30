@@ -69,6 +69,13 @@
 
     <!-- Ana Uygulama -->
     <div id="app-screen" class="app-screen hidden">
+        <!-- === AURORA BACKGROUND === -->
+        <div class="aurora-bg">
+            <div class="aurora-orb aurora-orb-1"></div>
+            <div class="aurora-orb aurora-orb-2"></div>
+            <div class="aurora-orb aurora-orb-3"></div>
+        </div>
+
         <!-- Sol Sidebar - Sunucu İkonu -->
         <div class="server-sidebar">
             <div class="server-icon active" title="SesliChat">
@@ -113,76 +120,14 @@
                         <span class="user-status" id="user-status-text">Çevrimiçi</span>
                     </div>
                 </div>
-                <div class="user-controls">
-                    <button class="control-btn" id="mic-btn" title="Mikrofon">
-                        <svg class="icon-mic-on" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <rect x="7" y="2" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.5"/>
-                            <path d="M4 9C4 12.3137 6.68629 15 10 15C13.3137 15 16 12.3137 16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <path d="M10 15V18M7 18H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                        <svg class="icon-mic-off hidden" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <rect x="7" y="2" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.5"/>
-                            <path d="M4 9C4 12.3137 6.68629 15 10 15C13.3137 15 16 12.3137 16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <path d="M10 15V18M7 18H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <line x1="3" y1="3" x2="17" y2="17" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                    <button class="control-btn" id="deafen-btn" title="Kulaklık">
-                        <svg class="icon-headphone-on" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M4 10C4 6.68629 6.68629 4 10 4C13.3137 4 16 6.68629 16 10V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <rect x="2" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                            <rect x="14" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                        </svg>
-                        <svg class="icon-headphone-off hidden" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M4 10C4 6.68629 6.68629 4 10 4C13.3137 4 16 6.68629 16 10V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <rect x="2" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                            <rect x="14" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                            <line x1="3" y1="3" x2="17" y2="17" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                    <button class="control-btn" id="settings-btn" title="Ses Ayarları">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
-                    </button>
-                    <button class="control-btn hidden" id="admin-panel-btn" title="Admin Paneli" style="color: var(--yellow);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="2 4 5 15 12 8 19 15 22 4"></polygon>
-                            <line x1="2" y1="20" x2="22" y2="20"></line>
-                        </svg>
-                    </button>
-                    <button class="control-btn" id="cam-btn" title="Kamera">
-                        <svg class="icon-cam-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                        </svg>
-                        <svg class="icon-cam-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                            <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                    </button>
-                    <button class="control-btn" id="share-screen-btn" title="Ekran Paylaş">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
-                    </button>
-                    <button class="control-btn" id="music-btn" title="Müzik Çal (herkesin duyduğu)" style="color: var(--yellow);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 18V5l12-2v13"></path>
-                            <circle cx="6" cy="18" r="3"></circle>
-                            <circle cx="18" cy="16" r="3"></circle>
-                        </svg>
-                    </button>
-                    <button class="control-btn" id="disconnect-btn" title="Bağlantıyı Kes" style="display:none;">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M4 4L16 16M16 4L4 16" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                </div>
+                <!-- Tek şık menü butonu — tıkla → menu modal açılır -->
+                <button class="menu-open-btn" id="menu-open-btn" title="Menü">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <circle cx="12" cy="5" r="1.5"></circle>
+                        <circle cx="12" cy="12" r="1.5"></circle>
+                        <circle cx="12" cy="19" r="1.5"></circle>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -486,6 +431,118 @@
         <div class="emoji-grid" id="emoji-grid"></div>
     </div>
 
+    <!-- === MENU MODAL — Tüm kontroller (glass morphism) === -->
+    <div id="menu-modal" class="menu-modal hidden">
+        <div class="menu-modal-content">
+            <div class="menu-modal-header">
+                <span class="menu-modal-title">⚡ Hızlı Menü</span>
+                <button id="menu-close-btn" class="menu-close-btn">✕</button>
+            </div>
+            <div class="menu-grid">
+                <!-- Mikrofon -->
+                <button class="menu-item" id="mic-btn" title="Mikrofon">
+                    <div class="menu-item-icon">
+                        <svg class="icon-mic-on" width="24" height="24" viewBox="0 0 20 20" fill="none">
+                            <rect x="7" y="2" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M4 9C4 12.3137 6.68629 15 10 15C13.3137 15 16 12.3137 16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M10 15V18M7 18H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <svg class="icon-mic-off hidden" width="24" height="24" viewBox="0 0 20 20" fill="none">
+                            <rect x="7" y="2" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M4 9C4 12.3137 6.68629 15 10 15C13.3137 15 16 12.3137 16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M10 15V18M7 18H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <line x1="3" y1="3" x2="17" y2="17" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Mikrofon</span>
+                </button>
+                <!-- Kulaklık -->
+                <button class="menu-item" id="deafen-btn" title="Kulaklık">
+                    <div class="menu-item-icon">
+                        <svg class="icon-headphone-on" width="24" height="24" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 10C4 6.68629 6.68629 4 10 4C13.3137 4 16 6.68629 16 10V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <rect x="2" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                            <rect x="14" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                        <svg class="icon-headphone-off hidden" width="24" height="24" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 10C4 6.68629 6.68629 4 10 4C13.3137 4 16 6.68629 16 10V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <rect x="2" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                            <rect x="14" y="11" width="4" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="3" y1="3" x2="17" y2="17" stroke="#ED4245" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Kulaklık</span>
+                </button>
+                <!-- Müzik -->
+                <button class="menu-item menu-item-accent" id="music-btn" title="Müzik Çal">
+                    <div class="menu-item-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Müzik</span>
+                </button>
+                <!-- Ayarlar -->
+                <button class="menu-item" id="settings-btn" title="Ses Ayarları">
+                    <div class="menu-item-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Ayarlar</span>
+                </button>
+                <!-- Admin -->
+                <button class="menu-item hidden" id="admin-panel-btn" title="Admin Paneli" style="--accent: var(--yellow);">
+                    <div class="menu-item-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="2 4 5 15 12 8 19 15 22 4"></polygon>
+                            <line x1="2" y1="20" x2="22" y2="20"></line>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Admin</span>
+                </button>
+                <!-- Kamera -->
+                <button class="menu-item" id="cam-btn" title="Kamera">
+                    <div class="menu-item-icon">
+                        <svg class="icon-cam-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <svg class="icon-cam-off hidden" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Kamera</span>
+                </button>
+                <!-- Ekran Paylaşımı -->
+                <button class="menu-item" id="share-screen-btn" title="Ekran Paylaş">
+                    <div class="menu-item-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Ekran</span>
+                </button>
+                <!-- Bağlantıyı Kes -->
+                <button class="menu-item hidden" id="disconnect-btn" title="Kanaldan Ayrıl" style="--accent: var(--red);">
+                    <div class="menu-item-icon">
+                        <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 4L16 16M16 4L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <span class="menu-item-label">Ayrıl</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- === NICK DEĞİŞTİRME MODALI === -->
     <div id="nick-change-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 380px;">
@@ -514,6 +571,6 @@
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- SoundTouchJS artık dynamic import ile yükleniyor (ES module olduğu için script tag ile global exposure olmuyor) -->
-    <script src="app.js?v=12.0.0"></script>
+    <script src="app.js?v=13.0.0"></script>
 </body>
 </html>
