@@ -458,29 +458,103 @@
         });
     };
 
+    // Emoji kütüphanesi — 32 komik emoji, animasyonlu webp URL'leri ile
+    VoiceChatApp.prototype.getEmojiLibrary = function() {
+        // { char, code (Noto animated webp code, null ise text emoji olarak render edilir) }
+        return [
+            { char: '🔥', code: '1f525' },
+            { char: '❤️', code: '2764' },
+            { char: '😂', code: '1f602' },
+            { char: '💀', code: '1f480' },
+            { char: '👍', code: '1f44d' },
+            { char: '👀', code: '1f440' },
+            { char: '🎉', code: '1f389' },
+            { char: '🤡', code: '1f921' },
+            { char: '🤣', code: '1f923' },
+            { char: '😍', code: '1f60d' },
+            { char: '🥳', code: '1f973' },
+            { char: '😎', code: '1f60e' },
+            { char: '🥺', code: '1f97a' },
+            { char: '😭', code: '1f62d' },
+            { char: '😡', code: '1f621' },
+            { char: '💯', code: '1f4af' },
+            { char: '🤯', code: '1f92f' },
+            { char: '😱', code: '1f631' },
+            { char: '😵', code: '1f635' },
+            { char: '🥵', code: '1f975' },
+            { char: '🤮', code: '1f92e' },
+            { char: '😈', code: '1f608' },
+            { char: '👻', code: '1f476' },
+            { char: '👾', code: '1f47e' },
+            { char: '🤖', code: '1f916' },
+            { char: '💩', code: '1f4a9' },
+            { char: '🐸', code: '1f438' },
+            { char: '💃', code: '1f483' },
+            { char: '🕺', code: '1f57a' },
+            { char: '🚀', code: '1f680' },
+            { char: '💥', code: '1f4a5' },
+            { char: '✨', code: '2728' }
+        ];
+    };
+
+    VoiceChatApp.prototype.emojiToWebpUrl = function(emoji) {
+        // Emoji nesnesi → Noto animated webp URL
+        if (!emoji || !emoji.code) return null;
+        return 'https://fonts.gstatic.com/s/e/notoemoji/latest/' + emoji.code + '/512.webp';
+    };
+
+    VoiceChatApp.prototype.findEmojiByChar = function(char) {
+        const lib = this.getEmojiLibrary();
+        return lib.find(e => e.char === char);
+    };
+
     VoiceChatApp.prototype.showEmojiPicker = function(targetId, x, y) {
         const old = document.getElementById('emoji-reaction-picker');
         if (old) old.remove();
 
         const self = this;
-        const emojis = ['🔥', '❤️', '😂', '💀', '👍', '👀', '🎉', '🤡'];
+        const emojis = this.getEmojiLibrary();
 
         const picker = document.createElement('div');
         picker.id = 'emoji-reaction-picker';
         picker.className = 'emoji-reaction-picker';
-        picker.style.left = Math.max(10, Math.min(x - 140, window.innerWidth - 290)) + 'px';
-        picker.style.top = Math.max(10, y - 60) + 'px';
+        picker.style.left = Math.max(10, Math.min(x - 160, window.innerWidth - 340)) + 'px';
+        picker.style.top = Math.max(10, y - 80) + 'px';
         picker.innerHTML = `
-            <div class="erp-title">Reaksiyon gönder</div>
+            <div class="erp-title">🎈 Reaksiyon gönder</div>
+            <div class="erp-tabs">
+                <button class="erp-tab active" data-cat="all">Hepsi</button>
+                <button class="erp-tab" data-cat="komik">Komik</button>
+                <button class="erp-tab" data-cat="yüz">Yüzler</button>
+                <button class="erp-tab" data-cat="nesne">Nesne</button>
+            </div>
             <div class="erp-grid">
-                ${emojis.map(em => `<button class="erp-emoji" data-emoji="${em}">${em}</button>`).join('')}
+                ${emojis.map((em, i) => `<button class="erp-emoji" data-emoji="${em.char}" data-idx="${i}"><img src="${this.emojiToWebpUrl(em)}" alt="${em.char}" loading="lazy"></button>`).join('')}
             </div>
         `;
         document.body.appendChild(picker);
 
         picker.addEventListener('click', function(e) {
             const btn = e.target.closest('.erp-emoji');
-            if (!btn) return;
+            if (!btn) {
+                // Tab tıklama?
+                const tab = e.target.closest('.erp-tab');
+                if (tab) {
+                    picker.querySelectorAll('.erp-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const cat = tab.dataset.cat;
+                    const all = picker.querySelectorAll('.erp-emoji');
+                    all.forEach((b, idx) => {
+                        const emoji = emojis[idx];
+                        let show = true;
+                        if (cat === 'komik') show = ['🤣','😂','💀','🤡','🤯','😱','🤮','💩','👻','👾'].includes(emoji.char);
+                        else if (cat === 'yüz') show = ['😍','🥳','😎','🥺','😭','😡','😈','🥵','😵','🔥','❤️','💯','👀'].includes(emoji.char);
+                        else if (cat === 'nesne') show = ['🎉','👍','🐸','💃','🕺','🚀','💥','✨','🤖'].includes(emoji.char);
+                        b.style.display = show ? 'flex' : 'none';
+                    });
+                }
+                return;
+            }
             const emoji = btn.dataset.emoji;
             picker.remove();
             self.sendEmojiReaction(targetId, emoji);
@@ -526,11 +600,19 @@
         const toX = toRect.left + toRect.width / 2;
         const toY = toRect.top + toRect.height / 2;
 
+        // Emoji lookup — animasyonlu webp kullan
+        const emojiObj = this.findEmojiByChar(emoji);
+        const webpUrl = emojiObj ? this.emojiToWebpUrl(emojiObj) : null;
+
         // 3 emoji parçacığı (arka arkaya)
         for (let i = 0; i < 3; i++) {
             const el = document.createElement('div');
             el.className = 'flying-emoji';
-            el.textContent = emoji;
+            if (webpUrl) {
+                el.innerHTML = `<img src="${webpUrl}" alt="${emoji}" style="width:36px;height:36px;">`;
+            } else {
+                el.textContent = emoji;
+            }
             el.style.left = fromX + 'px';
             el.style.top = fromY + 'px';
             el.style.setProperty('--to-x', (toX - fromX) + 'px');
@@ -844,9 +926,32 @@
             app.initEmojiReactions();
             app.initAmbientSounds();
             app.speakingTracker = new Map();
+            initStarField();
             console.log('[Fun] Eğlence özellikleri yüklendi ✅');
         } catch (e) {
             console.error('[Fun] init hatası:', e);
+        }
+    }
+
+    // Stars generator — twinkling background stars
+    function initStarField() {
+        const container = document.getElementById('aurora-stars');
+        if (!container) return;
+        container.innerHTML = '';
+        const count = window.innerWidth < 768 ? 30 : 60;
+        for (let i = 0; i < count; i++) {
+            const star = document.createElement('div');
+            star.className = 'aurora-star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            star.style.animationDuration = (2 + Math.random() * 3) + 's';
+            // Bazı yıldızlar daha büyük
+            if (Math.random() > 0.8) {
+                star.style.width = '3px';
+                star.style.height = '3px';
+            }
+            container.appendChild(star);
         }
     }
 
