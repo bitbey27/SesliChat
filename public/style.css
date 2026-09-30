@@ -1657,19 +1657,23 @@ body {
 
 /* Ana panel — kart benzeri, modern */
 .music-panel {
-    background: linear-gradient(180deg, rgba(124, 92, 252, 0.06) 0%, var(--bg-tertiary) 100%);
-    border: 1px solid rgba(124, 92, 252, 0.25);
-    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
     padding: 0;
-    margin-bottom: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
-    backdrop-filter: blur(10px);
+    margin: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex: 0 0 auto;
+    max-height: 300px; /* Müzik paneli çok yer kaplamasın — chat'e yer kalsın */
     animation: mpSlideIn 0.25s ease;
 }
 .music-panel.hidden { display: none; }
+.music-panel .mp-results {
+    overflow-y: auto; /* Sonuçlar scroll edilebilir */
+    max-height: 200px;
+}
 
 @keyframes mpSlideIn {
     from { opacity: 0; transform: translateY(-6px); }
