@@ -3371,7 +3371,7 @@ class VoiceChatApp {
 
     /** Mobil tab değiştir (Kanallar/Sohbet/İnsanlar) — toggle destekli */
     switchMobileTab(tabName) {
-        // DEBUG: toast göster — fonksiyon çağrılıyor mu?
+        // DEBUG: toast göster
         this.showToast('📱', 'Tab: ' + tabName);
         
         // Aynı tab'a tekrar tıklarsa → channels'e dön
@@ -3394,60 +3394,84 @@ class VoiceChatApp {
         const membersSidebar = document.querySelector('.members-sidebar');
         const musicPanel = document.getElementById('music-panel');
         
-        // Önce her şeyi sıfırla
-        if (voiceRoomCard) voiceRoomCard.style.display = '';
-        if (chatPanel) { chatPanel.style.display = ''; chatPanel.style.height = ''; chatPanel.style.maxHeight = ''; chatPanel.style.flex = ''; chatPanel.style.background = ''; }
-        if (musicPanel) musicPanel.style.display = '';
-        if (membersSidebar) {
-            membersSidebar.style.display = '';
-            membersSidebar.style.position = '';
-            membersSidebar.style.top = '';
-            membersSidebar.style.left = '';
-            membersSidebar.style.right = '';
-            membersSidebar.style.bottom = '';
-            membersSidebar.style.width = '';
-            membersSidebar.style.height = '';
-            membersSidebar.style.zIndex = '';
-            membersSidebar.style.background = '';
-            membersSidebar.style.flexDirection = '';
-        }
+        // Önce HER ŞEYİ sıfırla — removeProperty ile !important'ları temizle
+        const allElements = [voiceRoomCard, chatPanel, musicPanel, membersSidebar, voiceView];
+        allElements.forEach(el => {
+            if (!el) return;
+            el.style.removeProperty('display');
+            el.style.removeProperty('position');
+            el.style.removeProperty('top');
+            el.style.removeProperty('left');
+            el.style.removeProperty('right');
+            el.style.removeProperty('bottom');
+            el.style.removeProperty('width');
+            el.style.removeProperty('height');
+            el.style.removeProperty('z-index');
+            el.style.removeProperty('flex');
+            el.style.removeProperty('max-height');
+            el.style.removeProperty('background');
+            el.style.removeProperty('flex-direction');
+        });
         
         if (tabName === 'chat') {
-            // Sohbet tam ekran
-            if (voiceView) voiceView.classList.remove('hidden');
-            if (voiceRoomCard) voiceRoomCard.style.display = 'none';
-            if (musicPanel) musicPanel.style.display = 'none';
+            // voiceView gizli class'ı kaldır + TAM EKRAN fixed yap
+            if (voiceView) {
+                voiceView.classList.remove('hidden');
+                voiceView.style.setProperty('display', 'flex', 'important');
+                voiceView.style.setProperty('position', 'fixed', 'important');
+                voiceView.style.setProperty('top', '0', 'important');
+                voiceView.style.setProperty('left', '0', 'important');
+                voiceView.style.setProperty('right', '0', 'important');
+                voiceView.style.setProperty('bottom', '56px', 'important');
+                voiceView.style.setProperty('z-index', '200', 'important');
+                voiceView.style.setProperty('flex-direction', 'column', 'important');
+                voiceView.style.setProperty('background', '#0B0E14', 'important');
+            }
+            // Voice card gizle
+            if (voiceRoomCard) voiceRoomCard.style.setProperty('display', 'none', 'important');
+            if (musicPanel) musicPanel.style.setProperty('display', 'none', 'important');
+            // Chat panel TAM EKRAN — !important ile CSS'i ez
             if (chatPanel) {
-                chatPanel.style.display = 'flex';
-                chatPanel.style.flex = '1';
-                chatPanel.style.height = 'calc(100vh - 56px)';
-                chatPanel.style.maxHeight = 'none';
-                chatPanel.style.background = ''; // Debug kaldırıldı
+                chatPanel.style.setProperty('display', 'flex', 'important');
+                chatPanel.style.setProperty('flex', '1', 'important');
+                chatPanel.style.setProperty('height', '100%', 'important');
+                chatPanel.style.setProperty('max-height', 'none', 'important');
+                chatPanel.style.setProperty('flex-direction', 'column', 'important');
+                chatPanel.style.setProperty('overflow', 'hidden', 'important');
             }
             this.toggleMobileSidebar(false);
         } else if (tabName === 'people') {
-            // İnsanlar tam ekran
-            if (voiceRoomCard) voiceRoomCard.style.display = 'none';
-            if (chatPanel) chatPanel.style.display = 'none';
-            if (musicPanel) musicPanel.style.display = 'none';
+            // İnsanlar TAM EKRAN
+            if (voiceRoomCard) voiceRoomCard.style.setProperty('display', 'none', 'important');
+            if (chatPanel) chatPanel.style.setProperty('display', 'none', 'important');
+            if (musicPanel) musicPanel.style.setProperty('display', 'none', 'important');
             if (membersSidebar) {
-                membersSidebar.style.display = 'flex';
-                membersSidebar.style.position = 'fixed';
-                membersSidebar.style.top = '0';
-                membersSidebar.style.left = '0';
-                membersSidebar.style.right = '0';
-                membersSidebar.style.bottom = '0';
-                membersSidebar.style.width = '100%';
-                membersSidebar.style.height = '100%';
-                membersSidebar.style.zIndex = '300';
-                membersSidebar.style.background = '#0B0E14';
-                membersSidebar.style.flexDirection = 'column';
+                membersSidebar.style.setProperty('display', 'flex', 'important');
+                membersSidebar.style.setProperty('position', 'fixed', 'important');
+                membersSidebar.style.setProperty('top', '0', 'important');
+                membersSidebar.style.setProperty('left', '0', 'important');
+                membersSidebar.style.setProperty('right', '0', 'important');
+                membersSidebar.style.setProperty('bottom', '56px', 'important');
+                membersSidebar.style.setProperty('z-index', '300', 'important');
+                membersSidebar.style.setProperty('background', '#0B0E14', 'important');
+                membersSidebar.style.setProperty('flex-direction', 'column', 'important');
+                membersSidebar.style.setProperty('overflow-y', 'auto', 'important');
             }
             this.toggleMobileSidebar(false);
         } else {
-            // Kanallar (default)
-            if (voiceView) voiceView.classList.remove('hidden');
-            if (membersSidebar) membersSidebar.style.display = 'none';
+            // Kanallar (default) — her şeyi normale döndür
+            if (voiceView) {
+                voiceView.classList.remove('hidden');
+                voiceView.style.setProperty('display', 'flex', 'important');
+                voiceView.style.removeProperty('position');
+                voiceView.style.removeProperty('top');
+                voiceView.style.removeProperty('left');
+                voiceView.style.removeProperty('right');
+                voiceView.style.removeProperty('bottom');
+                voiceView.style.removeProperty('z-index');
+                voiceView.style.removeProperty('background');
+            }
+            if (membersSidebar) membersSidebar.style.setProperty('display', 'none', 'important');
             this.toggleMobileSidebar(false);
         }
     }
