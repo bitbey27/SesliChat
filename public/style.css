@@ -4591,3 +4591,97 @@ body {
         z-index: 350 !important;
     }
 }
+
+/* =========================================
+   === NÜKLEER MOBİL CSS — TEK TEMİZ BLOK ===
+   Tüm eski mobile kuralları override eder
+   ========================================= */
+
+@media (max-width: 768px) {
+    /* SERVER SIDEBAR — gizli */
+    .server-sidebar { display: none !important; }
+    
+    /* CHANNEL SIDEBAR — slide-in */
+    .channel-sidebar {
+        position: fixed !important;
+        left: 0 !important; top: 0 !important; bottom: 0 !important;
+        width: 280px !important; max-width: 85vw !important;
+        z-index: 350 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s ease !important;
+    }
+    .channel-sidebar.mobile-visible { transform: translateX(0) !important; }
+    
+    /* MEMBERS SIDEBAR — default gizli (JS ile açılır) */
+    .members-sidebar { display: none !important; }
+    
+    /* MOBILE MENU TOGGLE — görünür */
+    .mobile-menu-toggle { display: flex !important; }
+    
+    /* MOBILE TAB BAR — fixed alt */
+    .mobile-tab-bar {
+        display: flex !important;
+        position: fixed !important; bottom: 0 !important;
+        left: 0 !important; right: 0 !important;
+        height: 56px !important; z-index: 400 !important;
+        background: rgba(11, 14, 20, 0.95) !important;
+        backdrop-filter: blur(16px) !important;
+        border-top: 1px solid rgba(255,255,255,0.08) !important;
+    }
+    
+    /* APP SCREEN — tab bar için boşluk */
+    .app-screen { padding-bottom: 56px !important; }
+    
+    /* MAIN CONTENT — full genişlik */
+    .main-content { width: 100% !important; flex: 1 !important; }
+    
+    /* VOICE VIEW — full height flex */
+    .voice-view { height: 100% !important; display: flex !important; flex-direction: column !important; }
+    
+    /* VOICE BODY — column, no scroll */
+    .voice-body {
+        flex: 1 !important; display: flex !important;
+        flex-direction: column !important; overflow: hidden !important;
+        max-height: none !important;
+    }
+    
+    /* VOICE ROOM CARD — compact üstte */
+    .voice-room-card {
+        flex: 0 0 auto !important; max-height: 35vh !important;
+        min-height: 140px !important; overflow: hidden !important;
+        margin: 0 !important; border-radius: 0 !important;
+    }
+    
+    /* MUSIC PANEL — compact */
+    .music-panel {
+        flex: 0 0 auto !important; max-height: 180px !important;
+        overflow: hidden !important;
+    }
+    .music-panel .mp-results { max-height: 120px !important; overflow-y: auto !important; }
+    
+    /* CHAT PANEL — kalan alan, HER ZAMAN GÖRÜNÜR */
+    .voice-body .chat-panel {
+        flex: 1 !important; display: flex !important;
+        flex-direction: column !important;
+        min-height: 100px !important; max-height: none !important;
+        height: auto !important; margin: 0 !important;
+        border-radius: 0 !important; overflow: hidden !important;
+    }
+    
+    /* CHAT MESSAGES — scrollable */
+    .chat-messages { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+    
+    /* CHAT INPUT — always visible */
+    .chat-input-form { flex: 0 0 auto !important; }
+    
+    /* VRC BUTTONS — küçük */
+    .vrc-btn { width: 48px !important; height: 48px !important; }
+    .vrc-btn svg { width: 20px !important; height: 20px !important; }
+    .vrc-btn span { font-size: 9px !important; }
+    
+    /* PARTICIPANT AVATARS — küçük */
+    .participant-avatar { width: 36px !important; height: 36px !important; font-size: 14px !important; }
+    
+    /* MEMBERS BACK BUTTON — görünür */
+    .members-back-btn { display: block !important; }
+}
