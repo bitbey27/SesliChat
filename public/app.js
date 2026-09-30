@@ -3414,30 +3414,23 @@ class VoiceChatApp {
         });
         
         if (tabName === 'chat') {
-            // voiceView gizli class'ı kaldır + TAM EKRAN fixed yap
-            if (voiceView) {
-                voiceView.classList.remove('hidden');
-                voiceView.style.setProperty('display', 'flex', 'important');
-                voiceView.style.setProperty('position', 'fixed', 'important');
-                voiceView.style.setProperty('top', '0', 'important');
-                voiceView.style.setProperty('left', '0', 'important');
-                voiceView.style.setProperty('right', '0', 'important');
-                voiceView.style.setProperty('bottom', '56px', 'important');
-                voiceView.style.setProperty('z-index', '200', 'important');
-                voiceView.style.setProperty('flex-direction', 'column', 'important');
-                voiceView.style.setProperty('background', '#0B0E14', 'important');
-            }
-            // Voice card gizle
+            // Chat panel DIREKT fixed full-screen (voice-view'e değil, kendine)
             if (voiceRoomCard) voiceRoomCard.style.setProperty('display', 'none', 'important');
             if (musicPanel) musicPanel.style.setProperty('display', 'none', 'important');
-            // Chat panel TAM EKRAN — !important ile CSS'i ez
+            if (voiceView) voiceView.classList.remove('hidden');
+            // chat-panel'i members-sidebar gibi direkt fixed yap
             if (chatPanel) {
                 chatPanel.style.setProperty('display', 'flex', 'important');
-                chatPanel.style.setProperty('flex', '1', 'important');
-                chatPanel.style.setProperty('height', '100%', 'important');
-                chatPanel.style.setProperty('max-height', 'none', 'important');
+                chatPanel.style.setProperty('position', 'fixed', 'important');
+                chatPanel.style.setProperty('top', '0', 'important');
+                chatPanel.style.setProperty('left', '0', 'important');
+                chatPanel.style.setProperty('right', '0', 'important');
+                chatPanel.style.setProperty('bottom', '56px', 'important');
+                chatPanel.style.setProperty('z-index', '250', 'important');
                 chatPanel.style.setProperty('flex-direction', 'column', 'important');
-                chatPanel.style.setProperty('overflow', 'hidden', 'important');
+                chatPanel.style.setProperty('background', '#0B0E14', 'important');
+                chatPanel.style.setProperty('height', 'auto', 'important');
+                chatPanel.style.setProperty('max-height', 'none', 'important');
             }
             this.toggleMobileSidebar(false);
         } else if (tabName === 'people') {
