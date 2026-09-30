@@ -1223,10 +1223,10 @@ class VoiceChatApp {
         localStorage.setItem('currentRoom', message.roomId);
 
         // UI güncelle
-        this.welcomeView.classList.add('hidden');
-        this.voiceView.classList.remove('hidden');
-        this.disconnectBtn.style.display = 'flex';
-        this.userStatusText.textContent = 'Sesli kanalda';
+        if (this.welcomeView) this.welcomeView.classList.add('hidden');
+        if (this.voiceView) this.voiceView.classList.remove('hidden');
+        if (this.disconnectBtn) this.disconnectBtn.style.display = 'flex';
+        if (this.userStatusText) this.userStatusText.textContent = 'Sesli kanalda';
 
         // === AUDIO SYNC FIX ===
         // Oda yeniden girince AudioContext'i resume et
@@ -1294,10 +1294,10 @@ class VoiceChatApp {
         // === SAYFA YENİLEME === - odadan çıkınca kaydı temizle
         localStorage.removeItem('currentRoom');
         this.savedRoom = null;
-        this.voiceView.classList.add('hidden');
-        this.welcomeView.classList.remove('hidden');
-        this.disconnectBtn.style.display = 'none';
-        this.userStatusText.textContent = 'Çevrimiçi';
+        if (this.voiceView) this.voiceView.classList.add('hidden');
+        if (this.welcomeView) this.welcomeView.classList.remove('hidden');
+        if (this.disconnectBtn) this.disconnectBtn.style.display = 'none';
+        if (this.userStatusText) this.userStatusText.textContent = 'Çevrimiçi';
         this.voiceParticipants.innerHTML = '';
         this.speakingUsers.clear();
         this.stopVoiceActivityDetection();
