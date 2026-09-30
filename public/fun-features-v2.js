@@ -1,6 +1,6 @@
 // =========================================
 // SesliChat — Eğlence Özellikleri v1
-// Fısıltı, Sürpriz Ses, Havai Emoji, Avatar Animasyonu, Fal Botu, Ambient Sound
+// Fısıltı, Sürpriz Ses, Havai Emoji, Avatar Animasyonu, Ambient Sound
 // VoiceChatApp sınıfına prototip üzerinden metot ekler
 // =========================================
 
@@ -34,37 +34,6 @@
                 return;
         }
         return _origHandleMessage.call(this, message);
-    };
-
-    // Hook: sendChatMessage — /fal komutunu yakala
-    const _origSendChat = VoiceChatApp.prototype.sendChatMessage;
-    VoiceChatApp.prototype.sendChatMessage = function() {
-        const text = (this.chatInput.value || '').trim();
-        const lower = text.toLowerCase();
-        if (lower === '/fal' || lower.startsWith('/fal ')) {
-            const question = text.substring(4).trim() || 'Genel fal';
-            if (this.ws && this.currentRoom) {
-                this.ws.send(JSON.stringify({
-                    type: 'fal-bot',
-                    question: question
-                }));
-                this.showToast('🔮', 'Fal bakılıyor...');
-            }
-            this.chatInput.value = '';
-            return;
-        }
-        // Yardım komutu
-        if (lower === '/eğlence' || lower === '/eglence' || lower === '/help') {
-            this.addChatMessage({
-                username: '🎮 Komutlar',
-                color: '#7C5CFF',
-                message: '🔮 <b>/fal soru</b> — Fal botu cevaplasın (sesli!)<br>🎮 Daha fazla eğlence yakında!',
-                timestamp: Date.now()
-            });
-            this.chatInput.value = '';
-            return;
-        }
-        return _origSendChat.call(this);
     };
 
     // Hook: updateSpeakingUI — ON FIRE + sleeping badge ekle
