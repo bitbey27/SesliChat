@@ -4104,3 +4104,58 @@ body {
     background: rgba(46, 160, 67, 0.08) !important;
     border-radius: var(--radius-sm);
 }
+
+/* =========================================
+   MOBIL CHAT PANEL — KESİN ÇÖZÜM
+   ========================================= */
+
+/* Tab bar hidden class'ı override et */
+@media (max-width: 768px) {
+    .mobile-tab-bar {
+        display: flex !important;
+    }
+    .mobile-tab-bar.hidden {
+        display: flex !important;
+    }
+}
+
+/* Voice body mobilde SCROLLABLE — her şey görünür */
+@media (max-width: 768px) {
+    .voice-body {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 70px; /* tab bar için boşluk */
+    }
+    
+    /* Voice room card — kompakt, scroll ile geç */
+    .voice-room-card {
+        flex: 0 0 auto !important;
+        max-height: 45vh !important;
+        min-height: 200px !important;
+    }
+    
+    /* Chat panel — HER ZAMAN GÖRÜNÜR, flex değil sabit height */
+    .voice-body .chat-panel {
+        flex: 0 0 auto !important;
+        height: 300px !important;
+        max-height: 300px !important;
+        min-height: 200px !important;
+        display: flex !important;
+    }
+    
+    /* Tab bar'ın body class'ları ile gizleme kaldir */
+    body.tab-chat .voice-room-card {
+        display: flex !important;
+    }
+    body.tab-people .voice-room-card,
+    body.tab-people .chat-panel {
+        display: flex !important;
+    }
+    body.tab-people .members-sidebar {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        z-index: 300 !important;
+        display: flex !important;
+    }
+}
