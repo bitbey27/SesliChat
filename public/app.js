@@ -867,13 +867,14 @@ class VoiceChatApp {
                     if (this.clearChatBtn) this.clearChatBtn.classList.add('hidden');
                 }
                 this.showApp();
-                // Yeniden bağlantıda önceki odaya otomatik katıl
-                if (this.reconnectRoom) {
-                    const roomToJoin = this.reconnectRoom;
+                // === AUTO-JOIN: Son odaya veya varsayılan odaya otomatik katıl ===
+                const roomToJoin = this.reconnectRoom || this.savedRoom || 'genel';
+                if (roomToJoin) {
                     this.reconnectRoom = null;
                     this.currentRoom = null;
-                    this.joinRoom(roomToJoin);
-                    this.showToast('✅', 'Yeniden bağlandın!');
+                    // Kısa gecikme — UI'nin hazır olması için
+                    setTimeout(() => this.joinRoom(roomToJoin), 300);
+                    this.showToast('✅', `Hoş geldin, ${this.username}!`);
                 } else {
                     this.showToast('✅', `Hoş geldin, ${this.username}!`);
                 }
