@@ -4263,3 +4263,58 @@ body {
 }
 
 /* Mobilde column layout korunur (zaten var) */
+
+/* =========================================
+   MOBIL: Kartlar asagi uzamasin — compact
+   ========================================= */
+
+@media (max-width: 768px) {
+    /* Voice body tam ekran yapma — compact */
+    .voice-body {
+        max-height: calc(100vh - 120px) !important; /* tab bar + header için boşluk bırak */
+        overflow-y: auto !important;
+    }
+    
+    /* Voice room card — compact, çok uzamasın */
+    .voice-room-card {
+        flex: 0 0 auto !important;
+        max-height: 35vh !important;
+        min-height: 180px !important;
+    }
+    
+    /* Chat panel — SABIT yükseklik, flex:1 ile uzamasın */
+    .voice-body .chat-panel {
+        flex: 0 0 auto !important;
+        height: 250px !important;
+        max-height: 250px !important;
+        min-height: 180px !important;
+    }
+    
+    /* Müzik paneli de compact */
+    .music-panel {
+        max-height: 250px !important;
+    }
+    .music-panel .mp-results {
+        max-height: 150px !important;
+    }
+    
+    /* Participant avatarlar daha küçük */
+    .participant-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 15px !important;
+    }
+    
+    /* VRC butonlar daha küçük */
+    .vrc-btn {
+        width: 48px !important;
+        height: 48px !important;
+    }
+    .vrc-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    .vrc-btn span {
+        font-size: 9px !important;
+    }
+}
