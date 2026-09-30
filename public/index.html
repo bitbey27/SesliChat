@@ -589,6 +589,77 @@
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- SoundTouchJS artık dynamic import ile yükleniyor (ES module olduğu için script tag ile global exposure olmuyor) -->
-    <script src="app.js?v=22.0.0"></script>
+    <script src="app.js?v=23.0.0"></script>
+    
+    <!-- === INLINE MOBILE TAB SWITCHER — HTML içinde, her zaman fresh === -->
+    <script>
+    (function() {
+        function switchTab(tab) {
+            var chatPanel = document.getElementById('chat-panel');
+            var members = document.querySelector('.members-sidebar');
+            var voiceCard = document.querySelector('.voice-room-card');
+            var musicPanel = document.getElementById('music-panel');
+            var voiceView = document.getElementById('voice-view');
+            
+            // Reset everything
+            [chatPanel, voiceCard, musicPanel, members].forEach(function(el) {
+                if (!el) return;
+                el.style.cssText = el.style.cssText.replace(/display[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/position[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/top[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/left[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/right[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/bottom[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/z-index[^;]*;?/g, '');
+                el.style.cssText = el.style.cssText.replace(/background[^;]*;?/g, '');
+            });
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            
+            if (tab === 'chat') {
+                if (voiceView) voiceView.classList.remove('hidden');
+                if (voiceCard) voiceCard.style.cssText += ';display:none !important;';
+                if (musicPanel) musicPanel.style.cssText += ';display:none !important;';
+                if (chatPanel) {
+                    chatPanel.style.cssText += ';display:flex !important;position:fixed !important;top:0 !important;left:0 !important;right:0 !important;bottom:56px !important;z-index:250 !important;flex-direction:column !important;background:#0B0E14 !important;height:auto !important;max-height:none !important;';
+                }
+            } else if (tab === 'people') {
+                if (voiceCard) voiceCard.style.cssText += ';display:none !important;';
+                if (chatPanel) chatPanel.style.cssText += ';display:none !important;';
+                if (musicPanel) musicPanel.style.cssText += ';display:none !important;';
+                if (members) {
+                    members.style.cssText += ';display:flex !important;position:fixed !important;top:0 !important;left:0 !important;right:0 !important;bottom:56px !important;z-index:300 !important;flex-direction:column !important;background:#0B0E14 !important;overflow-y:auto !important;';
+                }
+            } else {
+                // channels — default
+                if (voiceView) voiceView.classList.remove('hidden');
+                if (members) members.style.cssText += ';display:none !important;';
+            }
+        }
+        
+        // Attach to tab buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            var btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var tab = btn.dataset.tab;
+                    // Toggle: if same tab clicked again, go to channels
+                    if (btn.classList.contains('active') && tab !== 'channels') {
+                        tab = 'channels';
+                    }
+                    switchTab(tab);
+                });
+            });
+            // Members back button
+            var backBtn = document.getElementById('members-back-btn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() { switchTab('channels'); });
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
