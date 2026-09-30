@@ -93,6 +93,39 @@
             <div class="aurora-stars" id="aurora-stars"></div>
             <!-- Grain overlay -->
             <div class="aurora-grain"></div>
+
+            <!-- === PREMIUM TEMA OVERLAY'leri === -->
+            <!-- Kar (canvas particle) -->
+            <canvas id="theme-snow-canvas" class="theme-canvas hidden"></canvas>
+            <!-- Yoğun Yağmur (canvas particle) -->
+            <canvas id="theme-rain-canvas" class="theme-canvas hidden"></canvas>
+            <!-- Galaksi (canvas particle) -->
+            <canvas id="theme-galaxy-canvas" class="theme-canvas hidden"></canvas>
+            <!-- Matrix yağmur (canvas) -->
+            <canvas id="theme-matrix-canvas" class="theme-canvas hidden"></canvas>
+
+            <!-- Neon ışık şeritleri (CSS) -->
+            <div id="theme-neon" class="theme-neon hidden">
+                <div class="neon-stripe neon-stripe-1"></div>
+                <div class="neon-stripe neon-stripe-2"></div>
+                <div class="neon-stripe neon-stripe-3"></div>
+                <div class="neon-stripe neon-stripe-4"></div>
+                <div class="neon-stripe neon-stripe-5"></div>
+            </div>
+
+            <!-- Şimşek (CSS flash + arka plan) -->
+            <div id="theme-lightning" class="theme-lightning hidden">
+                <div class="lightning-clouds"></div>
+                <div class="lightning-flash"></div>
+                <div class="lightning-bolt"></div>
+            </div>
+
+            <!-- Sis (CSS) -->
+            <div id="theme-fog" class="theme-fog hidden">
+                <div class="fog-layer fog-layer-1"></div>
+                <div class="fog-layer fog-layer-2"></div>
+                <div class="fog-layer fog-layer-3"></div>
+            </div>
         </div>
 
         <!-- Sol Sidebar - Sunucu İkonu -->
@@ -218,6 +251,10 @@
                             <button class="vrc-btn vrc-fun-btn" id="vrc-ambient-btn" title="Ambient — oda atmosferi (admin)">
                                 <span style="font-size:24px;">🌧️</span>
                                 <span>Atmosfer</span>
+                            </button>
+                            <button class="vrc-btn vrc-fun-btn" id="vrc-theme-btn" title="🎨 Arka Plan Teması">
+                                <span style="font-size:24px;">🎨</span>
+                                <span>Tema</span>
                             </button>
                             <button class="vrc-btn" id="vrc-menu-btn" title="Menü">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -623,5 +660,7 @@
     <script src="app-v26.js"></script>
     <!-- Eğlence Özellikleri v2: fısıltı, sürpriz ses, emoji (32), fal, ambient, neon aurora -->
     <script src="fun-features-v2.js"></script>
+    <!-- Premium Temalar: 8 seçilebilen arka plan (aurora/kar/yağmur/neon/galaksi/şimşek/sis/matrix) -->
+    <script src="premium-themes.js"></script>
 </body>
 </html>
