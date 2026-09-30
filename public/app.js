@@ -3385,10 +3385,12 @@ class VoiceChatApp {
         }
         
         // Element'leri direkt al
+        const voiceView = document.getElementById('voice-view');
         const voiceRoomCard = document.querySelector('.voice-room-card');
         const chatPanel = document.getElementById('chat-panel');
         const membersSidebar = document.querySelector('.members-sidebar');
         const musicPanel = document.getElementById('music-panel');
+        const mainContent = document.querySelector('.main-content');
         
         // Önce her şeyi sıfırla
         if (voiceRoomCard) voiceRoomCard.style.display = '';
@@ -3401,33 +3403,43 @@ class VoiceChatApp {
             membersSidebar.style.zIndex = '';
             membersSidebar.style.width = '';
             membersSidebar.style.height = '';
+            membersSidebar.style.background = '';
         }
         
         if (tabName === 'chat') {
             // Sohbet tam ekran — voice card gizle, chat full
             if (voiceRoomCard) voiceRoomCard.style.display = 'none';
             if (musicPanel) musicPanel.style.display = 'none';
+            if (voiceView) voiceView.classList.remove('hidden');
             if (chatPanel) {
                 chatPanel.style.display = 'flex';
                 chatPanel.style.flex = '1';
+                chatPanel.style.height = '100%';
+                chatPanel.style.maxHeight = 'none';
             }
             this.toggleMobileSidebar(false);
         } else if (tabName === 'people') {
             // İnsanlar tam ekran overlay
             if (voiceRoomCard) voiceRoomCard.style.display = 'none';
             if (chatPanel) chatPanel.style.display = 'none';
+            if (musicPanel) musicPanel.style.display = 'none';
             if (membersSidebar) {
                 membersSidebar.style.display = 'flex';
                 membersSidebar.style.position = 'fixed';
-                membersSidebar.style.inset = '0';
-                membersSidebar.style.zIndex = '300';
+                membersSidebar.style.top = '0';
+                membersSidebar.style.left = '0';
+                membersSidebar.style.right = '0';
+                membersSidebar.style.bottom = '0';
                 membersSidebar.style.width = '100%';
                 membersSidebar.style.height = '100%';
+                membersSidebar.style.zIndex = '300';
                 membersSidebar.style.background = 'var(--bg-base)';
+                membersSidebar.style.flexDirection = 'column';
             }
             this.toggleMobileSidebar(false);
         } else {
             // Kanallar (default) — her şey normal
+            if (voiceView) voiceView.classList.remove('hidden');
             if (membersSidebar) membersSidebar.style.display = 'none';
             this.toggleMobileSidebar(false);
         }
