@@ -3364,23 +3364,15 @@ class VoiceChatApp {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
         }
-        // İçerik göster/gizle
-        const channelSidebar = document.querySelector('.channel-sidebar');
-        const chatPanel = document.getElementById('chat-panel');
-        const membersSidebar = document.querySelector('.members-sidebar');
-
+        // Body class güncelle (CSS ile göster/gizle)
+        document.body.classList.remove('tab-channels', 'tab-chat', 'tab-people');
+        document.body.classList.add('tab-' + tabName);
+        
+        // Kanallar tab → sidebar aç
         if (tabName === 'channels') {
-            if (channelSidebar) channelSidebar.style.display = '';
-            if (chatPanel) chatPanel.style.display = 'none';
-            if (membersSidebar) membersSidebar.style.display = 'none';
-        } else if (tabName === 'chat') {
-            if (channelSidebar) channelSidebar.style.display = 'none';
-            if (chatPanel) chatPanel.style.display = '';
-            if (membersSidebar) membersSidebar.style.display = 'none';
-        } else if (tabName === 'people') {
-            if (channelSidebar) channelSidebar.style.display = 'none';
-            if (chatPanel) chatPanel.style.display = 'none';
-            if (membersSidebar) membersSidebar.style.display = '';
+            this.toggleMobileSidebar(true);
+        } else {
+            this.toggleMobileSidebar(false);
         }
     }
 

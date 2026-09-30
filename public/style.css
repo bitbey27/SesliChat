@@ -3975,3 +3975,71 @@ body {
         margin: 0 var(--sp-2) var(--sp-2) !important;
     }
 }
+
+/* =========================================
+   MOBIL FIX — Chat panel görünür olsun
+   ========================================= */
+
+@media (max-width: 768px) {
+    /* Voice room card mobilde tüm alanı kaplamasın */
+    .voice-room-card {
+        flex: 0 1 auto !important;
+        max-height: 50vh !important;
+        margin: var(--sp-2) !important;
+    }
+    
+    /* Chat panel mobilde görünür — flex: 1 ile kalan alanı kaplar */
+    .voice-body .chat-panel {
+        flex: 1 !important;
+        height: auto !important;
+        max-height: none !important;
+        margin: 0 var(--sp-2) var(--sp-2) !important;
+        min-height: 150px !important;
+    }
+    
+    /* Voice participants mobilde daha kompakt */
+    .voice-room-card .voice-participants {
+        padding: var(--sp-2) !important;
+        min-height: 80px !important;
+    }
+    
+    /* VRC buttons mobilde daha küçük */
+    .vrc-controls {
+        padding: var(--sp-2) !important;
+        gap: 4px !important;
+    }
+    .vrc-btn {
+        width: 52px !important;
+        height: 52px !important;
+    }
+    .vrc-btn span {
+        font-size: 9px !important;
+    }
+    
+    /* Tab bar "Sohbet" seçili ise voice card gizlensin, chat full screen */
+    body.tab-chat .voice-room-card {
+        display: none !important;
+    }
+    body.tab-chat .chat-panel {
+        flex: 1 !important;
+        max-height: none !important;
+        min-height: 200px !important;
+    }
+    
+    /* Tab bar "İnsanlar" seçili ise voice card + chat gizlensin */
+    body.tab-people .voice-room-card,
+    body.tab-people .chat-panel {
+        display: none !important;
+    }
+    body.tab-people .members-sidebar {
+        display: flex !important;
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        z-index: 200 !important;
+        background: var(--bg-sidebar) !important;
+    }
+    
+    /* Tab bar "Kanallar" seçili ise default (voice card + chat görünür) */
+    /* Members sidebar default gizli (zaten display: none mobilde) */
+}
