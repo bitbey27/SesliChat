@@ -4318,3 +4318,73 @@ body {
         font-size: 9px !important;
     }
 }
+
+/* =========================================
+   DESKTOP: Chat üstte + Members altta küçük kutu
+   ========================================= */
+
+@media (min-width: 769px) {
+    /* Members sidebar artık gizli DEĞİL — altta küçük kutu olarak */
+    .members-sidebar {
+        display: flex !important;
+        position: fixed !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 320px !important;
+        height: 100px !important;
+        max-height: 100px !important;
+        z-index: 50 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+        overflow: hidden !important;
+        background: var(--bg-surface) !important;
+    }
+    
+    /* Members header compact */
+    .members-sidebar .members-header {
+        padding: 6px 12px !important;
+    }
+    .members-sidebar .members-header h3 {
+        font-size: 11px !important;
+    }
+    
+    /* Member items küçük */
+    .members-sidebar .member-item {
+        padding: 4px 12px !important;
+        gap: 6px !important;
+    }
+    .members-sidebar .member-avatar {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 10px !important;
+    }
+    .members-sidebar .member-name {
+        font-size: 12px !important;
+    }
+    .members-sidebar .member-room {
+        font-size: 10px !important;
+    }
+    
+    /* Members listesi yatay scroll */
+    .members-sidebar .member-list {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 8px !important;
+        padding: 4px 8px !important;
+    }
+    .members-sidebar .member-item {
+        flex: 0 0 auto !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        padding: 4px !important;
+        min-width: 60px !important;
+    }
+    
+    /* Chat panel altında members için boşluk bırak */
+    .voice-body .chat-panel {
+        padding-bottom: 100px !important;
+    }
+}
