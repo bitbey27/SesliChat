@@ -663,6 +663,15 @@ class VoiceChatApp {
                 btn.addEventListener('click', () => this.switchMobileTab(btn.dataset.tab));
             });
         }
+        // Members header'a tıklayınca kapat (tab-people modunda)
+        const membersHeader = document.querySelector('.members-header');
+        if (membersHeader) {
+            membersHeader.addEventListener('click', () => {
+                if (document.body.classList.contains('tab-people')) {
+                    this.switchMobileTab('channels');
+                }
+            });
+        }
         if (this.menuCloseBtn) {
             this.menuCloseBtn.addEventListener('click', () => {
                 if (this.menuModal) this.menuModal.classList.add('hidden');
@@ -3363,21 +3372,29 @@ class VoiceChatApp {
         }
     }
 
-    /** Mobil tab değiştir (Kanallar/Sohbet/İnsanlar) */
+    /** Mobil tab değiştir (Kanallar/Sohbet/İnsanlar) — toggle destekli */
     switchMobileTab(tabName) {
+        // Aynı tab'a tekrar tıklarsa → channels'e dön (kapat)
+        const currentTab = document.body.className.match(/tab-(\w+)/);
+        if (currentTab && currentTab[1] === tabName && tabName !== 'channels') {
+            tabName = 'channels';
+        }
+        
         // Tab butonlarını güncelle
         if (this.mobileTabBar) {
             this.mobileTabBar.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
         }
-        // Body class güncelle (CSS ile göster/gizle)
+        // Body class güncelle
         document.body.classList.remove('tab-channels', 'tab-chat', 'tab-people');
         document.body.classList.add('tab-' + tabName);
         
-        // Kanallar tab → sidebar aç
+        // Kanallar tab → sidebar aç, diğerlerinde kapat
         if (tabName === 'channels') {
-            this.toggleMobileSidebar(true);
+            this.toggleMobileSidebar(false);
+        } else if (tabName === 'people') {
+            this.toggleMobileSidebar(false);
         } else {
             this.toggleMobileSidebar(false);
         }

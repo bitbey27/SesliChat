@@ -4388,3 +4388,95 @@ body {
         padding-bottom: 100px !important;
     }
 }
+
+/* =========================================
+   MOBIL TAM FIX — chat görünür + tab toggle + geri dön
+   ========================================= */
+
+@media (max-width: 768px) {
+    /* Desktop'taki fixed members-sidebar mobilde İPTAL */
+    .members-sidebar {
+        position: static !important;
+        bottom: auto !important;
+        right: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        z-index: auto !important;
+        border: none !important;
+        display: none !important; /* default gizli */
+    }
+    
+    /* tab-people aktifken members full screen overlay + kapat butonu */
+    body.tab-people .members-sidebar {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100vh !important;
+        z-index: 300 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--bg-base) !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Members overlay için kapat butonu (header'a eklenir) */
+    body.tab-people .members-header {
+        position: sticky !important;
+        top: 0 !important;
+        background: var(--bg-surface) !important;
+        padding: 12px 16px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        z-index: 10 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+    
+    body.tab-people .members-header::after {
+        content: '✕';
+        font-size: 18px;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+    
+    /* Members overlay'da member items normal boyutta */
+    body.tab-people .member-item {
+        flex-direction: row !important;
+        padding: 10px 16px !important;
+    }
+    body.tab-people .member-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 14px !important;
+    }
+    body.tab-people .member-name {
+        font-size: 14px !important;
+    }
+    body.tab-people .member-list {
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        gap: 0 !important;
+    }
+    
+    /* Chat panel input HER ZAMAN görünür — sticky bottom */
+    .chat-input-form {
+        position: sticky !important;
+        bottom: 0 !important;
+        background: var(--bg-surface) !important;
+        z-index: 10 !important;
+    }
+    
+    /* Chat panel padding temizle */
+    .voice-body .chat-panel {
+        padding-bottom: 0 !important;
+    }
+    
+    /* Voice body scroll içinde chat input kaybolmasın */
+    .voice-body {
+        padding-bottom: 60px !important; /* tab bar boşluğu */
+    }
+}
