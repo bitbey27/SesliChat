@@ -3371,6 +3371,9 @@ class VoiceChatApp {
 
     /** Mobil tab değiştir (Kanallar/Sohbet/İnsanlar) — toggle destekli */
     switchMobileTab(tabName) {
+        // DEBUG: toast göster — fonksiyon çağrılıyor mu?
+        this.showToast('📱', 'Tab: ' + tabName);
+        
         // Aynı tab'a tekrar tıklarsa → channels'e dön
         const currentTab = document.body.className.match(/tab-(\w+)/);
         if (currentTab && currentTab[1] === tabName && tabName !== 'channels') {
@@ -3390,36 +3393,40 @@ class VoiceChatApp {
         const chatPanel = document.getElementById('chat-panel');
         const membersSidebar = document.querySelector('.members-sidebar');
         const musicPanel = document.getElementById('music-panel');
-        const mainContent = document.querySelector('.main-content');
         
         // Önce her şeyi sıfırla
         if (voiceRoomCard) voiceRoomCard.style.display = '';
-        if (chatPanel) chatPanel.style.display = '';
+        if (chatPanel) { chatPanel.style.display = ''; chatPanel.style.height = ''; chatPanel.style.maxHeight = ''; chatPanel.style.flex = ''; chatPanel.style.background = ''; }
         if (musicPanel) musicPanel.style.display = '';
         if (membersSidebar) {
             membersSidebar.style.display = '';
             membersSidebar.style.position = '';
-            membersSidebar.style.inset = '';
-            membersSidebar.style.zIndex = '';
+            membersSidebar.style.top = '';
+            membersSidebar.style.left = '';
+            membersSidebar.style.right = '';
+            membersSidebar.style.bottom = '';
             membersSidebar.style.width = '';
             membersSidebar.style.height = '';
+            membersSidebar.style.zIndex = '';
             membersSidebar.style.background = '';
+            membersSidebar.style.flexDirection = '';
         }
         
         if (tabName === 'chat') {
-            // Sohbet tam ekran — voice card gizle, chat full
+            // Sohbet tam ekran
+            if (voiceView) voiceView.classList.remove('hidden');
             if (voiceRoomCard) voiceRoomCard.style.display = 'none';
             if (musicPanel) musicPanel.style.display = 'none';
-            if (voiceView) voiceView.classList.remove('hidden');
             if (chatPanel) {
                 chatPanel.style.display = 'flex';
                 chatPanel.style.flex = '1';
-                chatPanel.style.height = '100%';
+                chatPanel.style.height = 'calc(100vh - 56px)';
                 chatPanel.style.maxHeight = 'none';
+                chatPanel.style.background = ''; // Debug kaldırıldı
             }
             this.toggleMobileSidebar(false);
         } else if (tabName === 'people') {
-            // İnsanlar tam ekran overlay
+            // İnsanlar tam ekran
             if (voiceRoomCard) voiceRoomCard.style.display = 'none';
             if (chatPanel) chatPanel.style.display = 'none';
             if (musicPanel) musicPanel.style.display = 'none';
@@ -3433,12 +3440,12 @@ class VoiceChatApp {
                 membersSidebar.style.width = '100%';
                 membersSidebar.style.height = '100%';
                 membersSidebar.style.zIndex = '300';
-                membersSidebar.style.background = 'var(--bg-base)';
+                membersSidebar.style.background = '#0B0E14';
                 membersSidebar.style.flexDirection = 'column';
             }
             this.toggleMobileSidebar(false);
         } else {
-            // Kanallar (default) — her şey normal
+            // Kanallar (default)
             if (voiceView) voiceView.classList.remove('hidden');
             if (membersSidebar) membersSidebar.style.display = 'none';
             this.toggleMobileSidebar(false);
