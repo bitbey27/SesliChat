@@ -3791,7 +3791,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex: 0 0 auto; /* Tüm alanı kaplama — chat daha fazla yer alsın */
     min-height: 0;
 }
 
@@ -3903,10 +3903,11 @@ body {
 }
 
 /* === CHAT PANEL — Below the room card === */
+/* Chat panel — flex:1 ile kalan alanı kapla, daha büyük ve ortada */
 .voice-body .chat-panel {
-    flex-shrink: 0;
-    height: 200px;
-    max-height: 35vh;
+    flex: 1;
+    min-height: 200px;
+    max-height: none;
     margin: 0 var(--sp-3) var(--sp-3);
     border-radius: var(--radius-md);
     border: 1px solid rgba(255, 255, 255, 0.06);
