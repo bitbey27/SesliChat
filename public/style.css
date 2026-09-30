@@ -4480,3 +4480,114 @@ body {
         padding-bottom: 60px !important; /* tab bar boşluğu */
     }
 }
+
+/* =========================================
+   MOBIL KESIN COZUM — her sey ekrana sigar
+   ========================================= */
+
+/* Members back button — sadece mobilde */
+.members-back-btn {
+    display: none;
+}
+@media (max-width: 768px) {
+    .members-back-btn {
+        display: block !important;
+        background: rgba(124, 92, 255, 0.15);
+        border: 1px solid rgba(124, 92, 255, 0.3);
+        color: var(--accent);
+        padding: 6px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        margin-right: 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* APP SCREEN: tab bar icin bosluk birak */
+    .app-screen {
+        padding-bottom: 60px !important;
+    }
+    
+    /* MAIN CONTENT: tam genislik, tab bar ustunde */
+    .main-content {
+        width: 100% !important;
+        height: calc(100% - 0px) !important;
+    }
+    
+    /* VOICE VIEW: tam yukseklik */
+    .voice-view {
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* VOICE BODY: column, tam yukseklik, SCROLL YOK */
+    .voice-body {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important; /* SCROLL YOK — her sey ekranda */
+        max-height: none !important;
+        min-height: 0 !important;
+    }
+    
+    /* VOICE ROOM CARD: compact ustte */
+    .voice-room-card {
+        flex: 0 0 auto !important;
+        max-height: 40vh !important;
+        min-height: 150px !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* MUSIC PANEL: compact */
+    .music-panel {
+        flex: 0 0 auto !important;
+        max-height: 200px !important;
+    }
+    
+    /* CHAT PANEL: KALAN ALAN — HER ZAMAN GORUNUR */
+    .voice-body .chat-panel {
+        flex: 1 !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 120px !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+    
+    /* Chat mesajlar scroll edilebilir */
+    .chat-messages {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* MEMBERS SIDEBAR: tab-people iken TAM EKRAN overlay */
+    body.tab-people .members-sidebar {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 300 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--bg-base) !important;
+    }
+    
+    /* Tab bar her zaman ustte (members overlay'de bile) */
+    .mobile-tab-bar {
+        z-index: 400 !important;
+    }
+    
+    /* Channel sidebar z-index tab bar'dan yuksek */
+    .channel-sidebar {
+        z-index: 350 !important;
+    }
+}

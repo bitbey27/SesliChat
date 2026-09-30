@@ -663,15 +663,12 @@ class VoiceChatApp {
                 btn.addEventListener('click', () => this.switchMobileTab(btn.dataset.tab));
             });
         }
-        // Members header'a tıklayınca kapat (tab-people modunda)
-        const membersHeader = document.querySelector('.members-header');
-        if (membersHeader) {
-            membersHeader.addEventListener('click', () => {
-                if (document.body.classList.contains('tab-people')) {
-                    this.switchMobileTab('channels');
-                }
-            });
+        // Members back button — geri dön
+        const membersBackBtn = document.getElementById('members-back-btn');
+        if (membersBackBtn) {
+            membersBackBtn.addEventListener('click', () => this.switchMobileTab('channels'));
         }
+
         if (this.menuCloseBtn) {
             this.menuCloseBtn.addEventListener('click', () => {
                 if (this.menuModal) this.menuModal.classList.add('hidden');
