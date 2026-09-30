@@ -701,45 +701,48 @@ class VoiceChatApp {
     // =========================================
     playSound(type) {
         if (!this.notificationAudioContext) return;
-
         try {
             const ctx = this.notificationAudioContext;
-            
-            // Eğer tarayıcı tarafından durdurulduysa devam ettir
+            // Eğer askıdaysa resume ET (async, ama en azından dene)
             if (ctx.state === 'suspended') {
-                ctx.resume();
+                ctx.resume().then(() => {
+                    this._playSoundInternal(type);
+                }).catch(() => {});
+            } else {
+                this._playSoundInternal(type);
             }
+        } catch (e) {
+            console.error('Ses efekti çalınamadı:', e);
+        }
+    }
 
+    _playSoundInternal(type) {
+        const ctx = this.notificationAudioContext;
+        if (!ctx || ctx.state !== 'running') return;
+        try {
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
-
             osc.connect(gainNode);
             gainNode.connect(ctx.destination);
 
             if (type === 'join') {
-                // Katılma sesi: Yükselen iki ton (ör: Discord join)
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
-                osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1); // C#5
-                
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1);
                 gainNode.gain.setValueAtTime(0, ctx.currentTime);
                 gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
                 gainNode.gain.setValueAtTime(0.2, ctx.currentTime + 0.1);
                 gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-                
                 osc.start(ctx.currentTime);
                 osc.stop(ctx.currentTime + 0.2);
             } else if (type === 'leave') {
-                // Ayrılma sesi: Düşen iki ton
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(554, ctx.currentTime); // C#5
-                osc.frequency.setValueAtTime(440, ctx.currentTime + 0.1); // A4
-                
+                osc.frequency.setValueAtTime(554, ctx.currentTime);
+                osc.frequency.setValueAtTime(440, ctx.currentTime + 0.1);
                 gainNode.gain.setValueAtTime(0, ctx.currentTime);
                 gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
                 gainNode.gain.setValueAtTime(0.2, ctx.currentTime + 0.1);
                 gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-                
                 osc.start(ctx.currentTime);
                 osc.stop(ctx.currentTime + 0.2);
             }
@@ -786,11 +789,15 @@ class VoiceChatApp {
             if (this.vcAudioContext && this.vcAudioContext.state === 'suspended') {
                 this.vcAudioContext.resume().catch(() => {});
             }
-            // 2. Notification AudioContext
+            // 2. Notification AudioContext (bildirim sesleri)
             if (this.notificationAudioContext && this.notificationAudioContext.state === 'suspended') {
                 this.notificationAudioContext.resume().catch(() => {});
             }
-            // 3. Durmuş peer audio elementlerini tekrar çalmaya zorla
+            // 3. VAD AudioContext (konuşma algılama)
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().catch(() => {});
+            }
+            // 4. Durmuş peer audio elementlerini tekrar çal
             this.peers.forEach((peer) => {
                 if (peer.audioEl && peer.remoteStream) {
                     if (peer.audioEl.paused) {
