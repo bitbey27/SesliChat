@@ -4162,3 +4162,55 @@ body {
         display: flex !important;
     }
 }
+
+/* =========================================
+   KESİN MOBİL FIX — chat panel tam genişlik + kutu
+   ========================================= */
+
+@media (max-width: 768px) {
+    /* Members sidebar KESİNLİKLE gizli */
+    .members-sidebar {
+        display: none !important;
+    }
+    body.tab-people .members-sidebar {
+        display: flex !important;
+    }
+    
+    /* Voice body TAM GENİŞLİK */
+    .voice-body {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* Voice room card — TAM GENİŞLİK, kutu şeklinde */
+    .voice-room-card {
+        width: 100% !important;
+        margin: 0 !important;
+        flex: 0 0 auto !important;
+        border-radius: 0 !important;
+    }
+    
+    /* Chat panel — voice card ile AYNI genişlik, KUTU */
+    .voice-body .chat-panel {
+        flex: 1 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        max-height: none !important;
+        min-height: 150px !important;
+        border-radius: 0 !important;
+        border: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+    
+    /* Main content TAM GENİŞLİK */
+    .main-content {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    /* voice-view TAM GENİŞLİK */
+    .voice-view {
+        width: 100% !important;
+    }
+}
