@@ -461,6 +461,13 @@ wss.on('connection', (ws) => {
 
           // Önceki odadan ayrıl
           if (user.currentRoom && rooms[user.currentRoom]) {
+            // EĞER MÜZİK PAYLAŞIYORDUYSA — eski odaya music-stop yayınla!
+            if (user.isSharingMusic) {
+              broadcastMusicStop(rooms[user.currentRoom], userId, user.username);
+              user.isSharingMusic = false;
+              user.musicTrackName = '';
+              user.musicVideoId = '';
+            }
             rooms[user.currentRoom].users.delete(userId);
             // Odadaki diğer kullanıcılara ayrılma bildir
             rooms[user.currentRoom].users.forEach((otherUser) => {
@@ -541,6 +548,13 @@ wss.on('connection', (ws) => {
 
           const roomId = user.currentRoom;
           if (rooms[roomId]) {
+            // EĞER MÜZİK PAYLAŞIYORDUYSA — music-stop yayınla!
+            if (user.isSharingMusic) {
+              broadcastMusicStop(rooms[roomId], userId, user.username);
+              user.isSharingMusic = false;
+              user.musicTrackName = '';
+              user.musicVideoId = '';
+            }
             rooms[roomId].users.delete(userId);
             rooms[roomId].users.forEach((otherUser) => {
               if (otherUser.ws.readyState === WebSocket.OPEN) {
@@ -1122,6 +1136,10 @@ wss.on('connection', (ws) => {
     if (userId) {
       const user = connectedUsers.get(userId);
       if (user && user.currentRoom && rooms[user.currentRoom]) {
+        // EĞER MÜZİK PAYLAŞIYORDUYSA — odadakilere music-stop yayınla!
+        if (user.isSharingMusic) {
+          broadcastMusicStop(rooms[user.currentRoom], userId, user.username);
+        }
         rooms[user.currentRoom].users.delete(userId);
         rooms[user.currentRoom].users.forEach((otherUser) => {
           if (otherUser.ws.readyState === WebSocket.OPEN) {
@@ -1357,4 +1375,30 @@ function endMafiaGame(room, winner) {
     if (u.ws.readyState === WebSocket.OPEN) u.ws.send(endMsg);
   });
   delete room.mafiaGame;
+}
+
+// =========================================
+// MÜZİK CLEANUP — DJ ayrılınca otomatik durdur
+// =========================================
+
+function broadcastMusicStop(room, djId, djName) {
+  if (!room) return;
+  // Oda state'ini temizle (bu DJ şu anki aktif DJ ise)
+  if (room.currentDjId === djId) {
+    room.currentDjId = null;
+    room.currentVideoId = '';
+    room.currentTrackName = '';
+  }
+  const payload = JSON.stringify({
+    type: 'music-stop',
+    djId: djId,
+    djName: djName || '',
+    reason: 'dj-left'  // Dinleyiciye "DJ ayrıldı" mesajı için
+  });
+  room.users.forEach(u => {
+    if (u.ws.readyState === WebSocket.OPEN) {
+      u.ws.send(payload);
+    }
+  });
+  console.log(`[Music] DJ ${djName || djId} ayrıldı, müzik durduruldu (oda: ${room.id || '?'})`);
 }
