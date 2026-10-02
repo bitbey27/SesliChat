@@ -1656,23 +1656,262 @@ body {
    ========================================= */
 
 /* Ana panel — kart benzeri, modern */
+/* === MÜZİK PANEL — MP3 widget (sabit köşe, audio only) === */
 .music-panel {
-    background: rgba(11, 14, 20, 0.4);
-    border: 1px solid rgba(124, 92, 252, 0.15);
-    border-radius: 0;
-    padding: 0;
-    margin: 0;
+    position: fixed !important;
+    bottom: 80px !important;
+    right: 16px !important;
+    width: 300px !important;
+    max-width: calc(100vw - 32px) !important;
+    z-index: 100 !important;
+    background: rgba(11, 14, 20, 0.9) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(124, 92, 252, 0.15);
+    padding: 10px !important;
+    margin: 0 !important;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     flex: 0 0 auto;
-    max-height: 300px;
+    max-height: 70vh;
     animation: mpSlideIn 0.25s ease;
 }
-.music-panel.hidden { display: none; }
+.music-panel.hidden { display: none !important; }
+
+/* === AUDIO ONLY — YouTube iframe gizli (1x1 off-screen) === */
+.music-panel .mp-player-wrapper {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+}
+
+/* === HEADER === */
+.music-panel .mp-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 0 8px 0 !important;
+    border-bottom: 1px solid rgba(124, 92, 252, 0.15) !important;
+    background: transparent !important;
+    margin: 0 !important;
+}
+.music-panel .mp-header-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #7C5CFF !important;
+}
+.music-panel .mp-icon {
+    font-size: 16px !important;
+}
+.music-panel .mp-title-text {
+    color: #fff;
+}
+.music-panel .mp-header-actions {
+    display: flex;
+    gap: 4px;
+}
+.music-panel .mp-expand-btn,
+.music-panel .mp-close-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: #aaa;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+.music-panel .mp-expand-btn:hover,
+.music-panel .mp-close-btn:hover {
+    background: rgba(124, 92, 252, 0.25);
+    color: #fff;
+}
+
+/* === COLLAPSED STATE — arama gizli === */
+.music-panel.collapsed .mp-search-row,
+.music-panel.collapsed .mp-search-status,
+.music-panel.collapsed .mp-results,
+.music-panel.collapsed .mp-link-row {
+    display: none !important;
+}
+
+/* === NOW PLAYING — compact === */
+.music-panel .mp-now-playing {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    padding: 6px 0 !important;
+}
+.music-panel .mp-now-playing.hidden {
+    display: none !important;
+}
+.music-panel .mp-np-info {
+    padding: 0 !important;
+}
+.music-panel .mp-np-text {
+    text-align: center;
+}
+.music-panel .mp-np-title {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: center !important;
+    margin-bottom: 4px;
+}
+.music-panel .mp-np-time-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #aaa;
+}
+.music-panel .mp-progress {
+    flex: 1;
+    height: 4px;
+    accent-color: #7C5CFF;
+    cursor: pointer;
+}
+.music-panel .mp-time {
+    color: #888;
+    min-width: 30px;
+}
+
+/* === CONTROLS === */
+.music-panel .mp-controls-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 4px 0 0 0 !important;
+    justify-content: center;
+}
+.music-panel .mp-play-pause-btn {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: #7C5CFF !important;
+    color: #fff !important;
+    border: none !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex: 0 0 36px !important;
+}
+.music-panel .mp-play-pause-btn:hover {
+    background: #9C7CFF !important;
+    transform: scale(1.05);
+}
+.music-panel .mp-vol-btn,
+.music-panel .mp-mute-btn,
+.music-panel .mp-stop-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none !important;
+    color: #aaa !important;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+.music-panel .mp-vol-btn:hover,
+.music-panel .mp-mute-btn:hover,
+.music-panel .mp-stop-btn:hover {
+    background: rgba(124, 92, 252, 0.2);
+    color: #fff;
+}
+.music-panel .mp-volume {
+    flex: 1;
+    height: 4px;
+    accent-color: #7C5CFF;
+    cursor: pointer;
+    min-width: 40px;
+}
+.music-panel .mp-vol-label {
+    color: #888;
+    font-size: 10px;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* === SEARCH ROW === */
+.music-panel .mp-search-row {
+    display: flex;
+    gap: 4px;
+    margin: 6px 0;
+}
+.music-panel .mp-search-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+.music-panel .mp-search-input:focus {
+    outline: none;
+    border-color: rgba(124, 92, 252, 0.5);
+}
+.music-panel .mp-search-btn {
+    width: 30px;
+    height: 30px;
+    background: rgba(124, 92, 252, 0.2);
+    border: 1px solid rgba(124, 92, 252, 0.3);
+    color: #7C5CFF;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.music-panel .mp-search-btn:hover {
+    background: rgba(124, 92, 252, 0.35);
+}
 .music-panel .mp-results {
-    overflow-y: auto; /* Sonuçlar scroll edilebilir */
+    overflow-y: auto;
     max-height: 200px;
+    margin-top: 4px;
+}
+
+/* === LOADING OVERLAY === */
+.music-panel .mp-loading-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* === MOBIL === */
+@media (max-width: 768px) {
+    .music-panel {
+        bottom: 64px !important;
+        right: 8px !important;
+        left: 8px !important;
+        width: auto !important;
+        max-width: none !important;
+        padding: 8px !important;
+    }
+    .music-panel .mp-np-title {
+        font-size: 12px !important;
+    }
+    .music-panel .mp-play-pause-btn {
+        width: 32px !important;
+        height: 32px !important;
+        flex: 0 0 32px !important;
+    }
 }
 
 @keyframes mpSlideIn {
