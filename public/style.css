@@ -2469,83 +2469,147 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* === DİNLEYİCİ KUTUSU === */
+/* === DİNLEYİCİ MP3 WIDGET (sabit köşe, audio only) === */
 .music-listener-controls {
-    background: linear-gradient(135deg, rgba(124, 92, 252, 0.10) 0%, rgba(88, 101, 242, 0.06) 100%);
-    border: 1px solid rgba(124, 92, 252, 0.3);
-    border-radius: 12px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
+    position: fixed !important;
+    bottom: 80px !important;
+    right: 16px !important;
+    width: 300px !important;
+    max-width: calc(100vw - 32px) !important;
+    z-index: 99 !important;
+    background: rgba(11, 14, 20, 0.9) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(124, 92, 252, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(124, 92, 252, 0.15);
+    padding: 10px !important;
+    margin: 0 !important;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    animation: mpSlideIn 0.3s ease;
+    gap: 6px !important;
+    animation: mpSlideIn 0.25s ease;
 }
 
 .music-dj-info {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(124, 92, 252, 0.15);
 }
 .music-dj-play-icon {
-    font-size: 20px;
+    font-size: 16px;
     animation: mpBeat 1.5s ease-in-out infinite;
 }
 .music-dj-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: #fff;
-}
-.music-dj-track {
-    font-size: 11px;
-    color: var(--text-secondary);
-    font-style: italic;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #7C5CFF !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.music-dj-hide-video-btn {
-    margin-left: auto;
-    background: rgba(124, 92, 252, 0.15);
-    border: 1px solid rgba(124, 92, 252, 0.4);
-    color: var(--brand-primary);
-    padding: 4px 10px;
-    border-radius: 16px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: var(--transition-fast);
+.music-dj-track {
+    font-size: 11px !important;
+    color: #fff !important;
+    font-style: normal !important;
     white-space: nowrap;
-}
-.music-dj-hide-video-btn:hover {
-    background: rgba(124, 92, 252, 0.3);
-    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
 }
 
-/* Dinleyici tarafı: YouTube player konteynırı */
+/* "🎬 Klibi Gizle" butonu artık GEREK YOK — video zaten yok */
+.music-dj-hide-video-btn {
+    display: none !important;
+}
+
+/* YouTube player wrapper — AUDIO ONLY (1x1 off-screen, video yok) */
 .yt-listener-player-wrapper {
-    background: #000;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 4px;
-    aspect-ratio: 16/9;
-    max-height: 200px;
-    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    aspect-ratio: auto !important;
+    max-height: none !important;
+    background: transparent !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transition: none !important;
 }
 .yt-listener-player-wrapper iframe,
 .yt-listener-player-wrapper > div {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100%;
+    width: 1px !important;
+    height: 1px !important;
+    max-width: none !important;
 }
 .yt-listener-player-wrapper.video-hidden {
-    max-height: 0;
+    /* Still hidden, no change needed */
+    max-height: none;
     opacity: 0;
-    overflow: hidden;
+}
+
+/* Progress row */
+.music-dj-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+}
+.music-dj-progress {
+    flex: 1;
+    height: 4px;
+    accent-color: #7C5CFF;
+}
+.music-dj-time {
+    font-size: 10px;
+    color: #888;
+    min-width: 70px;
+    text-align: right;
+}
+
+/* Controls */
+.music-dj-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0;
+}
+.music-dj-vol-icon {
+    font-size: 14px;
+}
+.music-dj-volume {
+    flex: 1;
+    height: 4px;
+    accent-color: #7C5CFF;
+}
+.music-dj-mute-btn {
+    background: rgba(255, 255, 255, 0.05);
     border: none;
-    margin: 0;
-    padding: 0;
+    color: #aaa;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+/* Mobil */
+@media (max-width: 768px) {
+    .music-listener-controls {
+        bottom: 64px !important;
+        right: 8px !important;
+        left: 8px !important;
+        width: auto !important;
+        max-width: none !important;
+        padding: 8px !important;
+    }
 }
 
 .music-dj-progress-row {
