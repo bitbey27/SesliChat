@@ -6383,3 +6383,19 @@ body {
         font-size: 12px;
     }
 }
+
+/* === Inline external button (loading fallback) === */
+.gf-external-inline {
+    background: rgba(124, 92, 252, 0.2);
+    border: 1px solid rgba(124, 92, 252, 0.4);
+    color: #7C5CFF;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    margin-left: 4px;
+}
+.gf-external-inline:hover {
+    background: rgba(124, 92, 252, 0.35);
+    color: #fff;
+}

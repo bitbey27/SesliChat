@@ -8,35 +8,33 @@
     'use strict';
 
     // === Multi-player oyun kütüphanesi ===
-    // Hepsi iframe ile embed edilebilir, oyuncular oyunun server'ına bağlanır
+    // Hepsi iframe ile embed edilebilir (X-Frame-Options YOK, CSP frame-ancestors YOK)
+    // Engellenen oyunlar (Poki, venge.io, starve.io) listeden ÇIKARILDI
     const GAMES = [
         // FPS
         { id: 'krunker', name: 'Krunker', icon: '🔫', category: 'FPS', url: 'https://krunker.io/', desc: '3D Pixel FPS', players: '2-8' },
         { id: 'shellshock', name: 'Shell Shockers', icon: '🥚', category: 'FPS', url: 'https://shellshock.io/', desc: 'Yumurta FPS', players: '2-6' },
-        { id: 'venge', name: 'Venge.io', icon: '🎯', category: 'FPS', url: 'https://venge.io/', desc: '3rd-person shooter', players: '2-8' },
         { id: 'miniroyle', name: 'MiniRoyale', icon: '🪂', category: 'Battle Royale', url: 'https://miniroyale2.io/', desc: 'BR FPS', players: '2-10' },
+        { id: 'dogfight', name: 'Dogfight 2', icon: '✈️', category: 'Aksiyon', url: 'https://www.dogfight2.com/', desc: 'Uçak savaşı (Flash)', players: 'Single+İzle' },
 
         // Kart/Yarış
         { id: 'smashkarts', name: 'Smash Karts', icon: '🏎️', category: 'Kart Yarışı', url: 'https://smashkarts.io/', desc: 'Kart battle royale', players: '2-8' },
         { id: 'madalin', name: 'Madalin Stunt Cars', icon: '🚗', category: 'Yarış', url: 'https://madalinstuntcars2.io/', desc: 'Stunt yarış', players: '2-8' },
+        { id: 'hexgl', name: 'HexGL Racing', icon: '🚀', category: 'Yarış', url: 'https://hexgl.babylonjs.com/', desc: 'Future yarış', players: 'Single+İzle' },
 
-        // Battle Royale / Survival
+        // Battle Royale
         { id: 'zombsroyale', name: 'Zombs Royale', icon: '🧟', category: 'Battle Royale', url: 'https://zombsroyale.io/', desc: '2D BR', players: '2-100' },
-        { id: 'starve', name: 'Starve.io', icon: '🔥', category: 'Survival', url: 'https://starve.io/', desc: 'Hayatta kalma', players: '2-30' },
         { id: 'lordz', name: 'Lordz.io', icon: '👑', category: 'Strateji', url: 'https://lordz.io/', desc: 'Ortaçağ RTS', players: '2-50' },
 
-        // Hızla oyun
+        // Hızlı casual
         { id: 'wings', name: 'Wings.io', icon: '✈️', category: 'Aksiyon', url: 'https://wings.io/', desc: 'Uçak savaşı', players: '2-20' },
         { id: 'agar', name: 'Agar.io', icon: '🔵', category: 'Casual', url: 'https://agar.io/', desc: 'Hücre büyütme', players: '2-50' },
         { id: 'slither', name: 'Slither.io', icon: '🐍', category: 'Casual', url: 'https://slither.io/', desc: 'Yılan büyütme', players: '2-50' },
+        { id: 'hole', name: 'Hole.io', icon: '🕳️', category: 'Casual', url: 'https://hole.io/', desc: 'Kara delik yutma', players: '2-10' },
+        { id: 'paper', name: 'Paper.io 2', icon: '📄', category: 'Casual', url: 'https://paper-io.com/', desc: 'Bölge kap', players: '2-8' },
 
         // Spor
-        { id: 'soccer', name: 'Soccer Skills', icon: '⚽', category: 'Spor', url: 'https://www.soccerskills.io/', desc: '3D futbol', players: '2-4' },
-        { id: 'pool', name: '8 Ball Pool', icon: '🎱', category: 'Spor', url: 'https://8ball-pool.poki.com/', desc: 'Bilardo', players: '2' },
-
-        // Dövüş / Duel
-        { id: 'rooftop', name: 'Rooftop Snipers', icon: '⚔️', category: 'Düello', url: 'https://rooftop-snipers.poki.com/', desc: '2P atış', players: '2' },
-        { id: 'stickfight', name: 'Stickman Fighter', icon: '🥋', category: 'Düello', url: 'https://stickman-fight-2.poki.com/', desc: '2P savaş', players: '2' }
+        { id: 'soccer', name: 'Soccer Skills', icon: '⚽', category: 'Spor', url: 'https://www.soccerskills.io/', desc: '3D futbol', players: '2-4' }
     ];
 
     // === State ===
@@ -156,10 +154,13 @@
                 </div>
             </div>
             <div class="gf-frame-wrap">
-                <iframe src="${game.url}" class="gf-iframe" allow="autoplay; fullscreen; gamepad; microphone; camera" allowfullscreen sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-presentation"></iframe>
+                <iframe src="${game.url}" class="gf-iframe" allow="autoplay; fullscreen; gamepad; microphone; camera; encrypted-media; gyroscope; accelerometer" allowfullscreen referrerpolicy="no-referrer"></iframe>
                 <div class="gf-loading" id="gf-loading">
                     <div class="gf-spinner"></div>
-                    <div>Yükleniyor... Eğer oyun açılmazsa "↗ Yeni Sekmede Aç" butonunu kullan</div>
+                    <div>Yükleniyor...</div>
+                    <div style="margin-top: 12px; font-size: 12px; color: #888;">
+                        Açılmıyor mu? <button class="gf-external-inline" onclick="window.open('${game.url}', '_blank', 'noopener')">↗ Yeni sekmede aç</button>
+                    </div>
                 </div>
             </div>
         `;
