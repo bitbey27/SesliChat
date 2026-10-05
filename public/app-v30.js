@@ -502,10 +502,14 @@ class VoiceChatApp {
                 }
             });
         }
-        // Panel kapatma butonu (X) — widget'ı tamamen gizler
+        // Panel kapatma butonu (X) — widget'ı gizle VE müziği durdur
         if (this.musicCloseBtn) {
             this.musicCloseBtn.addEventListener('click', () => {
                 if (this.musicPanel) this.musicPanel.classList.add('hidden');
+                // Müzik paylaşıyorsa DURDUR — dinleyiciler de duymayı bırakmalı
+                if (this.isSharingMusic) {
+                    this.stopMusicShare();
+                }
             });
         }
         // Expand butonu (🔍) — arama panelini aç/kapat
