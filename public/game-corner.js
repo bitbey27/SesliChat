@@ -1,33 +1,33 @@
 // =========================================
-// SesliChat — Oyun Köşesi
-// iframe ile multiplayer .io oyunları gömer
-// Sesli sohbet arka planda çalışmaya devam eder
+// SesliChat — Oyun Köşesi v3
+// iframe yerine YENİ SEKME açma yaklaşımı
+// Sesli sohbet arka planda devam eder
 // =========================================
 
 (function() {
     'use strict';
 
     // === Multi-player oyun kütüphanesi ===
-    // Hepsi iframe ile embed edilebilir (X-Frame-Options YOK, CSP frame-ancestors YOK)
-    // Engellenen oyunlar (Poki, venge.io, starve.io) listeden ÇIKARILDI
+    // Hepsi yeni sekmede açılır (iframe engellemesi yok)
+    // Test edilmiş, çalışan oyunlar
     const GAMES = [
         // FPS
         { id: 'krunker', name: 'Krunker', icon: '🔫', category: 'FPS', url: 'https://krunker.io/', desc: '3D Pixel FPS', players: '2-8' },
         { id: 'shellshock', name: 'Shell Shockers', icon: '🥚', category: 'FPS', url: 'https://shellshock.io/', desc: 'Yumurta FPS', players: '2-6' },
-        { id: 'miniroyle', name: 'MiniRoyale', icon: '🪂', category: 'Battle Royale', url: 'https://miniroyale2.io/', desc: 'BR FPS', players: '2-10' },
-        { id: 'dogfight', name: 'Dogfight 2', icon: '✈️', category: 'Aksiyon', url: 'https://www.dogfight2.com/', desc: 'Uçak savaşı (Flash)', players: 'Single+İzle' },
+        { id: 'venge', name: 'Venge.io', icon: '🎯', category: 'FPS', url: 'https://venge.io/', desc: '3rd-person shooter', players: '2-8' },
 
         // Kart/Yarış
         { id: 'smashkarts', name: 'Smash Karts', icon: '🏎️', category: 'Kart Yarışı', url: 'https://smashkarts.io/', desc: 'Kart battle royale', players: '2-8' },
         { id: 'madalin', name: 'Madalin Stunt Cars', icon: '🚗', category: 'Yarış', url: 'https://madalinstuntcars2.io/', desc: 'Stunt yarış', players: '2-8' },
-        { id: 'hexgl', name: 'HexGL Racing', icon: '🚀', category: 'Yarış', url: 'https://hexgl.babylonjs.com/', desc: 'Future yarış', players: 'Single+İzle' },
 
         // Battle Royale
-        { id: 'zombsroyale', name: 'Zombs Royale', icon: '🧟', category: 'Battle Royale', url: 'https://zombsroyale.io/', desc: '2D BR', players: '2-100' },
+        { id: 'zombsroyale', name: 'Zombs Royale', icon: '🧟', category: 'Battle Royale', url: 'https://zombsroyale.io/', desc: '2D BR (iframe çalışıyor)', players: '2-100', iframeOk: true },
         { id: 'lordz', name: 'Lordz.io', icon: '👑', category: 'Strateji', url: 'https://lordz.io/', desc: 'Ortaçağ RTS', players: '2-50' },
 
-        // Hızlı casual
+        // Aksiyon
         { id: 'wings', name: 'Wings.io', icon: '✈️', category: 'Aksiyon', url: 'https://wings.io/', desc: 'Uçak savaşı', players: '2-20' },
+
+        // Casual
         { id: 'agar', name: 'Agar.io', icon: '🔵', category: 'Casual', url: 'https://agar.io/', desc: 'Hücre büyütme', players: '2-50' },
         { id: 'slither', name: 'Slither.io', icon: '🐍', category: 'Casual', url: 'https://slither.io/', desc: 'Yılan büyütme', players: '2-50' },
         { id: 'hole', name: 'Hole.io', icon: '🕳️', category: 'Casual', url: 'https://hole.io/', desc: 'Kara delik yutma', players: '2-10' },
@@ -36,11 +36,6 @@
         // Spor
         { id: 'soccer', name: 'Soccer Skills', icon: '⚽', category: 'Spor', url: 'https://www.soccerskills.io/', desc: '3D futbol', players: '2-4' }
     ];
-
-    // === State ===
-    let gameModal = null;
-    let gameFrame = null;
-    let currentGame = null;
 
     function showGameLibrary() {
         const old = document.getElementById('game-corner-modal');
@@ -86,14 +81,16 @@
                 </div>
                 <div class="gc-intro">
                     <p>🌐 Tüm oyunlar <strong>multi-player</strong> — arkadaşlarınla aynı anda oynayın!</p>
-                    <p>🔊 <strong>Sesli sohbet devam eder</strong> — oyun modalı kapansa bile sesli kanaldan çıkış yapmazsın</p>
-                    <p>📋 Oyun açılınca arkadaşlarına "ben şu odaya katıl" de — aynı server'da buluşun</p>
+                    <p>📌 Oyunlar <strong>yeni sekmede açılır</strong> — SesliChat sekmesinde sesli sohbet <strong>devam eder</strong></p>
+                    <p>🔊 Karşındakine oyunun oda kodunu söylesin — aynı server'da buluşun</p>
+                    <p>💡 <strong>Desktop:</strong> İki sekme yan yana — sesli sohbet + oyun beraber</p>
+                    <p>📱 <strong>Mobil:</strong> Oyun sekmesinde oyna, ses için SesliChat'e geri dön</p>
                 </div>
                 <div class="gc-body">
                     ${gameGridsHTML}
                 </div>
                 <div class="gc-footer">
-                    <span>💡 İpucu: Bazı oyunlar (Krunker, Smash Karts) <strong>özel oda kodu</strong> oluşturur — arkadaşlarınla paylaş!</span>
+                    <span>💡 İpucu: Krunker/Smash Karts'ta <strong>'Party' oluştur</strong>, kodu arkadaşına gönder</span>
                 </div>
             </div>
         `;
@@ -108,7 +105,7 @@
                 const gameId = btn.dataset.gameId;
                 const game = GAMES.find(g => g.id === gameId);
                 if (game) {
-                    openGameFrame(game);
+                    openGameInNewTab(game);
                 }
             });
         });
@@ -124,81 +121,56 @@
             'Strateji': '👑',
             'Aksiyon': '⚡',
             'Casual': '🔵',
-            'Spor': '⚽',
-            'Düello': '⚔️'
+            'Spor': '⚽'
         };
         return icons[cat] || '🎮';
     }
 
-    function openGameFrame(game) {
-        const old = document.getElementById('game-corner-modal');
+    function openGameInNewTab(game) {
+        // Yeni sekmede aç
+        const gameWindow = window.open(game.url, '_blank', 'noopener,noreferrer');
+
+        // Modal'ı kapat
+        const modal = document.getElementById('game-corner-modal');
+        if (modal) modal.remove();
+
+        // Floating voice chat widget göster
+        showVoiceChatWidget(game);
+
+        // Toast mesajı
+        if (window.app) {
+            window.app.showToast('🎮', `${game.name} yeni sekmede açıldı! Sesli sohbet burada devam ediyor.`);
+        }
+    }
+
+    function showVoiceChatWidget(game) {
+        // Önceki widget'ı kaldır
+        const old = document.getElementById('game-voice-widget');
         if (old) old.remove();
 
-        const modal = document.createElement('div');
-        modal.id = 'game-frame-modal';
-        modal.className = 'game-frame-modal';
-        modal.innerHTML = `
-            <div class="gf-header">
-                <div class="gf-title">
-                    <span class="gf-icon">${game.icon}</span>
-                    <span>${game.name}</span>
-                    <span class="gf-cat">${game.category}</span>
-                </div>
-                <div class="gf-status">
-                    <span class="gf-voice-indicator">🔊 Sesli sohbet aktif</span>
-                </div>
-                <div class="gf-actions">
-                    <button class="gf-back-btn" id="gf-back-btn" title="Oyun listesine dön">← Oyunlar</button>
-                    <button class="gf-external" id="gf-external-btn" title="Yeni sekmede aç">↗</button>
-                    <button class="gf-close-btn" id="gf-close-btn" title="Kapat">✕</button>
-                </div>
+        const widget = document.createElement('div');
+        widget.id = 'game-voice-widget';
+        widget.className = 'game-voice-widget';
+        widget.innerHTML = `
+            <div class="gvw-icon">🎮</div>
+            <div class="gvw-info">
+                <div class="gvw-title">${game.name}</div>
+                <div class="gvw-status">🔊 Sesli sohbet aktif</div>
             </div>
-            <div class="gf-frame-wrap">
-                <iframe src="${game.url}" class="gf-iframe" allow="autoplay; fullscreen; gamepad; microphone; camera; encrypted-media; gyroscope; accelerometer" allowfullscreen referrerpolicy="no-referrer"></iframe>
-                <div class="gf-loading" id="gf-loading">
-                    <div class="gf-spinner"></div>
-                    <div>Yükleniyor...</div>
-                    <div style="margin-top: 12px; font-size: 12px; color: #888;">
-                        Açılmıyor mu? <button class="gf-external-inline" onclick="window.open('${game.url}', '_blank', 'noopener')">↗ Yeni sekmede aç</button>
-                    </div>
-                </div>
-            </div>
+            <button class="gvw-close" title="Widget'ı kapat (oyun sekmesi açık kalır)">✕</button>
         `;
-        document.body.appendChild(modal);
+        document.body.appendChild(widget);
 
-        // Event listeners
-        modal.querySelector('#gf-back-btn').addEventListener('click', () => {
-            modal.remove();
-            showGameLibrary();
+        // Otomatik kaybolma (60 saniye)
+        const autoClose = setTimeout(() => widget.remove(), 60000);
+
+        widget.querySelector('.gvw-close').addEventListener('click', () => {
+            clearTimeout(autoClose);
+            widget.remove();
         });
-        modal.querySelector('#gf-external-btn').addEventListener('click', () => {
-            window.open(game.url, '_blank', 'noopener');
-        });
-        modal.querySelector('#gf-close-btn').addEventListener('click', () => modal.remove());
 
-        // Iframe load event — loading'i gizle
-        const iframe = modal.querySelector('.gf-iframe');
-        const loading = modal.querySelector('#gf-loading');
-        if (iframe && loading) {
-            iframe.addEventListener('load', () => {
-                loading.style.display = 'none';
-            });
-            // 8 saniye sonra da loading'i gizle (bazı oyunlar load event'i fire etmiyor)
-            setTimeout(() => {
-                if (loading) loading.style.display = 'none';
-            }, 8000);
-        }
-
-        // ESC ile kapat
-        const escHandler = (e) => {
-            if (e.key === 'Escape') {
-                modal.remove();
-                document.removeEventListener('keydown', escHandler);
-            }
-        };
-        document.addEventListener('keydown', escHandler);
-
-        currentGame = game;
+        // Animasyon: 5 saniye sonra küçülsün
+        setTimeout(() => widget.classList.add('minimized'), 5000);
     }
 
     // === Başlatma ===
@@ -213,7 +185,7 @@
                 showGameLibrary();
             });
         }
-        console.log('[GameCorner] Oyun Köşesi yüklendi ✅');
+        console.log('[GameCorner] Oyun Köşesi v3 yüklendi (yeni sekme modu) ✅');
     }
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {

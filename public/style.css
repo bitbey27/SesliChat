@@ -6399,3 +6399,103 @@ body {
     background: rgba(124, 92, 252, 0.35);
     color: #fff;
 }
+
+/* =========================================
+   OYUN VOICE WIDGET — floating indicator
+   ========================================= */
+.game-voice-widget {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    z-index: 9999;
+    background: rgba(11, 14, 20, 0.95);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(124, 92, 252, 0.4);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(124, 92, 252, 0.3);
+    animation: gvwSlideIn 0.3s ease-out;
+    max-width: 280px;
+    transition: all 0.3s ease;
+}
+@keyframes gvwSlideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.gvw-icon {
+    font-size: 24px;
+    animation: gvwPulse 1.5s ease-in-out infinite;
+}
+@keyframes gvwPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+.gvw-info {
+    flex: 1;
+    min-width: 0;
+}
+.gvw-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gvw-status {
+    font-size: 11px;
+    color: #3DFFAB;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+.gvw-close {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+.gvw-close:hover {
+    color: #fff;
+    background: rgba(255, 100, 100, 0.2);
+}
+.game-voice-widget.minimized {
+    padding: 8px 12px;
+    transform: scale(0.85);
+    transform-origin: bottom right;
+    opacity: 0.8;
+}
+.game-voice-widget.minimized .gvw-title {
+    font-size: 11px;
+}
+.game-voice-widget.minimized .gvw-status {
+    font-size: 9px;
+}
+.game-voice-widget.minimized .gvw-icon {
+    font-size: 20px;
+}
+
+@media (max-width: 768px) {
+    .game-voice-widget {
+        bottom: 70px;
+        right: 8px;
+        left: 8px;
+        max-width: none;
+        padding: 8px 12px;
+    }
+    .gvw-title {
+        font-size: 12px;
+    }
+    .gvw-status {
+        font-size: 10px;
+    }
+}
