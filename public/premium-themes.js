@@ -1154,6 +1154,15 @@
         if (huzurVideo && themeId !== 'huzur') {
             try { huzurVideo.pause(); huzurVideo.currentTime = 0; } catch (e) {}
         }
+        // Huzur audio control'u gizle
+        const huzurAudioControl = document.getElementById('huzur-audio-control');
+        if (huzurAudioControl && themeId !== 'huzur') {
+            huzurAudioControl.style.display = 'none';
+        } else if (huzurAudioControl && themeId === 'huzur') {
+            huzurAudioControl.style.display = 'flex';
+        }
+        // Huzur active class'ı kaldır
+        document.body.classList.remove('theme-huzur-active');
 
         // Aurora orbs default görünür mü? (aurora hariç tüm temalarda orbs'ı azalt)
         // Not: Canvas'lar artık aurora-bg DIŞINDA - opacity change canvas'ları etkilemez
@@ -1219,6 +1228,14 @@
                     }
                 }
             }
+            // Audio control'u body'ye taşı — aurora-bg stacking context'inden çıkar
+            // Böylece z-index: 200 gerçekten tüm sayfada etkili olur
+            const audioControl = document.getElementById('huzur-audio-control');
+            if (audioControl && audioControl.parentNode !== document.body) {
+                document.body.appendChild(audioControl);
+            }
+            // Chat welcome mesajını gizle
+            document.body.classList.add('theme-huzur-active');
         }
         // aurora temayı için hiçbir şey gizleme (default)
 
