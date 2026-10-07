@@ -6663,15 +6663,28 @@ body {
     z-index: 1;
 }
 
-/* === Instagram filigran kaplama — üst gradient === */
+/* === Instagram filigran kaplama — üst sağ köşe (solid) === */
 .huzur-watermark-cover-top {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 80px;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+    height: 160px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.7) 60%, transparent 100%);
     z-index: 2;
+    pointer-events: none;
+}
+
+/* Sağ üst köşede Instagram logosu + username için ekstra solid kaplama */
+.huzur-watermark-cover-top::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 180px;
+    background: rgba(0, 0, 0, 0.95);
+    border-bottom-left-radius: 20px;
     pointer-events: none;
 }
 
@@ -6681,8 +6694,8 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 100px;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+    height: 120px;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.7) 60%, transparent 100%);
     z-index: 2;
     pointer-events: none;
 }
