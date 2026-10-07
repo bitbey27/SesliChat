@@ -352,7 +352,443 @@
     // GALAXY — yıldız + nebula + kayan yıldız + GEZEGENLER (rotasyonlu)
     // ============================================
 
-    // Gezegen çizim fonksiyonu — kendi ekseninde döner
+    // === Gezegen texture'ları offscreen canvas'a pre-render (her gezegen için 1x) ===
+    const planetTextures = {}; // type → offscreen canvas
+
+    function getPlanetTexture(type, r) {
+        const key = `${type}-${Math.round(r)}`;
+        if (planetTextures[key]) return planetTextures[key];
+
+        // Offscreen canvas — 2r x 2r (gezegenin tamamı + doku)
+        const size = Math.ceil(r * 2.2);
+        const off = document.createElement('canvas');
+        off.width = size;
+        off.height = size;
+        const octx = off.getContext('2d');
+        const cx = size / 2;
+        const cy = size / 2;
+
+        // Clip to circle
+        octx.save();
+        octx.beginPath();
+        octx.arc(cx, cy, r, 0, Math.PI * 2);
+        octx.clip();
+
+        if (type === 'jupiter') {
+            drawJupiterTexture(octx, cx, cy, r);
+        } else if (type === 'saturn') {
+            drawSaturnTexture(octx, cx, cy, r);
+        } else if (type === 'mars') {
+            drawMarsTexture(octx, cx, cy, r);
+        } else if (type === 'earth') {
+            drawEarthTexture(octx, cx, cy, r);
+        } else if (type === 'venus') {
+            drawVenusTexture(octx, cx, cy, r);
+        } else if (type === 'mercury') {
+            drawMercuryTexture(octx, cx, cy, r);
+        }
+
+        octx.restore();
+        planetTextures[key] = off;
+        return off;
+    }
+
+    // === JUPITER — dalgalı turbulent bantlar + Büyük Kırmızı Leke ===
+    function drawJupiterTexture(ctx, cx, cy, r) {
+        // Base color
+        ctx.fillStyle = '#C9A878';
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+        // Dalgalı bantlar — sinusoidal y offset
+        const bands = [
+            { y: -0.85, h: 0.12, color1: '#8B5A2B', color2: '#A56B3A' },
+            { y: -0.65, h: 0.15, color1: '#E8C490', color2: '#D4A66F' },
+            { y: -0.45, h: 0.13, color1: '#A67B5B', color2: '#8B6543' },
+            { y: -0.25, h: 0.16, color1: '#F0D0A0', color2: '#E8C490' },
+            { y: -0.05, h: 0.14, color1: '#7A4F2A', color2: '#6B4020' },
+            { y: 0.15, h: 0.17, color1: '#D4A66F', color2: '#C89060' },
+            { y: 0.40, h: 0.13, color1: '#B8855A', color2: '#A67B5B' },
+            { y: 0.60, h: 0.14, color1: '#E8C490', color2: '#D4A66F' },
+            { y: 0.82, h: 0.12, color1: '#7A4F2A', color2: '#6B4020' }
+        ];
+
+        bands.forEach((band, i) => {
+            const yStart = cy + band.y * r;
+            const yEnd = yStart + band.h * r;
+            // Gradient ile yumuşak geçiş
+            const grad = ctx.createLinearGradient(0, yStart, 0, yEnd);
+            grad.addColorStop(0, band.color1);
+            grad.addColorStop(0.5, band.color2);
+            grad.addColorStop(1, band.color1);
+            ctx.fillStyle = grad;
+
+            // Dalgalı kenarlar — sinus eğrisi
+            ctx.beginPath();
+            ctx.moveTo(cx - r, yStart);
+            for (let x = -r; x <= r; x += 2) {
+                const wave = Math.sin((x + i * 10) * 0.08 + i) * 4;
+                ctx.lineTo(cx + x, yStart + wave);
+            }
+            for (let x = r; x >= -r; x -= 2) {
+                const wave = Math.sin((x + i * 10 + 5) * 0.08 + i) * 4;
+                ctx.lineTo(cx + x, yEnd + wave);
+            }
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // Turbulent swirls — küçük girdaplar bantların içinde
+        for (let i = 0; i < 12; i++) {
+            const sx = cx + (Math.random() - 0.5) * r * 1.8;
+            const sy = cy + (Math.random() - 0.5) * r * 1.6;
+            const sr = 3 + Math.random() * 8;
+            ctx.fillStyle = `rgba(${200 + Math.random() * 40}, ${150 + Math.random() * 40}, ${100 + Math.random() * 30}, ${0.3 + Math.random() * 0.3})`;
+            ctx.beginPath();
+            ctx.ellipse(sx, sy, sr * 1.5, sr * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Büyük Kırmızı Leke — oval, salmon, çevresinde girdap
+        const grsX = cx + r * 0.3;
+        const grsY = cy + r * 0.18;
+        // Outer ring (lighter)
+        ctx.fillStyle = 'rgba(200, 100, 70, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(grsX, grsY, r * 0.28, r * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Inner spot (darker red)
+        const grsGrad = ctx.createRadialGradient(grsX, grsY, 0, grsX, grsY, r * 0.25);
+        grsGrad.addColorStop(0, '#C04030');
+        grsGrad.addColorStop(0.6, '#A03020');
+        grsGrad.addColorStop(1, '#802015');
+        ctx.fillStyle = grsGrad;
+        ctx.beginPath();
+        ctx.ellipse(grsX, grsY, r * 0.22, r * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Spiral inside
+        ctx.strokeStyle = 'rgba(220, 150, 120, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 2; a += 0.1) {
+            const rr = r * 0.18 * (1 - a / (Math.PI * 4));
+            const px = grsX + Math.cos(a) * rr;
+            const py = grsY + Math.sin(a) * rr * 0.5;
+            if (a === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+    }
+
+    // === SATURN — ince bantlar + üstü düz ===
+    function drawSaturnTexture(ctx, cx, cy, r) {
+        ctx.fillStyle = '#E8D5A0';
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+        const bands = [
+            { y: -0.80, h: 0.15, color: '#D4B070' },
+            { y: -0.55, h: 0.18, color: '#F0DCAC' },
+            { y: -0.30, h: 0.15, color: '#C8A060' },
+            { y: -0.10, h: 0.18, color: '#E8D5A0' },
+            { y: 0.15, h: 0.15, color: '#D4B070' },
+            { y: 0.40, h: 0.18, color: '#F0DCAC' },
+            { y: 0.65, h: 0.15, color: '#B8954F' }
+        ];
+        bands.forEach((band, i) => {
+            const yStart = cy + band.y * r;
+            const yEnd = yStart + band.h * r;
+            const grad = ctx.createLinearGradient(0, yStart, 0, yEnd);
+            grad.addColorStop(0, band.color);
+            grad.addColorStop(0.5, band.color);
+            grad.addColorStop(1, band.color);
+            ctx.fillStyle = grad;
+            // Subtle wave
+            ctx.beginPath();
+            ctx.moveTo(cx - r, yStart);
+            for (let x = -r; x <= r; x += 3) {
+                const wave = Math.sin((x + i * 5) * 0.05 + i) * 2;
+                ctx.lineTo(cx + x, yStart + wave);
+            }
+            for (let x = r; x >= -r; x -= 3) {
+                const wave = Math.sin((x + i * 5 + 3) * 0.05 + i) * 2;
+                ctx.lineTo(cx + x, yEnd + wave);
+            }
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // Kuzey kutupta hexagon (subtle, çok ince)
+        ctx.strokeStyle = 'rgba(120, 100, 70, 0.3)';
+        ctx.lineWidth = 1;
+        const hexY = cy - r * 0.75;
+        ctx.beginPath();
+        for (let i = 0; i <= 6; i++) {
+            const a = (i / 6) * Math.PI * 2;
+            const px = cx + Math.cos(a) * r * 0.18;
+            const py = hexY + Math.sin(a) * r * 0.08;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+    }
+
+    // === MARS — koyu bölgeler + toz + Valles Marineris ===
+    function drawMarsTexture(ctx, cx, cy, r) {
+        // Base Mars red
+        const baseGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        baseGrad.addColorStop(0, '#D67042');
+        baseGrad.addColorStop(0.7, '#B8552E');
+        baseGrad.addColorStop(1, '#8B3A20');
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+        // Syrtis Major — büyük koyu yeşil-kahve bölge
+        ctx.fillStyle = 'rgba(70, 50, 30, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.2, cy - r * 0.4);
+        ctx.bezierCurveTo(cx, cy - r * 0.3, cx + r * 0.3, cy - r * 0.1, cx + r * 0.4, cy + r * 0.2);
+        ctx.bezierCurveTo(cx + r * 0.2, cy + r * 0.4, cx - r * 0.1, cy + r * 0.3, cx - r * 0.2, cy);
+        ctx.bezierCurveTo(cx - r * 0.3, cy - r * 0.1, cx - r * 0.25, cy - r * 0.3, cx - r * 0.2, cy - r * 0.4);
+        ctx.fill();
+
+        // Koyu bölgeler (Mare Acidalium, Mare Erythraeum vb.)
+        const darkRegions = [
+            { x: -0.5, y: -0.5, w: 0.4, h: 0.25, rot: 0.3 },
+            { x: 0.4, y: -0.3, w: 0.3, h: 0.2, rot: -0.5 },
+            { x: -0.3, y: 0.4, w: 0.35, h: 0.18, rot: 0.1 },
+            { x: 0.2, y: 0.55, w: 0.25, h: 0.12, rot: -0.3 }
+        ];
+        darkRegions.forEach(reg => {
+            ctx.fillStyle = `rgba(80, 50, 25, ${0.4 + Math.random() * 0.2})`;
+            ctx.beginPath();
+            ctx.ellipse(cx + reg.x * r, cy + reg.y * r, reg.w * r, reg.h * r, reg.rot, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Valles Marineris — büyük kanyon çizgisi
+        ctx.strokeStyle = 'rgba(40, 20, 10, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.3, cy + r * 0.1);
+        ctx.bezierCurveTo(
+            cx - r * 0.1, cy + r * 0.05,
+            cx + r * 0.2, cy + r * 0.15,
+            cx + r * 0.5, cy + r * 0.08
+        );
+        ctx.stroke();
+        // Yan kanyonlar
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            ctx.strokeStyle = `rgba(40, 20, 10, ${0.3 + Math.random() * 0.2})`;
+            ctx.beginPath();
+            const startX = cx + (Math.random() - 0.5) * r;
+            const startY = cy + r * 0.1 + (Math.random() - 0.5) * r * 0.2;
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(startX + (Math.random() - 0.5) * r * 0.3, startY + (Math.random() - 0.5) * r * 0.1);
+            ctx.stroke();
+        }
+
+        // Toz fırtınası — açık kırmızı-turuncu hafif alanlar
+        for (let i = 0; i < 8; i++) {
+            const dx = cx + (Math.random() - 0.5) * r * 1.6;
+            const dy = cy + (Math.random() - 0.5) * r * 1.6;
+            const dr = 4 + Math.random() * 12;
+            ctx.fillStyle = `rgba(255, 180, 100, ${0.15 + Math.random() * 0.15})`;
+            ctx.beginPath();
+            ctx.arc(dx, dy, dr, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Kraterler — küçük çukurlar
+        for (let i = 0; i < 15; i++) {
+            const cr = cx + (Math.random() - 0.5) * r * 1.7;
+            const cy_ = cy + (Math.random() - 0.5) * r * 1.7;
+            const crSize = 1 + Math.random() * 4;
+            ctx.fillStyle = 'rgba(60, 30, 15, 0.5)';
+            ctx.beginPath();
+            ctx.arc(cr, cy_, crSize, 0, Math.PI * 2);
+            ctx.fill();
+            // Highlight (krater kenarı)
+            ctx.fillStyle = 'rgba(255, 180, 100, 0.3)';
+            ctx.beginPath();
+            ctx.arc(cr - 0.5, cy_ - 0.5, crSize * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // === EARTH — okyanuslar + kıtalar + bulutlar + buzullar ===
+    function drawEarthTexture(ctx, cx, cy, r) {
+        // Okyanus — derin mavi gradyan
+        const oceanGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        oceanGrad.addColorStop(0, '#1E5A9E');
+        oceanGrad.addColorStop(0.5, '#164580');
+        oceanGrad.addColorStop(1, '#0A2A50');
+        ctx.fillStyle = oceanGrad;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+        // Kıtalar — gerçekçi şekiller (basit bezier)
+        // Afrika + Avrupa benzeri
+        ctx.fillStyle = '#2D6B2D';
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.15, cy - r * 0.4);
+        ctx.bezierCurveTo(cx + r * 0.05, cy - r * 0.5, cx + r * 0.25, cy - r * 0.3, cx + r * 0.2, cy - r * 0.1);
+        ctx.bezierCurveTo(cx + r * 0.3, cy + r * 0.1, cx + r * 0.15, cy + r * 0.4, cx - r * 0.05, cy + r * 0.45);
+        ctx.bezierCurveTo(cx - r * 0.2, cy + r * 0.3, cx - r * 0.25, cy, cx - r * 0.15, cy - r * 0.4);
+        ctx.fill();
+
+        // Amerika benzeri (sol taraf)
+        ctx.fillStyle = '#357A35';
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.55, cy - r * 0.35);
+        ctx.bezierCurveTo(cx - r * 0.45, cy - r * 0.5, cx - r * 0.35, cy - r * 0.2, cx - r * 0.4, cy + r * 0.1);
+        ctx.bezierCurveTo(cx - r * 0.5, cy + r * 0.3, cx - r * 0.6, cy + r * 0.2, cx - r * 0.55, cy - r * 0.35);
+        ctx.fill();
+
+        // Asya/Avustralya (sağ alt)
+        ctx.fillStyle = '#3A803A';
+        ctx.beginPath();
+        ctx.ellipse(cx + r * 0.5, cy + r * 0.3, r * 0.2, r * 0.12, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Kıyı çizgileri (daha koyu yeşil)
+        ctx.strokeStyle = 'rgba(20, 50, 20, 0.4)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Çöller (kum rengi)
+        ctx.fillStyle = 'rgba(200, 170, 100, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(cx + r * 0.1, cy - r * 0.15, r * 0.15, r * 0.08, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx - r * 0.45, cy + r * 0.05, r * 0.1, r * 0.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bulut sistemi — swirl pattern
+        for (let i = 0; i < 8; i++) {
+            const clx = cx + (Math.random() - 0.5) * r * 1.8;
+            const cly = cy + (Math.random() - 0.5) * r * 1.8;
+            const clSize = 5 + Math.random() * 15;
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.random() * 0.4})`;
+            // Spiral bulut
+            for (let j = 0; j < 5; j++) {
+                const angle = j * 0.5;
+                const dist = j * 2;
+                ctx.beginPath();
+                ctx.ellipse(clx + Math.cos(angle) * dist, cly + Math.sin(angle) * dist * 0.6, clSize - j, (clSize - j) * 0.5, angle, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Şehir ışıkları (gece tarafında) — küçük sarı noktalar
+        for (let i = 0; i < 20; i++) {
+            const lx = cx + (Math.random() - 0.5) * r * 1.8;
+            const ly = cy + (Math.random() - 0.5) * r * 1.8;
+            ctx.fillStyle = `rgba(255, 220, 100, ${0.2 + Math.random() * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // === VENUS — kalın bulut örtüsü, swirl ===
+    function drawVenusTexture(ctx, cx, cy, r) {
+        // Base cream-yellow
+        const baseGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        baseGrad.addColorStop(0, '#F5E0A0');
+        baseGrad.addColorStop(0.7, '#DDB070');
+        baseGrad.addColorStop(1, '#A07840');
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+        // Yatay bulut şeritleri — dalgalı
+        for (let i = -5; i <= 5; i++) {
+            const y = cy + i * r * 0.18;
+            const opacity = 0.2 + Math.random() * 0.3;
+            ctx.fillStyle = `rgba(${200 + Math.random() * 50}, ${160 + Math.random() * 40}, ${80 + Math.random() * 30}, ${opacity})`;
+            ctx.beginPath();
+            ctx.moveTo(cx - r, y);
+            for (let x = -r; x <= r; x += 4) {
+                const wave = Math.sin(x * 0.06 + i * 0.5) * 6;
+                ctx.lineTo(cx + x, y + wave);
+            }
+            for (let x = r; x >= -r; x -= 4) {
+                const wave = Math.sin(x * 0.06 + i * 0.5 + 1) * 6;
+                ctx.lineTo(cx + x, y + r * 0.06 + wave);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Büyük bulut girdapları
+        for (let i = 0; i < 5; i++) {
+            const sx = cx + (Math.random() - 0.5) * r * 1.5;
+            const sy = cy + (Math.random() - 0.5) * r * 1.5;
+            ctx.fillStyle = `rgba(220, 180, 100, ${0.3 + Math.random() * 0.2})`;
+            // Çok ince spiral
+            ctx.beginPath();
+            for (let a = 0; a < Math.PI * 4; a += 0.1) {
+                const rr = (1 - a / (Math.PI * 4)) * r * 0.15;
+                const px = sx + Math.cos(a) * rr;
+                const py = sy + Math.sin(a) * rr * 0.5;
+                if (a === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = ctx.fillStyle;
+            ctx.stroke();
+        }
+    }
+
+    // === MERCURY — yoğun kraterli, gri ===
+    function drawMercuryTexture(ctx, cx, cy, r) {
+        const baseGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        baseGrad.addColorStop(0, '#A8A095');
+        baseGrad.addColorStop(0.7, '#7F7868');
+        baseGrad.addColorStop(1, '#4A4540');
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+        // Renk değişim bölgeleri
+        for (let i = 0; i < 6; i++) {
+            const rx = cx + (Math.random() - 0.5) * r * 1.7;
+            const ry = cy + (Math.random() - 0.5) * r * 1.7;
+            ctx.fillStyle = `rgba(${100 + Math.random() * 50}, ${90 + Math.random() * 40}, ${80 + Math.random() * 30}, 0.3)`;
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, r * (0.15 + Math.random() * 0.15), r * (0.1 + Math.random() * 0.1), Math.random() * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Kraterler — çeşitli boyutlarda + ışınlar
+        for (let i = 0; i < 25; i++) {
+            const cr = cx + (Math.random() - 0.5) * r * 1.7;
+            const cy_ = cy + (Math.random() - 0.5) * r * 1.7;
+            const csize = 1 + Math.random() * 6;
+            // Işınlar (büyük kraterler için)
+            if (csize > 4) {
+                ctx.strokeStyle = `rgba(180, 170, 160, ${0.15 + Math.random() * 0.15})`;
+                ctx.lineWidth = 0.5;
+                for (let j = 0; j < 6; j++) {
+                    const angle = (j / 6) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cr, cy_);
+                    ctx.lineTo(cr + Math.cos(angle) * csize * 3, cy_ + Math.sin(angle) * csize * 3);
+                    ctx.stroke();
+                }
+            }
+            // Krater gölgesi
+            ctx.fillStyle = `rgba(40, 35, 30, ${0.4 + Math.random() * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(cr, cy_, csize, 0, Math.PI * 2);
+            ctx.fill();
+            // Krater highlight (kenar)
+            ctx.fillStyle = `rgba(200, 190, 180, ${0.3 + Math.random() * 0.2})`;
+            ctx.beginPath();
+            ctx.arc(cr - csize * 0.3, cy_ - csize * 0.3, csize * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // === ANA drawPlanet — gerçekçi render ===
     function drawPlanet(ctx, p, canvasW, canvasH) {
         const x = p.x * canvasW;
         const y = p.y * canvasH;
@@ -361,200 +797,154 @@
         ctx.save();
         ctx.translate(x, y);
 
-        // 1. Atmosfer parıltısı (gezegenin etrafında ince halo)
-        const haloGrad = ctx.createRadialGradient(0, 0, r * 0.9, 0, 0, r * 1.3);
-        haloGrad.addColorStop(0, p.haloColor || 'rgba(255, 255, 255, 0.15)');
+        // 1. Atmosfer halo — çok daha gerçekçi (limb brightening)
+        const haloColor = p.haloColor || 'rgba(255, 255, 255, 0.15)';
+        // Dış atmosferik saçılma
+        const haloGrad = ctx.createRadialGradient(0, 0, r * 0.92, 0, 0, r * 1.4);
+        haloGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        haloGrad.addColorStop(0.05, haloColor);
+        haloGrad.addColorStop(0.5, haloColor.replace(/[\d.]+\)$/, '0.05)'));
         haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = haloGrad;
         ctx.beginPath();
-        ctx.arc(0, 0, r * 1.3, 0, Math.PI * 2);
+        ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // 2. Satürn için arka halka (gezegenin arkasında kalan kısım)
+        // 2. Satürn arka halka
         if (p.type === 'saturn') {
             ctx.save();
             ctx.rotate(-0.4);
-            ctx.strokeStyle = 'rgba(220, 200, 150, 0.7)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, r * 1.7, r * 0.4, 0, Math.PI, Math.PI * 2);
-            ctx.stroke();
-            ctx.strokeStyle = 'rgba(180, 160, 120, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, r * 1.4, r * 0.32, 0, Math.PI, Math.PI * 2);
-            ctx.stroke();
+            // Çoklu ince halka şeritleri (Cassini Division dahil)
+            const ringColors = [
+                { rx: 1.95, ry: 0.46, w: 1.5, c: 'rgba(180, 160, 120, 0.4)' },
+                { rx: 1.80, ry: 0.43, w: 2.5, c: 'rgba(200, 180, 140, 0.6)' },
+                { rx: 1.70, ry: 0.40, w: 3, c: 'rgba(220, 200, 150, 0.8)' },
+                { rx: 1.55, ry: 0.36, w: 1, c: 'rgba(120, 100, 70, 0.2)' }, // Cassini Division
+                { rx: 1.45, ry: 0.34, w: 2.5, c: 'rgba(210, 190, 150, 0.7)' },
+                { rx: 1.30, ry: 0.30, w: 2, c: 'rgba(190, 170, 130, 0.5)' }
+            ];
+            ringColors.forEach(ring => {
+                ctx.strokeStyle = ring.c;
+                ctx.lineWidth = ring.w;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * ring.rx, r * ring.ry, 0, Math.PI, Math.PI * 2);
+                ctx.stroke();
+            });
             ctx.restore();
         }
 
-        // 3. Gezegen gövdesi (radial gradient — 3D küre efekti)
-        const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 0, 0, 0, r);
-        grad.addColorStop(0, p.light);
-        grad.addColorStop(0.7, p.mid);
-        grad.addColorStop(1, p.dark);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 4. Dönen yüzey özellikleri (gezegenin klip içinde kalan kısmı)
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.rotate(p.rotation);
-
-        if (p.type === 'jupiter') {
-            // Yatay bantlar
-            const bands = ['#8B5A2B', '#D4A66F', '#A67B5B', '#E8C490', '#7A4F2A', '#C89060'];
-            const bh = r * 2 / bands.length;
-            for (let i = 0; i < bands.length; i++) {
-                ctx.fillStyle = bands[i];
-                ctx.fillRect(-r, -r + i * bh, r * 2, bh + 0.5);
-            }
-            // Büyük Kırmızı Leke
-            ctx.fillStyle = '#B04020';
-            ctx.beginPath();
-            ctx.ellipse(r * 0.3, r * 0.15, r * 0.25, r * 0.12, 0, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (p.type === 'mars') {
-            // Koyu yüzey özellikleri (Vallis Marineris benzeri)
-            ctx.fillStyle = 'rgba(80, 30, 10, 0.5)';
-            ctx.beginPath();
-            ctx.ellipse(r * 0.2, -r * 0.1, r * 0.35, r * 0.15, 0.3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(-r * 0.3, r * 0.3, r * 0.25, r * 0.12, -0.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(r * 0.1, r * 0.5, r * 0.2, r * 0.08, 0.1, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (p.type === 'earth') {
-            // Kıtalar (yeşil blob'lar)
-            ctx.fillStyle = '#3A8B3A';
-            ctx.beginPath();
-            ctx.ellipse(-r * 0.3, -r * 0.15, r * 0.35, r * 0.4, 0.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(r * 0.35, r * 0.25, r * 0.28, r * 0.22, -0.3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(-r * 0.1, r * 0.45, r * 0.18, r * 0.12, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // Bulutlar (beyaz)
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-            ctx.beginPath();
-            ctx.ellipse(r * 0.1, -r * 0.45, r * 0.4, r * 0.1, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(-r * 0.3, r * 0.5, r * 0.3, r * 0.08, 0.2, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (p.type === 'saturn') {
-            // Hafif bantlar
-            const bands = ['#D4B070', '#E8C490', '#C8A060', '#D4B070', '#B8954F'];
-            const bh = r * 2 / bands.length;
-            for (let i = 0; i < bands.length; i++) {
-                ctx.fillStyle = bands[i];
-                ctx.fillRect(-r, -r + i * bh, r * 2, bh + 0.5);
-            }
-        } else if (p.type === 'venus') {
-            // Sıcak bulut swoşları
-            ctx.fillStyle = 'rgba(180, 140, 60, 0.4)';
-            for (let i = -2; i <= 2; i++) {
-                ctx.beginPath();
-                ctx.ellipse(0, i * r * 0.3, r * 0.95, r * 0.07, 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.fillStyle = 'rgba(220, 180, 100, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(r * 0.2, -r * 0.2, r * 0.5, r * 0.15, 0.4, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (p.type === 'mercury') {
-            // Kraterler
-            ctx.fillStyle = 'rgba(40, 35, 30, 0.6)';
-            const craters = [
-                { x: 0.4, y: -0.2, r: 0.18 },
-                { x: -0.3, y: 0.3, r: 0.15 },
-                { x: 0.1, y: 0.5, r: 0.12 },
-                { x: -0.4, y: -0.4, r: 0.1 },
-                { x: 0.5, y: 0.4, r: 0.08 }
-            ];
-            craters.forEach(c => {
-                ctx.beginPath();
-                ctx.arc(c.x * r, c.y * r, c.r * r, 0, Math.PI * 2);
-                ctx.fill();
-            });
+        // 3. Gezegen gövdesi — pre-rendered texture + rotation
+        const texture = getPlanetTexture(p.type, r);
+        if (texture) {
+            ctx.save();
+            ctx.rotate(p.rotation);
+            // Texture'ı çiz — wrap around the sphere
+            const texSize = texture.width;
+            ctx.drawImage(texture, -texSize / 2, -texSize / 2);
+            ctx.restore();
         }
-        ctx.restore(); // un-clip
 
-        // 5. DÖNMEYEN özellikler (kutuplar, halka ön kısmı)
+        // 4. DÖNMEYEN özellikler (kutuplar)
         if (p.type === 'mars') {
-            // Kutup buzulları (kuzey & güney)
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            // Kuzey kutup buzu — küçük ve asimetrik
+            const poleGrad = ctx.createRadialGradient(0, -r * 0.85, 0, 0, -r * 0.85, r * 0.4);
+            poleGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            poleGrad.addColorStop(0.6, 'rgba(220, 230, 240, 0.6)');
+            poleGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = poleGrad;
             ctx.beginPath();
             ctx.ellipse(0, -r * 0.85, r * 0.4, r * 0.18, 0, 0, Math.PI * 2);
             ctx.fill();
+            // Güney kutup — daha küçük
+            const poleGrad2 = ctx.createRadialGradient(0, r * 0.88, 0, 0, r * 0.88, r * 0.32);
+            poleGrad2.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            poleGrad2.addColorStop(0.6, 'rgba(220, 230, 240, 0.5)');
+            poleGrad2.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = poleGrad2;
             ctx.beginPath();
             ctx.ellipse(0, r * 0.88, r * 0.32, r * 0.14, 0, 0, Math.PI * 2);
             ctx.fill();
         } else if (p.type === 'earth') {
-            // Kutup buzulları
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            // Kutup buzulları — yumuşak kenarlı
+            const npole = ctx.createRadialGradient(0, -r * 0.9, 0, 0, -r * 0.9, r * 0.5);
+            npole.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            npole.addColorStop(0.7, 'rgba(240, 245, 250, 0.4)');
+            npole.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = npole;
             ctx.beginPath();
             ctx.ellipse(0, -r * 0.9, r * 0.5, r * 0.15, 0, 0, Math.PI * 2);
             ctx.fill();
+            const spole = ctx.createRadialGradient(0, r * 0.9, 0, 0, r * 0.9, r * 0.42);
+            spole.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+            spole.addColorStop(0.7, 'rgba(240, 245, 250, 0.35)');
+            spole.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = spole;
             ctx.beginPath();
             ctx.ellipse(0, r * 0.9, r * 0.4, r * 0.13, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // 6. Satürn ön halka (gezegenin önünde kalan kısım)
+        // 5. Satürn ön halka (gezegenin önünde kalan kısım)
         if (p.type === 'saturn') {
             ctx.save();
             ctx.rotate(-0.4);
-            ctx.strokeStyle = 'rgba(220, 200, 150, 0.8)';
-            ctx.lineWidth = 3;
+            const ringColorsFront = [
+                { rx: 1.95, ry: 0.46, w: 1.5, c: 'rgba(180, 160, 120, 0.5)' },
+                { rx: 1.80, ry: 0.43, w: 2.5, c: 'rgba(200, 180, 140, 0.7)' },
+                { rx: 1.70, ry: 0.40, w: 3, c: 'rgba(220, 200, 150, 0.9)' },
+                { rx: 1.55, ry: 0.36, w: 1, c: 'rgba(120, 100, 70, 0.3)' }, // Cassini Division
+                { rx: 1.45, ry: 0.34, w: 2.5, c: 'rgba(210, 190, 150, 0.8)' },
+                { rx: 1.30, ry: 0.30, w: 2, c: 'rgba(190, 170, 130, 0.6)' }
+            ];
+            ringColorsFront.forEach(ring => {
+                ctx.strokeStyle = ring.c;
+                ctx.lineWidth = ring.w;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * ring.rx, r * ring.ry, 0, 0, Math.PI);
+                ctx.stroke();
+            });
+            // Ring shadow on planet (in front)
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.ellipse(0, 0, r * 1.7, r * 0.4, 0, 0, Math.PI);
-            ctx.stroke();
-            ctx.strokeStyle = 'rgba(180, 160, 120, 0.6)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, r * 1.4, r * 0.32, 0, 0, Math.PI);
-            ctx.stroke();
-            ctx.strokeStyle = 'rgba(200, 180, 140, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, r * 2.0, r * 0.48, 0, 0, Math.PI);
+            ctx.ellipse(0, 0, r * 0.95, r * 0.22, 0, Math.PI * 0.1, Math.PI * 0.9);
             ctx.stroke();
             ctx.restore();
         }
 
-        // 7. Highlight (specular — sol üstten ışık)
+        // 6. Specular highlight — sol üstten gelen güneş ışığı (limb brightening değil, atmospheric scattering)
         const highlight = ctx.createRadialGradient(
-            -r * 0.35, -r * 0.35, 0,
-            -r * 0.35, -r * 0.35, r * 0.7
+            -r * 0.4, -r * 0.4, 0,
+            -r * 0.4, -r * 0.4, r * 0.9
         );
-        highlight.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
-        highlight.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+        highlight.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+        highlight.addColorStop(0.3, 'rgba(255, 255, 255, 0.1)');
         highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = highlight;
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.fill();
 
-        // 8. Gölge (terminator — karanlık taraf)
+        // 7. Terminator — gece/gündüz çizgisi (yumuşak gölge)
         const shadow = ctx.createRadialGradient(
-            r * 0.4, r * 0.4, 0,
-            r * 0.4, r * 0.4, r * 1.5
+            r * 0.5, r * 0.3, 0,
+            r * 0.5, r * 0.3, r * 1.8
         );
         shadow.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        shadow.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
-        shadow.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+        shadow.addColorStop(0.4, 'rgba(0, 0, 0, 0)');
+        shadow.addColorStop(0.7, 'rgba(0, 0, 0, 0.2)');
+        shadow.addColorStop(1, 'rgba(0, 0, 0, 0.65)');
         ctx.fillStyle = shadow;
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.fill();
+
+        // 8. Atmospheric limb — gezegen kenarında ince atmosferik halka (Rayleigh saçılması)
+        ctx.strokeStyle = p.haloColor ? p.haloColor.replace(/[\d.]+\)$/, '0.4)') : 'rgba(100, 150, 255, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, r + 0.5, 0, Math.PI * 2);
+        ctx.stroke();
 
         ctx.restore();
 
