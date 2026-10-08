@@ -6931,3 +6931,195 @@ body.theme-huzur-active #huzur-audio-control {
     filter: contrast(1.05) saturate(1.15) brightness(1.02);
     transform: translateZ(0);
 }
+
+/* =========================================
+   NEON ÇERÇEVE + OPAK PANEL + KALIN YAZI
+   ========================================= */
+
+/* === Tüm panel border'ları neon === */
+.voice-room-card,
+.chat-panel,
+.members-sidebar,
+.server-sidebar,
+.channel-sidebar,
+.music-panel,
+.voice-header,
+.vrc-header,
+.vrc-controls,
+.voice-connection-info,
+.user-panel {
+    border: 1px solid rgba(124, 92, 252, 0.4) !important;
+    box-shadow: 0 0 12px rgba(124, 92, 252, 0.15), inset 0 0 8px rgba(124, 92, 252, 0.05) !important;
+}
+
+/* === Voice room card — opak + neon === */
+.voice-room-card {
+    background: rgba(11, 14, 20, 0.8) !important;
+    border: 1px solid rgba(124, 92, 252, 0.45) !important;
+    box-shadow: 0 0 16px rgba(124, 92, 252, 0.2), 0 4px 24px rgba(0, 0, 0, 0.4) !important;
+}
+.vrc-header {
+    background: rgba(11, 14, 20, 0.75) !important;
+    border-bottom: 1px solid rgba(124, 92, 252, 0.3) !important;
+}
+.vrc-controls {
+    background: rgba(11, 14, 20, 0.75) !important;
+    border-top: 1px solid rgba(124, 92, 252, 0.3) !important;
+}
+
+/* === Chat panel — opak + neon === */
+.chat-panel {
+    background: rgba(11, 14, 20, 0.75) !important;
+    border-top: 1px solid rgba(124, 92, 252, 0.35) !important;
+    box-shadow: 0 -4px 16px rgba(124, 92, 252, 0.08) !important;
+}
+.chat-header {
+    background: rgba(11, 14, 20, 0.7) !important;
+    border-bottom: 1px solid rgba(124, 92, 252, 0.25) !important;
+}
+
+/* === Members sidebar — opak + neon === */
+.members-sidebar {
+    background: rgba(11, 14, 20, 0.75) !important;
+    border-left: 1px solid rgba(124, 92, 252, 0.35) !important;
+    box-shadow: -4px 0 16px rgba(124, 92, 252, 0.08) !important;
+}
+.members-header {
+    background: rgba(11, 14, 20, 0.7) !important;
+    border-bottom: 1px solid rgba(124, 92, 252, 0.2) !important;
+}
+
+/* === Server + Channel sidebar — opak + neon === */
+.server-sidebar {
+    background: rgba(11, 14, 20, 0.8) !important;
+    border-right: 1px solid rgba(124, 92, 252, 0.3) !important;
+}
+.channel-sidebar {
+    background: rgba(11, 14, 20, 0.75) !important;
+    border-right: 1px solid rgba(124, 92, 252, 0.3) !important;
+}
+.channel-header {
+    background: rgba(11, 14, 20, 0.7) !important;
+    border-bottom: 1px solid rgba(124, 92, 252, 0.25) !important;
+}
+
+/* === User panel — opak + neon === */
+.user-panel {
+    background: rgba(11, 14, 20, 0.8) !important;
+    border-top: 1px solid rgba(124, 92, 252, 0.3) !important;
+}
+
+/* === Konuşmacı kartları — opak + neon çerçeve === */
+.participant-card {
+    background: rgba(11, 14, 20, 0.8) !important;
+    border: 1px solid rgba(124, 92, 252, 0.35) !important;
+    box-shadow: 0 0 12px rgba(124, 92, 252, 0.12), 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+}
+.participant-card.speaking {
+    border-color: rgba(124, 92, 252, 0.8) !important;
+    box-shadow: 0 0 20px rgba(124, 92, 252, 0.4), 0 0 8px rgba(124, 92, 252, 0.3) !important;
+}
+
+/* === Oda isimleri (channel items) — neon + kalın === */
+.channel-item,
+.channel-category {
+    font-weight: 700 !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8) !important;
+    color: #fff !important;
+}
+.channel-item:hover {
+    background: rgba(124, 92, 252, 0.15) !important;
+    border-left: 3px solid rgba(124, 92, 252, 0.8) !important;
+}
+.channel-item.active {
+    background: rgba(124, 92, 252, 0.2) !important;
+    border-left: 3px solid #7C5CFF !important;
+    box-shadow: 0 0 8px rgba(124, 92, 252, 0.2) !important;
+}
+
+/* === Tüm başlık yazıları — kalın + neon glow === */
+.vrc-header h2,
+.chat-header-title,
+.members-header h3,
+.channel-header h2,
+.mp-title-text,
+.mp-np-title,
+.music-dj-title,
+.mof-title {
+    font-weight: 800 !important;
+    text-shadow: 0 0 8px rgba(124, 92, 252, 0.4), 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* === Konuşmacı isimleri — kalın + okunabilir === */
+.participant-name,
+.participant-status,
+.chat-msg-author,
+.member-name,
+.member-status,
+.display-name {
+    font-weight: 700 !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* === Chat mesajları — okunabilir === */
+.chat-msg {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* === VRC butonları — neon hover === */
+.vrc-btn {
+    border: 1px solid rgba(124, 92, 252, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+.vrc-btn:hover {
+    border-color: rgba(124, 92, 252, 0.5) !important;
+    box-shadow: 0 0 12px rgba(124, 92, 252, 0.3) !important;
+}
+
+/* === Music panel — opak + neon === */
+.music-panel {
+    background: rgba(11, 14, 20, 0.85) !important;
+    border: 1px solid rgba(124, 92, 252, 0.4) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(124, 92, 252, 0.15) !important;
+}
+
+/* === Video temalarında paneller YİNE opak (sönük değil) === */
+body.theme-huzur-active .voice-room-card,
+body.theme-huzur-active .chat-panel,
+body.theme-huzur-active .members-sidebar,
+body.theme-huzur-active .server-sidebar,
+body.theme-huzur-active .channel-sidebar,
+body.theme-huzur-active .participant-card,
+body.theme-huzur-active .user-panel,
+body.theme-huzur-active .music-panel,
+body.theme-huzur-active .vrc-header,
+body.theme-huzur-active .vrc-controls {
+    background: rgba(11, 14, 20, 0.75) !important;
+    background-color: rgba(11, 14, 20, 0.75) !important;
+    border: 1px solid rgba(124, 92, 252, 0.4) !important;
+    box-shadow: 0 0 12px rgba(124, 92, 252, 0.15) !important;
+}
+body.theme-huzur-active .main-content,
+body.theme-huzur-active .voice-view,
+body.theme-huzur-active .voice-body,
+body.theme-huzur-active .app-screen,
+body.theme-huzur-active .aurora-bg {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* === Sesli oda ismi — neon + kalın === */
+#voice-room-name {
+    font-weight: 800 !important;
+    text-shadow: 0 0 10px rgba(124, 92, 252, 0.5), 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* === Tab butonları (mobil) — neon === */
+.tab-btn {
+    font-weight: 700 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+}
+.tab-btn.active {
+    color: #7C5CFF !important;
+    text-shadow: 0 0 8px rgba(124, 92, 252, 0.6) !important;
+}
