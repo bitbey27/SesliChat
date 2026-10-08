@@ -11,11 +11,7 @@
         galaxy: { id: 'galaxy', icon: '🌟', name: 'Galaksi', desc: 'Yıldız + gezegenler (varsayılan)' },
         aurora: { id: 'aurora', icon: '🌌', name: 'Kuzey Işıkları', desc: 'Aurora borealis' },
         snow: { id: 'snow', icon: '❄️', name: 'Kar Yağışı', desc: 'Gerçek kar taneleri' },
-        rain: { id: 'rain', icon: '🌧️', name: 'Yoğun Yağmur', desc: 'Cuma çarpan damlalar' },
-        neon: { id: 'neon', icon: '💡', name: 'Neon Işıklar', desc: 'Renkli neon şeritler' },
-        lightning: { id: 'lightning', icon: '⚡', name: 'Şimşek', desc: 'Fırtına + çakmalar' },
-        fog: { id: 'fog', icon: '🌫️', name: 'Sisli', desc: 'Hareketli sis katmanları' },
-        matrix: { id: 'matrix', icon: '🟢', name: 'Matrix', desc: 'Dijital yağmur' },
+        rain: { id: 'rain', icon: '🌧️', name: 'Yoğun Yağmur', desc: 'Cama çarpan damlalar' },
         huzur: { id: 'huzur', icon: '🕊️', name: 'Huzur', desc: 'Video arka plan (landscape)' }
     };
 
@@ -1141,11 +1137,11 @@
         activeCanvases.forEach(c => { try { c.getContext('2d').clearRect(0, 0, c.width, c.height); } catch (e) {} });
 
         // Tüm tema elementlerini gizle
-        ['theme-snow-canvas', 'theme-rain-canvas', 'theme-galaxy-canvas', 'theme-matrix-canvas'].forEach(id => {
+        ['theme-snow-canvas', 'theme-rain-canvas', 'theme-galaxy-canvas'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
-        ['theme-neon', 'theme-lightning', 'theme-fog'].forEach(id => {
+        ['theme-fog'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
@@ -1197,16 +1193,6 @@
             activeAnimation = 'galaxy';
             activeCanvases = [canvas];
             initGalaxy(canvas);
-        } else if (themeId === 'matrix') {
-            const canvas = document.getElementById('theme-matrix-canvas');
-            canvas.classList.remove('hidden');
-            activeAnimation = 'matrix';
-            activeCanvases = [canvas];
-            initMatrix(canvas);
-        } else if (themeId === 'neon') {
-            document.getElementById('theme-neon').classList.remove('hidden');
-        } else if (themeId === 'lightning') {
-            document.getElementById('theme-lightning').classList.remove('hidden');
         } else if (themeId === 'fog') {
             document.getElementById('theme-fog').classList.remove('hidden');
         } else if (themeId === 'huzur') {
