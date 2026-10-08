@@ -1307,7 +1307,7 @@
         const old = document.getElementById('theme-picker-modal');
         if (old) old.remove();
 
-        const currentTheme = localStorage.getItem('chat-theme') || 'galaxy';
+        const currentTheme = localStorage.getItem('chat-theme') || 'hayal1';
 
         const modal = document.createElement('div');
         modal.id = 'theme-picker-modal';
@@ -1399,8 +1399,8 @@
             });
         }
 
-        // Kaydedilmiş temayı yükle — default GALAXY
-        const savedTheme = localStorage.getItem('chat-theme') || 'galaxy';
+        // Kaydedilmiş temayı yükle — default HAYAL1
+        const savedTheme = localStorage.getItem('chat-theme') || 'hayal1';
         // Sayfa yüklenir yüklenmez uygula (1s gecikme — canvas ready olsun)
         setTimeout(() => applyTheme(savedTheme), 1000);
         // Buton ikonunu ayarla
