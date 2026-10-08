@@ -12,7 +12,8 @@
         aurora: { id: 'aurora', icon: '🌌', name: 'Kuzey Işıkları', desc: 'Aurora borealis' },
         snow: { id: 'snow', icon: '❄️', name: 'Kar Yağışı', desc: 'Gerçek kar taneleri' },
         rain: { id: 'rain', icon: '🌧️', name: 'Yoğun Yağmur', desc: 'Cama çarpan damlalar' },
-        huzur: { id: 'huzur', icon: '🕊️', name: 'Huzur', desc: 'Video arka plan (landscape)' }
+        huzur: { id: 'huzur', icon: '🕊️', name: 'Huzur', desc: 'Video + dalga sesi' },
+        hayal1: { id: 'hayal1', icon: '💫', name: 'Hayal1', desc: 'Sessiz video arka plan' }
     };
 
     // === Active particle animations ===
@@ -1151,6 +1152,12 @@
             huzurVid.classList.add('hidden');
             try { huzurVid.pause(); } catch (e) {}
         }
+        // Hayal1 videosunu gizle
+        const hayal1Vid = document.getElementById('hayal1-video');
+        if (hayal1Vid && themeId !== 'hayal1') {
+            hayal1Vid.classList.add('hidden');
+            try { hayal1Vid.pause(); } catch (e) {}
+        }
         // Huzur audio control gizle
         const huzurAudioCtrl = document.getElementById('huzur-audio-control');
         if (huzurAudioCtrl && themeId !== 'huzur') {
@@ -1217,6 +1224,16 @@
                 document.addEventListener('click', unmuteOnInteraction, { once: true });
                 document.addEventListener('touchstart', unmuteOnInteraction, { once: true });
                 document.addEventListener('keydown', unmuteOnInteraction, { once: true });
+            }
+            // Tüm panelleri şeffaf yap
+            document.body.classList.add('theme-huzur-active');
+        } else if (themeId === 'hayal1') {
+            // === HAYAL1 TEMA — Sessiz video arka plan ===
+            const vid = document.getElementById('hayal1-video');
+            if (vid) {
+                vid.classList.remove('hidden');
+                vid.muted = true;  // sessiz zaten, ama browser policy
+                vid.play().catch(() => {});
             }
             // Tüm panelleri şeffaf yap
             document.body.classList.add('theme-huzur-active');
