@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v38">
+    <link rel="stylesheet" href="style.css?v39">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -127,6 +127,11 @@
             <div class="fog-layer fog-layer-2"></div>
             <div class="fog-layer fog-layer-3"></div>
         </div>
+
+        <!-- === HUZUR TEMA — Video arka plan (landscape, tam ekran) === -->
+        <video id="huzur-video" class="huzur-video hidden" loop muted playsinline preload="auto" style="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:0;pointer-events:none;">
+            <source src="themes/huzur.mp4" type="video/mp4">
+        </video>
 
         <!-- Sol Sidebar - Sunucu İkonu -->
         <div class="server-sidebar">
@@ -728,13 +733,20 @@
     <script src="app-v31.js"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
-    <!-- Premium Temalar v7: huzur KALDIRILDI -->
-    <script src="premium-themes.js?v7"></script>
+    <!-- Premium Temalar v8: huzur video tema (landscape, body seviyesinde audio) -->
+    <script src="premium-themes.js?v8"></script>
     <!-- Parti & Snake v2: snake başlangıç bug fix + restart butonu -->
     <script src="party-snake.js?v2"></script>
     <!-- Çılgın Fikirler: Voice Thief + Mafia + Uzay Yarışı -->
     <script src="crazy-features.js"></script>
     <!-- Oyun Köşesi v3: iframe yerine yeni sekme + floating voice widget -->
     <script src="game-corner.js?v3"></script>
+
+    <!-- === HUZUR SES KONTROLÜ — body seviyesinde === -->
+    <div id="huzur-audio-control" class="huzur-audio-control" style="display:none;">
+        <button class="huzur-mute-btn" id="huzur-mute-btn" title="Sesi aç/kapat">🔇</button>
+        <input type="range" class="huzur-volume-slider" id="huzur-volume-slider" min="0" max="100" value="30" title="Ses seviyesi">
+        <span class="huzur-volume-label" id="huzur-volume-label">30%</span>
+    </div>
 </body>
 </html>

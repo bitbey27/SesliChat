@@ -11,11 +11,12 @@
         galaxy: { id: 'galaxy', icon: '🌟', name: 'Galaksi', desc: 'Yıldız + gezegenler (varsayılan)' },
         aurora: { id: 'aurora', icon: '🌌', name: 'Kuzey Işıkları', desc: 'Aurora borealis' },
         snow: { id: 'snow', icon: '❄️', name: 'Kar Yağışı', desc: 'Gerçek kar taneleri' },
-        rain: { id: 'rain', icon: '🌧️', name: 'Yoğun Yağmur', desc: 'Cama çarpan damlalar' },
+        rain: { id: 'rain', icon: '🌧️', name: 'Yoğun Yağmur', desc: 'Cuma çarpan damlalar' },
         neon: { id: 'neon', icon: '💡', name: 'Neon Işıklar', desc: 'Renkli neon şeritler' },
         lightning: { id: 'lightning', icon: '⚡', name: 'Şimşek', desc: 'Fırtına + çakmalar' },
         fog: { id: 'fog', icon: '🌫️', name: 'Sisli', desc: 'Hareketli sis katmanları' },
-        matrix: { id: 'matrix', icon: '🟢', name: 'Matrix', desc: 'Dijital yağmur' }
+        matrix: { id: 'matrix', icon: '🟢', name: 'Matrix', desc: 'Dijital yağmur' },
+        huzur: { id: 'huzur', icon: '🕊️', name: 'Huzur', desc: 'Video arka plan (landscape)' }
     };
 
     // === Active particle animations ===
@@ -1148,6 +1149,17 @@
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
+        // Huzur videosunu gizle (başka temaya geçince)
+        const huzurVid = document.getElementById('huzur-video');
+        if (huzurVid && themeId !== 'huzur') {
+            huzurVid.classList.add('hidden');
+            try { huzurVid.pause(); } catch (e) {}
+        }
+        // Huzur audio control gizle
+        const huzurAudioCtrl = document.getElementById('huzur-audio-control');
+        if (huzurAudioCtrl && themeId !== 'huzur') {
+            huzurAudioCtrl.style.display = 'none';
+        }
 
         // Aurora orbs default görünür mü? (aurora hariç tüm temalarda orbs'ı azalt)
         // Not: Canvas'lar artık aurora-bg DIŞINDA - opacity change canvas'ları etkilemez
@@ -1195,6 +1207,18 @@
             document.getElementById('theme-lightning').classList.remove('hidden');
         } else if (themeId === 'fog') {
             document.getElementById('theme-fog').classList.remove('hidden');
+        } else if (themeId === 'huzur') {
+            // === HUZUR TEMA — Video arka plan ===
+            const vid = document.getElementById('huzur-video');
+            if (vid) {
+                vid.classList.remove('hidden');
+                vid.muted = true;
+                vid.volume = 0;
+                vid.play().catch(() => {});
+            }
+            // Audio control göster
+            const audioCtrl = document.getElementById('huzur-audio-control');
+            if (audioCtrl) audioCtrl.style.display = 'flex';
         }
         // aurora temayı için hiçbir şey gizleme (default)
 
@@ -1268,6 +1292,45 @@
         const btn = document.getElementById('vrc-theme-btn');
         if (btn) {
             btn.addEventListener('click', showThemePicker);
+        }
+
+        // === HUZUR AUDIO CONTROL ===
+        const hMuteBtn = document.getElementById('huzur-mute-btn');
+        const hVolSlider = document.getElementById('huzur-volume-slider');
+        const hVolLabel = document.getElementById('huzur-volume-label');
+        const hVid = document.getElementById('huzur-video');
+
+        if (hMuteBtn && hVid) {
+            let hMuted = true;
+            hMuteBtn.addEventListener('click', () => {
+                hMuted = !hMuted;
+                if (hMuted) {
+                    hVid.muted = true;
+                    hMuteBtn.textContent = '🔇';
+                } else {
+                    hVid.muted = false;
+                    const v = parseInt(hVolSlider ? hVolSlider.value : '30', 10) / 100;
+                    hVid.volume = v;
+                    hMuteBtn.textContent = '🔊';
+                    if (hVid.paused) hVid.play().catch(() => {});
+                }
+            });
+        }
+
+        if (hVolSlider && hVid) {
+            hVolSlider.addEventListener('input', (e) => {
+                const v = parseInt(e.target.value, 10) / 100;
+                hVid.volume = v;
+                if (hVolLabel) hVolLabel.textContent = e.target.value + '%';
+                if (v > 0 && hVid.muted) {
+                    hVid.muted = false;
+                    if (hMuteBtn) hMuteBtn.textContent = '🔊';
+                } else if (v === 0 && !hVid.muted) {
+                    hVid.muted = true;
+                    if (hMuteBtn) hMuteBtn.textContent = '🔇';
+                }
+                if (hVid.paused) hVid.play().catch(() => {});
+            });
         }
 
         // Kaydedilmiş temayı yükle — default GALAXY
