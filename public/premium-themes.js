@@ -13,7 +13,8 @@
         snow: { id: 'snow', icon: '❄️', name: 'Kar Yağışı', desc: 'Gerçek kar taneleri' },
         rain: { id: 'rain', icon: '🌧️', name: 'Yoğun Yağmur', desc: 'Cama çarpan damlalar' },
         huzur: { id: 'huzur', icon: '🕊️', name: 'Huzur', desc: 'Video + dalga sesi' },
-        hayal1: { id: 'hayal1', icon: '💫', name: 'Hayal1', desc: 'Sessiz video arka plan' }
+        hayal1: { id: 'hayal1', icon: '💫', name: 'Hayal1', desc: 'Sessiz video arka plan' },
+        cicekler: { id: 'cicekler', icon: '🌸', name: 'Çiçekler', desc: 'Video + ses (portre)' }
     };
 
     // === Active particle animations ===
@@ -1158,6 +1159,12 @@
             hayal1Vid.classList.add('hidden');
             try { hayal1Vid.pause(); } catch (e) {}
         }
+        // Çiçekler videosunu gizle
+        const ciceklerVid = document.getElementById('cicekler-video');
+        if (ciceklerVid && themeId !== 'cicekler') {
+            ciceklerVid.classList.add('hidden');
+            try { ciceklerVid.pause(); } catch (e) {}
+        }
         // Huzur audio control gizle
         const huzurAudioCtrl = document.getElementById('huzur-audio-control');
         if (huzurAudioCtrl && themeId !== 'huzur') {
@@ -1234,6 +1241,31 @@
                 vid.classList.remove('hidden');
                 vid.muted = true;  // sessiz zaten, ama browser policy
                 vid.play().catch(() => {});
+            }
+            // Tüm panelleri şeffaf yap
+            document.body.classList.add('theme-huzur-active');
+        } else if (themeId === 'cicekler') {
+            // === ÇİÇEKLER TEMA — Video + ses, portre cover ===
+            const vid = document.getElementById('cicekler-video');
+            if (vid) {
+                vid.classList.remove('hidden');
+                vid.muted = true;
+                vid.volume = 0;
+                vid.play().catch(() => {});
+                // İlk tıklamada ses aç — sese hiç karışma, otomatik çalsın
+                const unmuteCicekler = () => {
+                    if (vid.muted) {
+                        vid.muted = false;
+                        vid.volume = 0.3;
+                        vid.play().catch(() => {});
+                    }
+                    document.removeEventListener('click', unmuteCicekler);
+                    document.removeEventListener('touchstart', unmuteCicekler);
+                    document.removeEventListener('keydown', unmuteCicekler);
+                };
+                document.addEventListener('click', unmuteCicekler, { once: true });
+                document.addEventListener('touchstart', unmuteCicekler, { once: true });
+                document.addEventListener('keydown', unmuteCicekler, { once: true });
             }
             // Tüm panelleri şeffaf yap
             document.body.classList.add('theme-huzur-active');
