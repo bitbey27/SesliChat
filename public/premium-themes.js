@@ -1215,7 +1215,7 @@
             if (vid) {
                 vid.classList.remove('hidden');
                 vid.muted = true;
-                vid.volume = 0;
+                vid.volume = 0.3;
                 vid.play().catch(() => {});
                 // İlk kullanıcı tıklamasında sessiz modu kapat, %30 ses
                 const unmuteOnInteraction = () => {
@@ -1231,6 +1231,13 @@
                 document.addEventListener('click', unmuteOnInteraction, { once: true });
                 document.addEventListener('touchstart', unmuteOnInteraction, { once: true });
                 document.addEventListener('keydown', unmuteOnInteraction, { once: true });
+                // Volume %30'da sabit tut
+                vid.addEventListener('volumechange', () => {
+                    if (vid.volume > 0.3 && !vid.muted) vid.volume = 0.3;
+                });
+                vid.addEventListener('play', () => {
+                    if (!vid.muted) vid.volume = 0.3;
+                });
             }
             // Tüm panelleri şeffaf yap
             document.body.classList.add('theme-huzur-active');
@@ -1245,14 +1252,14 @@
             // Tüm panelleri şeffaf yap
             document.body.classList.add('theme-huzur-active');
         } else if (themeId === 'cicekler') {
-            // === ÇİÇEKLER TEMA — Video + ses, portre cover ===
+            // === ÇİÇEKLER TEMA — Video + ses, %30 sabit ===
             const vid = document.getElementById('cicekler-video');
             if (vid) {
                 vid.classList.remove('hidden');
                 vid.muted = true;
-                vid.volume = 0;
+                vid.volume = 0.3;
                 vid.play().catch(() => {});
-                // İlk tıklamada ses aç — sese hiç karışma, otomatik çalsın
+                // İlk tıklamada sessiz modu kapat — ses %30 sabit
                 const unmuteCicekler = () => {
                     if (vid.muted) {
                         vid.muted = false;
@@ -1266,6 +1273,15 @@
                 document.addEventListener('click', unmuteCicekler, { once: true });
                 document.addEventListener('touchstart', unmuteCicekler, { once: true });
                 document.addEventListener('keydown', unmuteCicekler, { once: true });
+                // Volume %30'da sabit tut — loop'ta sıfırlanırsa geri al
+                vid.addEventListener('volumechange', () => {
+                    if (vid.volume > 0.3 && !vid.muted) {
+                        vid.volume = 0.3;
+                    }
+                });
+                vid.addEventListener('play', () => {
+                    if (!vid.muted) vid.volume = 0.3;
+                });
             }
             // Tüm panelleri şeffaf yap
             document.body.classList.add('theme-huzur-active');
