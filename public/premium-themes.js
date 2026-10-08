@@ -1160,6 +1160,8 @@
         if (huzurAudioCtrl && themeId !== 'huzur') {
             huzurAudioCtrl.style.display = 'none';
         }
+        // Huzur active class'ı kaldır (paneller normale dönsün)
+        document.body.classList.remove('theme-huzur-active');
 
         // Aurora orbs default görünür mü? (aurora hariç tüm temalarda orbs'ı azalt)
         // Not: Canvas'lar artık aurora-bg DIŞINDA - opacity change canvas'ları etkilemez
@@ -1219,6 +1221,8 @@
             // Audio control göster
             const audioCtrl = document.getElementById('huzur-audio-control');
             if (audioCtrl) audioCtrl.style.display = 'flex';
+            // Tüm panelleri şeffaf yap
+            document.body.classList.add('theme-huzur-active');
         }
         // aurora temayı için hiçbir şey gizleme (default)
 

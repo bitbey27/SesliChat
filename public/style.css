@@ -6832,3 +6832,35 @@ body.theme-huzur-active .chat-welcome-msg {
         display: none;
     }
 }
+
+/* =========================================
+   HUZUR TEMA AKTİF — TÜM PANELLER ŞEFFAF
+   ========================================= */
+body.theme-huzur-active .app-screen,
+body.theme-huzur-active .main-content,
+body.theme-huzur-active .voice-view,
+body.theme-huzur-active .voice-body,
+body.theme-huzur-active .voice-room-card,
+body.theme-huzur-active .vrc-header,
+body.theme-huzur-active .vrc-controls,
+body.theme-huzur-active .voice-header,
+body.theme-huzur-active .voice-connection-info,
+body.theme-huzur-active .chat-panel,
+body.theme-huzur-active .chat-header,
+body.theme-huzur-active .members-sidebar,
+body.theme-huzur-active .members-header,
+body.theme-huzur-active .server-sidebar,
+body.theme-huzur-active .channel-sidebar,
+body.theme-huzur-active .channel-header,
+body.theme-huzur-active .user-panel,
+body.theme-huzur-active .music-panel,
+body.theme-huzur-active .mp-header,
+body.theme-huzur-active .aurora-bg {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Video kırpma yok — tam görünsün */
+body.theme-huzur-active #huzur-video {
+    object-fit: fill !important;
+}
