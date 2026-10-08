@@ -6924,3 +6924,10 @@ body.theme-huzur-active #huzur-video {
 body.theme-huzur-active #huzur-audio-control {
     display: none !important;
 }
+
+/* Çiçekler video — upscaling kalite iyileştirme */
+#cicekler-video {
+    image-rendering: auto;
+    filter: contrast(1.05) saturate(1.15) brightness(1.02);
+    transform: translateZ(0);
+}
