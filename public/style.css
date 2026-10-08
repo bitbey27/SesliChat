@@ -144,8 +144,6 @@ body {
 
 .login-card {
     background: rgba(30, 31, 43, 0.85);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(124, 92, 252, 0.15);
     border-radius: var(--radius-xl);
     padding: 48px 44px;
@@ -1670,8 +1668,6 @@ body {
     max-width: calc(100vw - 24px) !important;
     z-index: 100 !important;
     background: rgba(11, 14, 20, 0.92) !important;
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(124, 92, 252, 0.3);
     border-radius: 12px !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(124, 92, 252, 0.15);
@@ -2497,8 +2493,6 @@ body {
     max-width: calc(100vw - 24px) !important;
     z-index: 99 !important;
     background: rgba(11, 14, 20, 0.92) !important;
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(124, 92, 252, 0.3) !important;
     border-radius: 12px !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(124, 92, 252, 0.15);
@@ -3200,7 +3194,6 @@ body {
 .modal-content {
     border-radius: 16px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
     animation: modalSlideIn 0.25s ease;
 }
 @keyframes modalSlideIn {
@@ -3212,7 +3205,6 @@ body {
 .login-card {
     border-radius: 20px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
 }
 
 .login-screen {
@@ -3456,16 +3448,12 @@ body {
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     animation: fadeIn 0.2s ease;
 }
 .menu-modal.hidden { display: none; }
 
 .menu-modal-content {
     background: rgba(20, 25, 40, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
     padding: 24px;
@@ -3609,8 +3597,6 @@ body {
 /* === GLASS MODALS === */
 .modal-content {
     background: rgba(20, 25, 40, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 92, 252, 0.1);
@@ -3624,8 +3610,6 @@ body {
 }
 .login-card {
     background: rgba(20, 25, 40, 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 92, 252, 0.1);
 }
@@ -5150,8 +5134,6 @@ body {
     position: fixed;
     z-index: 10000;
     background: rgba(20, 22, 28, 0.98);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(124, 92, 255, 0.3);
     border-radius: 14px;
     padding: 8px;
@@ -5231,8 +5213,6 @@ body {
     position: fixed;
     z-index: 10000;
     background: rgba(20, 22, 28, 0.98);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(124, 92, 255, 0.3);
     border-radius: 14px;
     padding: 10px;
@@ -5419,8 +5399,6 @@ body {
     inset: 0;
     z-index: 10001;
     background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5659,7 +5637,6 @@ body {
     width: 4px;
     height: 60%;
     background: linear-gradient(180deg, #fff 0%, rgba(180, 200, 255, 0.7) 50%, transparent 100%);
-    filter: blur(1px);
     box-shadow: 0 0 30px #fff, 0 0 60px rgba(124, 200, 255, 0.8);
     opacity: 0;
     transform: skewX(-10deg);
@@ -5750,8 +5727,6 @@ body {
     inset: 0;
     z-index: 10002;
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5823,8 +5798,6 @@ body {
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5927,8 +5900,6 @@ body {
     inset: 0;
     z-index: 10003;
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -6111,8 +6082,6 @@ body {
     inset: 0;
     z-index: 10005;
     background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -6430,8 +6399,6 @@ body {
     right: 16px;
     z-index: 9999;
     background: rgba(11, 14, 20, 0.95);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(124, 92, 252, 0.4);
     border-radius: 12px;
     padding: 10px 14px;
@@ -6531,8 +6498,6 @@ body {
     transform: translateX(-50%);
     z-index: 99;
     background: rgba(11, 14, 20, 0.92);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(124, 92, 252, 0.3);
     border-radius: 10px;
     padding: 6px 12px;
@@ -6707,8 +6672,6 @@ body {
     right: 16px;
     z-index: 200 !important;
     background: rgba(11, 14, 20, 0.9);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid rgba(124, 92, 252, 0.3);
     border-radius: 20px;
     padding: 6px 12px;
@@ -6807,8 +6770,6 @@ body.theme-huzur-active .chat-welcome-msg {
     transform: translateX(-50%);
     z-index: 9999 !important;
     background: rgba(11, 14, 20, 0.85);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid rgba(124, 92, 252, 0.3);
     border-radius: 24px;
     padding: 8px 16px;
