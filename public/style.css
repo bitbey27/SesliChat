@@ -6864,3 +6864,63 @@ body.theme-huzur-active .aurora-bg {
 body.theme-huzur-active #huzur-video {
     object-fit: fill !important;
 }
+
+/* =========================================
+   HUZUR TEMA — TÜM CSS DEĞİŞKENLERİ ŞEFFAF
+   ========================================= */
+body.theme-huzur-active {
+    --bg-base: transparent !important;
+    --bg-primary: transparent !important;
+    --bg-secondary: transparent !important;
+    --bg-surface: transparent !important;
+    --bg-sidebar: transparent !important;
+    --bg-tertiary: transparent !important;
+    --bg-input: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* TÜM elementler şeffaf — wildcard */
+body.theme-huzur-active .app-screen,
+body.theme-huzur-active .main-content,
+body.theme-huzur-active .voice-view,
+body.theme-huzur-active .voice-body,
+body.theme-huzur-active .voice-room-card,
+body.theme-huzur-active .voice-participants,
+body.theme-huzur-active .vrc-header,
+body.theme-huzur-active .vrc-controls,
+body.theme-huzur-active .voice-header,
+body.theme-huzur-active .voice-connection-info,
+body.theme-huzur-active .chat-panel,
+body.theme-huzur-active .chat-header,
+body.theme-huzur-active .chat-messages,
+body.theme-huzur-active .members-sidebar,
+body.theme-huzur-active .members-header,
+body.theme-huzur-active .server-sidebar,
+body.theme-huzur-active .channel-sidebar,
+body.theme-huzur-active .channel-header,
+body.theme-huzur-active .user-panel,
+body.theme-huzur-active .music-panel,
+body.theme-huzur-active .mp-header,
+body.theme-huzur-active .aurora-bg,
+body.theme-huzur-active .participant-card,
+body.theme-huzur-active .participant-avatar,
+body.theme-huzur-active .welcome-view {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Konuşmacı kartları — sadece border ve text, arka plan yok */
+body.theme-huzur-active .participant-card {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Video — tam ekran, kırpma yok */
+body.theme-huzur-active #huzur-video {
+    object-fit: fill !important;
+    z-index: 0 !important;
+}
+
+/* Audio control TAMAMEN GİZLE — sadece arka plan sesi */
+body.theme-huzur-active #huzur-audio-control {
+    display: none !important;
+}

@@ -1210,17 +1210,28 @@
         } else if (themeId === 'fog') {
             document.getElementById('theme-fog').classList.remove('hidden');
         } else if (themeId === 'huzur') {
-            // === HUZUR TEMA — Video arka plan ===
+            // === HUZUR TEMA — Video arka plan, sadece dalga sesi ===
             const vid = document.getElementById('huzur-video');
             if (vid) {
                 vid.classList.remove('hidden');
                 vid.muted = true;
                 vid.volume = 0;
                 vid.play().catch(() => {});
+                // İlk kullanıcı tıklamasında sessiz modu kapat, %30 ses
+                const unmuteOnInteraction = () => {
+                    if (vid.muted) {
+                        vid.muted = false;
+                        vid.volume = 0.3;
+                        vid.play().catch(() => {});
+                    }
+                    document.removeEventListener('click', unmuteOnInteraction);
+                    document.removeEventListener('touchstart', unmuteOnInteraction);
+                    document.removeEventListener('keydown', unmuteOnInteraction);
+                };
+                document.addEventListener('click', unmuteOnInteraction, { once: true });
+                document.addEventListener('touchstart', unmuteOnInteraction, { once: true });
+                document.addEventListener('keydown', unmuteOnInteraction, { once: true });
             }
-            // Audio control göster
-            const audioCtrl = document.getElementById('huzur-audio-control');
-            if (audioCtrl) audioCtrl.style.display = 'flex';
             // Tüm panelleri şeffaf yap
             document.body.classList.add('theme-huzur-active');
         }
