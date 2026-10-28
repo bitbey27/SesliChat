@@ -423,6 +423,29 @@ class VoiceChatApp {
                     this.emojiPicker.classList.add('hidden');
                 }
             });
+
+            // === Sekme geçişleri (Emoji <-> Sticker) ===
+            this.emojiTabs = document.querySelectorAll('.emoji-tab');
+            this.emojiPanelEmojis = document.getElementById('emoji-panel-emojis');
+            this.emojiPanelStickers = document.getElementById('emoji-panel-stickers');
+            this.stickerGrid = document.getElementById('sticker-grid');
+            this.stickerManifest = null;
+            this.stickerLottieInstances = [];
+
+            if (this.emojiTabs.length) {
+                this.emojiTabs.forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const target = tab.dataset.tab;
+                        this.emojiTabs.forEach(t => t.classList.toggle('active', t === tab));
+                        if (this.emojiPanelEmojis) this.emojiPanelEmojis.classList.toggle('hidden', target !== 'emojis');
+                        if (this.emojiPanelStickers) this.emojiPanelStickers.classList.toggle('hidden', target !== 'stickers');
+                        if (target === 'stickers' && !this.stickerManifest) {
+                            this.loadStickerManifest();
+                        }
+                    });
+                });
+            }
         }
 
         // Kamera ve Ekran Paylaşımı
@@ -1898,6 +1921,10 @@ class VoiceChatApp {
             safeText = safeText.replace(regex, `<img src="https://fonts.gstatic.com/s/e/notoemoji/latest/${id}/512.webp" class="chat-animated-emoji" alt="${char}">`);
         }
         
+        // Sticker token'larını (:stkrN:) span'e çevir
+        const stickerResult = this.renderStickerTokensInText(safeText);
+        safeText = stickerResult.html;
+        
         const avatarColor = message.color || '#5865F2';
 
         msgEl.innerHTML = `
@@ -1909,7 +1936,122 @@ class VoiceChatApp {
         `;
 
         this.chatMessages.appendChild(msgEl);
+
+        // Sticker span'larını lottie ile doldur (async yüklenir)
+        try { this.hydrateStickerSpans(msgEl); } catch(e) { console.warn('hydrate err', e); }
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    // =========================================
+    // Sticker (TGS / Lottie) yönetimi
+    // =========================================
+    async loadStickerManifest() {
+        if (!this.stickerGrid) return;
+        try {
+            const res = await fetch('/stickers/manifest.json', { cache: 'no-cache' });
+            if (!res.ok) throw new Error('manifest yüklenemedi');
+            this.stickerManifest = await res.json();
+            this.renderStickerPicker();
+        } catch (err) {
+            console.warn('Sticker manifest yüklenemedi:', err);
+            if (this.stickerGrid) {
+                this.stickerGrid.innerHTML = '<div class="sticker-loading">Stickerlar yüklenemedi</div>';
+            }
+        }
+    }
+
+    renderStickerPicker() {
+        if (!this.stickerGrid || !this.stickerManifest) return;
+        this.stickerGrid.innerHTML = '';
+        if (this.stickerLottieInstances) {
+            this.stickerLottieInstances.forEach(inst => { try { inst.destroy(); } catch(_){} });
+        }
+        this.stickerLottieInstances = [];
+
+        this.stickerManifest.stickers.forEach(stk => {
+            const btn = document.createElement('button');
+            btn.className = 'sticker-btn';
+            btn.type = 'button';
+            btn.title = `Sticker ${stk.id}`;
+            btn.dataset.stickerId = stk.id;
+
+            const container = document.createElement('div');
+            container.className = 'lottie-container';
+            btn.appendChild(container);
+
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.chatInput.value += ` :stkr${stk.id}: `;
+                this.chatInput.focus();
+                this.emojiPicker.classList.add('hidden');
+            });
+
+            try {
+                const inst = lottie.loadAnimation({
+                    container: container,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: false,
+                    path: `/stickers/${stk.file}`
+                });
+                inst.addEventListener('DOMLoaded', () => {
+                    try { inst.goToAndStop(0, true); } catch(_){}
+                });
+                btn.addEventListener('mouseenter', () => { try { inst.play(); } catch(_){} });
+                btn.addEventListener('mouseleave', () => { try { inst.goToAndStop(0, true); } catch(_){} });
+                this.stickerLottieInstances.push(inst);
+            } catch (e) {
+                console.warn('Sticker lottie yükleme hatası:', stk.id, e);
+            }
+
+            this.stickerGrid.appendChild(btn);
+        });
+    }
+
+    // Chat mesajı içinde :stkrN: token'larını span'e çevir
+    renderStickerTokensInText(safeText) {
+        if (!this.stickerManifest) return { html: safeText };
+        let html = safeText;
+        for (const stk of this.stickerManifest.stickers) {
+            const regex = new RegExp(':stkr' + stk.id + ':', 'g');
+            html = html.replace(regex, `<span class="chat-sticker" data-sticker="${stk.id}" data-sticker-file="${stk.file}"></span>`);
+        }
+        return { html: html };
+    }
+
+    // Mesaj DOM'a eklendikten sonra sticker span'larını lottie ile doldur
+    hydrateStickerSpans(rootEl) {
+        if (!this.stickerManifest) {
+            this.loadStickerManifest().then(() => {
+                if (this.stickerManifest) this.hydrateStickerSpans(rootEl);
+            });
+            return;
+        }
+        const spans = rootEl.querySelectorAll('span.chat-sticker[data-sticker-file]:not([data-hydrated])');
+        spans.forEach(sp => {
+            sp.dataset.hydrated = '1';
+            const file = sp.dataset.stickerFile;
+            const parent = sp.parentElement;
+            let onlySticker = false;
+            if (parent && parent.classList.contains('chat-msg-text')) {
+                const txt = parent.textContent.trim();
+                if (txt === '') onlySticker = true;
+            }
+            if (onlySticker) {
+                sp.classList.add('chat-sticker-only');
+            }
+            try {
+                lottie.loadAnimation({
+                    container: sp,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: `/stickers/${file}`
+                });
+            } catch(e) {
+                console.warn('Chat sticker lottie hatası:', file, e);
+            }
+        });
     }
 
     // =========================================

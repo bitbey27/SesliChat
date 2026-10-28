@@ -1,0 +1,70 @@
+{
+  "stickers": [
+    {
+      "id": 1,
+      "file": "stkr1.json",
+      "orig": "AnimatedSticker.tgs",
+      "size": 259985
+    },
+    {
+      "id": 2,
+      "file": "stkr2.json",
+      "orig": "AnimatedSticker (1).tgs",
+      "size": 544512
+    },
+    {
+      "id": 3,
+      "file": "stkr3.json",
+      "orig": "AnimatedSticker (2).tgs",
+      "size": 457228
+    },
+    {
+      "id": 4,
+      "file": "stkr4.json",
+      "orig": "AnimatedSticker (3).tgs",
+      "size": 378704
+    },
+    {
+      "id": 5,
+      "file": "stkr5.json",
+      "orig": "AnimatedSticker (4).tgs",
+      "size": 487098
+    },
+    {
+      "id": 6,
+      "file": "stkr6.json",
+      "orig": "AnimatedSticker (5).tgs",
+      "size": 1871542
+    },
+    {
+      "id": 7,
+      "file": "stkr7.json",
+      "orig": "AnimatedSticker (6).tgs",
+      "size": 200884
+    },
+    {
+      "id": 8,
+      "file": "stkr8.json",
+      "orig": "AnimatedSticker (7).tgs",
+      "size": 223125
+    },
+    {
+      "id": 9,
+      "file": "stkr9.json",
+      "orig": "AnimatedSticker (8).tgs",
+      "size": 258586
+    },
+    {
+      "id": 10,
+      "file": "stkr10.json",
+      "orig": "AnimatedSticker (9).tgs",
+      "size": 511585
+    },
+    {
+      "id": 11,
+      "file": "stkr11.json",
+      "orig": "AnimatedSticker (10).tgs",
+      "size": 810553
+    }
+  ]
+}

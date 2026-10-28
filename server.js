@@ -17,6 +17,13 @@ app.use(express.json());
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
 
+// Stickerlar (Lottie JSON) — cache'li (değişmeyen büyük dosyalar) — ÖNCE tanımla
+app.use('/stickers', express.static(path.join(__dirname, 'public', 'stickers'), {
+    etag: true,
+    lastModified: true,
+    maxAge: '7d'
+}));
+
 // Statik dosyaları sun — NO CACHE (mobil Chrome cache sorununu önle)
 app.use(express.static(path.join(__dirname, 'public'), {
     etag: false,

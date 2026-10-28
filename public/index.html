@@ -8,10 +8,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v45">
+    <link rel="stylesheet" href="style.css?v46">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <!-- Lottie (TGS sticker animasyonları için) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 </head>
 <body>
     <!-- Giriş Ekranı -->
@@ -520,7 +522,18 @@
 
     <!-- Emojiler için küçük kap -> style.css'te tasarlanacak -->
     <div id="emoji-picker" class="emoji-picker hidden">
-        <div class="emoji-grid" id="emoji-grid"></div>
+        <div class="emoji-tabs" id="emoji-tabs">
+            <button class="emoji-tab active" data-tab="emojis">😀 Emoji</button>
+            <button class="emoji-tab" data-tab="stickers">✨ Sticker</button>
+        </div>
+        <div class="emoji-panel" id="emoji-panel-emojis">
+            <div class="emoji-grid" id="emoji-grid"></div>
+        </div>
+        <div class="emoji-panel hidden" id="emoji-panel-stickers">
+            <div class="sticker-grid" id="sticker-grid">
+                <div class="sticker-loading">Yükleniyor…</div>
+            </div>
+        </div>
     </div>
 
     <!-- === MENU MODAL — Tüm kontroller (glass morphism) === -->
@@ -690,8 +703,8 @@
 
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <!-- v31: Müzik X close + sync check + 30% new song + members/chat expansion -->
-    <script src="app-v31.js"></script>
+    <!-- v32: TGS sticker seti (Lottie) — chat emoji sekmesi + manifest + inline render -->
+    <script src="app-v32.js"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
     <!-- Premium Temalar v15: hayal1 default tema -->
