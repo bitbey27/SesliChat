@@ -65,6 +65,60 @@
       "file": "stkr11.json",
       "orig": "AnimatedSticker (10).tgs",
       "size": 810553
+    },
+    {
+      "id": 12,
+      "file": "stkr12.json",
+      "orig": "AnimatedSticker.tgs",
+      "size": 594578
+    },
+    {
+      "id": 13,
+      "file": "stkr13.json",
+      "orig": "AnimatedSticker (1).tgs",
+      "size": 393900
+    },
+    {
+      "id": 14,
+      "file": "stkr14.json",
+      "orig": "AnimatedSticker (2).tgs",
+      "size": 383293
+    },
+    {
+      "id": 15,
+      "file": "stkr15.json",
+      "orig": "AnimatedSticker (3).tgs",
+      "size": 203427
+    },
+    {
+      "id": 16,
+      "file": "stkr16.json",
+      "orig": "AnimatedSticker (4).tgs",
+      "size": 335896
+    },
+    {
+      "id": 17,
+      "file": "stkr17.json",
+      "orig": "AnimatedSticker (5).tgs",
+      "size": 376812
+    },
+    {
+      "id": 18,
+      "file": "stkr18.json",
+      "orig": "AnimatedSticker (6).tgs",
+      "size": 513651
+    },
+    {
+      "id": 19,
+      "file": "stkr19.json",
+      "orig": "AnimatedSticker (7).tgs",
+      "size": 424289
+    },
+    {
+      "id": 20,
+      "file": "stkr20.json",
+      "orig": "AnimatedSticker (8).tgs",
+      "size": 359562
     }
   ]
 }
