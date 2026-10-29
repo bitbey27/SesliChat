@@ -2,3 +2,4 @@ node_modules/
 tunnel_log.txt
 *.ps1
 tunnel_baslat.bat
+.config/
