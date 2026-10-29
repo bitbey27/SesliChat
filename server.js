@@ -44,8 +44,8 @@ app.get('/health', (req, res) => {
 // Admin panelinden değiştirilebilir, tüm kullanıcılara broadcast edilir
 let tickerState = {
   text: 'CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ',
-  imageUrl: '',  // Boşsa Atatürk görseli gösterilmez
-  showFlag: true, // Türk bayrağı arka planı göster
+  imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Mustafa_Kemal_Atat%C3%BCrk_1930.jpg/220px-Mustafa_Kemal_Atat%C3%BCrk_1930.jpg',
+  showFlag: false, // Türk bayrağı arka planı kapalı (şeffaf)
   enabled: true
 };
 
