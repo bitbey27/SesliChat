@@ -7218,3 +7218,125 @@ body.theme-huzur-active .aurora-bg {
     color: #7C5CFF !important;
     text-shadow: 0 0 8px rgba(124, 92, 252, 0.6) !important;
 }
+
+/* ========================================================== */
+/* === KAYAN YAZI (TICKER) — Türk Bayrağı + Atatürk arka planı === */
+/* ========================================================== */
+
+.ticker-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    z-index: 9000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(90deg, #E30A17 0%, #E30A17 50%, #C20814 100%);
+    border-bottom: 2px solid #fff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(227, 10, 23, 0.4);
+    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+}
+
+/* Türk bayrağı arka planı — hilal + yıldız (sol orta) */
+.ticker-flag-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 32% 50%, transparent 12px, transparent 14px),
+        radial-gradient(circle at 27% 50%, #E30A17 13px, transparent 14px),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='40,50 46,52 50,56 54,52 60,50 54,48 50,44 46,48' fill='white' transform='rotate(15 50 50)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-size: 100% 100%, 100% 100%, 80px 80px;
+    background-position: center, center, 28% center;
+    opacity: 0.15;
+    pointer-events: none;
+}
+
+/* Atatürk görseli (sağda küçük) */
+.ticker-attaturk {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 38px;
+    width: auto;
+    object-fit: contain;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    z-index: 2;
+}
+
+/* Kayan yazı içeriği */
+.ticker-content {
+    position: absolute;
+    left: 100%;
+    width: auto;
+    white-space: nowrap;
+    z-index: 3;
+    animation: ticker-scroll 25s linear infinite;
+}
+
+.ticker-text {
+    display: inline-block;
+    padding: 0 40px;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 12px rgba(255, 255, 255, 0.4),
+        1px 1px 0 rgba(0, 0, 0, 0.6);
+    text-transform: uppercase;
+}
+
+/* Sağdaki bayrak ikonu */
+.ticker-flag-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 24px;
+    z-index: 4;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+    animation: ticker-flag-wave 3s ease-in-out infinite;
+}
+
+@keyframes ticker-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-200%); }
+}
+
+@keyframes ticker-flag-wave {
+    0%, 100% { transform: translateY(-50%) rotate(-3deg); }
+    50% { transform: translateY(-50%) rotate(3deg); }
+}
+
+/* Ticker kapalıyken gizle */
+.ticker-bar.hidden { display: none !important; }
+
+/* Bayrak arka planı kapalıyken gradient daha sade */
+.ticker-bar.no-flag {
+    background: linear-gradient(90deg, #1a1410 0%, #2a1f1a 100%);
+}
+.ticker-bar.no-flag .ticker-flag-bg { display: none; }
+
+/* Mobil uyumluluk */
+@media (max-width: 768px) {
+    .ticker-bar { height: 36px; }
+    .ticker-text { font-size: 14px; letter-spacing: 1px; padding: 0 20px; }
+    .ticker-attaturk { height: 30px; right: 50px; }
+    .ticker-flag-icon { font-size: 18px; right: 8px; }
+    .ticker-content { animation-duration: 20s; }
+}
+
+/* Erişilebilirlik — prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    .ticker-content { animation: none; }
+    .ticker-flag-icon { animation: none; }
+}

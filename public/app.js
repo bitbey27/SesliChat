@@ -142,6 +142,15 @@ class VoiceChatApp {
         this.adminUpdatePassword = document.getElementById('admin-update-password');
         this.adminSetPasswordBtn = document.getElementById('admin-set-password-btn');
         this.adminDeleteRoomBtn = document.getElementById('admin-delete-room-btn');
+        // === TICKER (Kayan Yazı) element'leri ===
+        this.adminTickerText = document.getElementById('admin-ticker-text');
+        this.adminTickerImage = document.getElementById('admin-ticker-image');
+        this.adminTickerFlag = document.getElementById('admin-ticker-flag');
+        this.adminTickerEnabled = document.getElementById('admin-ticker-enabled');
+        this.adminTickerSaveBtn = document.getElementById('admin-ticker-save-btn');
+        this.tickerBar = document.getElementById('ticker-bar');
+        this.tickerText = document.getElementById('ticker-text');
+        this.tickerAttaturk = document.getElementById('ticker-attaturk');
 
         // Emoji
         this.emojiToggleBtn = document.getElementById('emoji-toggle-btn');
@@ -320,6 +329,27 @@ class VoiceChatApp {
                     }));
                     this.adminModal.classList.add('hidden');
                 }
+            });
+        }
+
+        // === TICKER (Kayan Yazı) Admin Kaydet ===
+        if (this.adminTickerSaveBtn) {
+            this.adminTickerSaveBtn.addEventListener('click', () => {
+                const tickerData = {
+                    text: (this.adminTickerText.value || '').trim(),
+                    imageUrl: (this.adminTickerImage.value || '').trim(),
+                    showFlag: this.adminTickerFlag.checked,
+                    enabled: this.adminTickerEnabled.checked
+                };
+                if (!tickerData.text && tickerData.enabled) {
+                    this.showToast('⚠️', 'Yazı boş olamaz! Önce yazı gir ya da "Aktif"i kapat.');
+                    return;
+                }
+                this.ws.send(JSON.stringify({
+                    type: 'ticker-update',
+                    ticker: tickerData
+                }));
+                this.showToast('📢', 'Kayan yazı yayınlandı! Tüm kullanıcılarda güncellendi.');
             });
         }
 
@@ -1020,6 +1050,11 @@ class VoiceChatApp {
                 
             case 'admin-error':
                 this.showToast('❌', message.message);
+                break;
+                
+            // === TICKER (Kayan Yazı) — server'dan gelen state ===
+            case 'ticker-state':
+                this.applyTickerState(message.ticker);
                 break;
                 
             case 'clear-chat':
@@ -2539,6 +2574,53 @@ class VoiceChatApp {
     // =========================================
     // Yardımcı Fonksiyonlar
     // =========================================
+    
+    // === TICKER (Kayan Yazı) — server state'ini UI'ya uygula ===
+    applyTickerState(ticker) {
+        if (!ticker || !this.tickerBar) return;
+        
+        // Aktif/pasif
+        if (ticker.enabled === false) {
+            this.tickerBar.classList.add('hidden');
+            return;
+        }
+        this.tickerBar.classList.remove('hidden');
+        
+        // Bayrak arka planı
+        if (ticker.showFlag === false) {
+            this.tickerBar.classList.add('no-flag');
+        } else {
+            this.tickerBar.classList.remove('no-flag');
+        }
+        
+        // Yazı
+        if (ticker.text && this.tickerText) {
+            this.tickerText.textContent = ticker.text;
+        }
+        
+        // Atatürk görseli
+        if (this.tickerAttaturk) {
+            if (ticker.imageUrl) {
+                this.tickerAttaturk.src = ticker.imageUrl;
+                this.tickerAttaturk.style.display = 'block';
+                this.tickerAttaturk.onerror = () => {
+                    this.tickerAttaturk.style.display = 'none';
+                };
+            } else {
+                this.tickerAttaturk.style.display = 'none';
+                this.tickerAttaturk.src = '';
+            }
+        }
+        
+        // Admin paneli açıksa, input'ları güncelle
+        if (this.adminTickerText && this.adminModal && !this.adminModal.classList.contains('hidden')) {
+            if (this.adminTickerText) this.adminTickerText.value = ticker.text || '';
+            if (this.adminTickerImage) this.adminTickerImage.value = ticker.imageUrl || '';
+            if (this.adminTickerFlag) this.adminTickerFlag.checked = ticker.showFlag !== false;
+            if (this.adminTickerEnabled) this.adminTickerEnabled.checked = ticker.enabled !== false;
+        }
+    }
+    
     showToast(icon, message) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');

@@ -116,6 +116,20 @@
             <div class="neon-stripe neon-stripe-5"></div>
         </div>
 
+        <!-- === KAYAN YAZI (TICKER) — Türk Bayrağı + Atatürk arka planı === -->
+        <div id="ticker-bar" class="ticker-bar">
+            <!-- Türk bayrağı arka planı (CSS gradient) -->
+            <div class="ticker-flag-bg"></div>
+            <!-- Atatürk görseli (admin panelinden URL ile değiştirilebilir) -->
+            <img id="ticker-attaturk" class="ticker-attaturk" src="" alt="Atatürk" style="display:none;">
+            <!-- Kayan yazı -->
+            <div class="ticker-content">
+                <span id="ticker-text" class="ticker-text">CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ</span>
+            </div>
+            <!-- Bayrak ikonu sağda -->
+            <div class="ticker-flag-icon">🇹🇷</div>
+        </div>
+
         <!-- Şimşek (CSS flash + arka plan) -->
         <div id="theme-lightning" class="theme-lightning hidden">
             <div class="lightning-clouds"></div>
@@ -475,6 +489,27 @@
                         <button id="admin-set-password-btn" class="btn-primary" style="flex:1;">Şifreyi Güncelle</button>
                         <button id="admin-delete-room-btn" class="btn-leave" style="flex:1; background:rgba(237,66,69,0.2); color:#ED4245; border:1px solid rgba(237,66,69,0.5);">Odayı Sil</button>
                     </div>
+                </div>
+            </div>
+
+            <hr style="margin: 20px 0; border-color: rgba(255,255,255,0.1);">
+
+            <!-- === KAYAN YAZI (TICKER) YÖNETİMİ === -->
+            <div class="settings-group">
+                <h4>📢 Kayan Yazı (Üst Bar)</h4>
+                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 12px;">Tüm kullanıcılarda üst orta kısımda kayan yazı gösterilir. Türk bayrağı arka planı ile.</p>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <textarea id="admin-ticker-text" class="modern-input" rows="3" placeholder="Kayan yazı metni... (örn: CUMHURİYET BAYRAMINIZ KUTLU OLSUN)" style="resize:vertical; font-weight:bold; min-height:60px;"></textarea>
+                    <input type="text" id="admin-ticker-image" class="modern-input" placeholder="Atatürk görsel URL (boş = görsel yok)">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+                            <input type="checkbox" id="admin-ticker-flag" checked> Türk Bayrağı arka plan
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-left:auto;">
+                            <input type="checkbox" id="admin-ticker-enabled" checked> Aktif
+                        </label>
+                    </div>
+                    <button id="admin-ticker-save-btn" class="btn-primary">📢 Kayan Yazıyı Yayınla</button>
                 </div>
             </div>
 

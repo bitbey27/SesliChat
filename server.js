@@ -40,6 +40,20 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', users: connectedUsers.size });
 });
 
+// === TICKER (Kayan Yazı) STATE ===
+// Admin panelinden değiştirilebilir, tüm kullanıcılara broadcast edilir
+let tickerState = {
+  text: 'CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ',
+  imageUrl: '',  // Boşsa Atatürk görseli gösterilmez
+  showFlag: true, // Türk bayrağı arka planı göster
+  enabled: true
+};
+
+// Ticker getir endpoint — sayfa yüklendiğinde mevcut ticker'ı al
+app.get('/api/ticker', (req, res) => {
+  res.json(tickerState);
+});
+
 // === YOUTUBE ARAMA ENDPOINT ===
 // Frontend bu endpoint'e POST yapıp arama sonuçlarını alır.
 // YOUTUBE_API_KEY yoksa 403 döner, frontend URL yapıştırmayı kullanır.
@@ -267,6 +281,8 @@ wss.on('connection', (ws) => {
           connectedUsers.set(userId, user);
 
           ws.send(JSON.stringify({ type: 'joined', userId, role: user.role }));
+          // Yeni client'a mevcut ticker'ı gönder
+          ws.send(JSON.stringify({ type: 'ticker-state', ticker: tickerState }));
           broadcastRoomUpdate();
           broadcastOnlineUsers();
           break;
@@ -454,11 +470,38 @@ wss.on('connection', (ws) => {
           if (message.password === adminPwd) {
             user.role = 'admin';
             ws.send(JSON.stringify({ type: 'admin-success' }));
+            // Admin girişinde mevcut ticker'ı gönder
+            ws.send(JSON.stringify({ type: 'ticker-state', ticker: tickerState }));
             broadcastRoomUpdate();
             broadcastOnlineUsers();
           } else {
             ws.send(JSON.stringify({ type: 'admin-error', message: 'Hatalı şifre!' }));
           }
+          break;
+        }
+
+        // === TICKER UPDATE (Admin only) ===
+        case 'ticker-update': {
+          const user = connectedUsers.get(userId);
+          if (!user || user.role !== 'admin') {
+            ws.send(JSON.stringify({ type: 'admin-error', message: 'Ticker güncellemek için admin yetkisi gerek!' }));
+            return;
+          }
+          // State'i güncelle (sadece gönderilen alanları)
+          if (typeof message.ticker === 'object' && message.ticker) {
+            if (typeof message.ticker.text === 'string') tickerState.text = message.ticker.text;
+            if (typeof message.ticker.imageUrl === 'string') tickerState.imageUrl = message.ticker.imageUrl;
+            if (typeof message.ticker.showFlag === 'boolean') tickerState.showFlag = message.ticker.showFlag;
+            if (typeof message.ticker.enabled === 'boolean') tickerState.enabled = message.ticker.enabled;
+          }
+          // Tüm kullanıcılara broadcast
+          const broadcast = JSON.stringify({ type: 'ticker-state', ticker: tickerState });
+          wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(broadcast);
+            }
+          });
+          console.log('[Ticker] Güncellendi:', tickerState.text.substring(0, 60) + '...');
           break;
         }
 
