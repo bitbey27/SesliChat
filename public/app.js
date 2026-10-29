@@ -1392,8 +1392,19 @@ class VoiceChatApp {
     // =========================================
     createPeerConnection(peerId, isInitiator) {
         const pc = new RTCPeerConnection({
-            iceServers: this.iceServers
+            iceServers: this.iceServers,
+            sdpSemantics: 'unified-plan',    // Modern, codec tercihleri için
+            bundlePolicy: 'max-bundle',      // Tek port, NAT delici daha iyi
+            iceCandidatePoolSize: 10,        // Daha çok ICE adayı, donma az
+            iceTransportPolicy: 'all'        // STUN + TURN
         });
+
+        // === CODEC TERCİHLERİ: H.264 öncelik (en uyumlu, en az donma) ===
+        try {
+            const transceivers = pc.getTransceivers();
+            // Codec tercihleri transceiver'a set edilir (addTrack'ten önce/sonra)
+            // Şimdilik RTCRtpSender.setCodecCapabilities kullanarak ayarlayalım
+        } catch (_) {}
 
         // === Event handler'ları ÖNCE set et (addTrack'tan önce) ===
         // Bu, race condition'u önler: addTrack → onnegotiationneeded queued olur,
@@ -1407,6 +1418,16 @@ class VoiceChatApp {
                     targetId: peerId,
                     data: event.candidate
                 }));
+            }
+        };
+
+        // ICE bağlantı durumu — donma tespiti için
+        pc.oniceconnectionstatechange = () => {
+            console.log(`[WRTC] Peer ${peerId} ICE state: ${pc.iceConnectionState}`);
+            if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                // ICE yeniden başlatma (donma çözümü)
+                console.log(`[WRTC] ICE restart denemesi (peer ${peerId})`);
+                try { pc.restartIce(); } catch (_) {}
             }
         };
 
@@ -1439,6 +1460,8 @@ class VoiceChatApp {
             const track = event.track;
             const stream = event.streams[0];
 
+            console.log(`[WRTC] ontrack: peer=${peerId}, kind=${track.kind}, id=${track.id}, streams=${event.streams.length}`);
+
             if (track.kind === 'video') {
                 this.showRemoteVideo(peerId, stream);
                 track.onended = () => {
@@ -1447,13 +1470,14 @@ class VoiceChatApp {
                 return;
             }
 
-            // AUDIO TRACK (voice)
+            // AUDIO TRACK (voice veya ekran sesi)
             let peerData = this.peers.get(peerId);
             if (!peerData) {
                 peerData = { pc, audioEl: null, remoteStream: null };
                 this.peers.set(peerId, peerData);
             }
 
+            // Önceki audio element varsa, yeni track'i oraya set et (yoksa yeni oluştur)
             let audioEl = peerData.audioEl;
             if (!audioEl) {
                 audioEl = document.createElement('audio');
@@ -1568,6 +1592,35 @@ class VoiceChatApp {
 
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(message.data));
+            
+            // === CODEC TERCİHLERİ: H.264 öncelik (video donmasını azaltır) ===
+            try {
+                const transceivers = pc.getTransceivers();
+                transceivers.forEach(tr => {
+                    if (tr.receiver && tr.receiver.track && tr.receiver.track.kind === 'video') {
+                        const caps = RTCRtpReceiver.getCapabilities('video');
+                        if (caps && caps.codecs) {
+                            // H.264 öncelik, sonra VP8, VP9, AV1
+                            const preferred = caps.codecs.filter(c => 
+                                c.mimeType === 'video/H264'
+                            );
+                            const others = caps.codecs.filter(c => 
+                                c.mimeType !== 'video/H264' && 
+                                c.mimeType !== 'video/rtx'
+                            );
+                            const rtx = caps.codecs.filter(c => c.mimeType === 'video/rtx');
+                            const ordered = [...preferred, ...others, ...rtx];
+                            if (ordered.length > 0) {
+                                tr.setCodecPreferences(ordered);
+                                console.log(`[WRTC] H.264 codec tercihleri uygulandı (peer ${message.senderId})`);
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('[WRTC] Codec tercihleri uygulanamadı:', e);
+            }
+            
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
@@ -2115,7 +2168,7 @@ class VoiceChatApp {
     }
 
     // =========================================
-    // Ekran Paylaşımı (Screen Share)
+    // Ekran Paylaşımı (Screen Share) — SES + GÖRÜNTÜ birlikte gönder
     // =========================================
     async toggleScreenShare() {
         if (this.isScreenSharing) {
@@ -2125,8 +2178,16 @@ class VoiceChatApp {
 
         try {
             this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
-                audio: true
+                video: { 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 }, 
+                    frameRate: { ideal: 30, max: 60 } 
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
             });
 
             this.isScreenSharing = true;
@@ -2134,15 +2195,45 @@ class VoiceChatApp {
             this.shareScreenBtn.style.color = '#3BA55D';
             
             const videoTrack = this.screenStream.getVideoTracks()[0];
+            const audioTrack = this.screenStream.getAudioTracks()[0]; // SES TRACK — KARŞI TARAF DUYMASI İÇİN
             videoTrack.onended = () => {
                 this.stopScreenShare();
             };
 
+            // Her peer'a HEM video HEM audio track gönder + bitrate ayarla
             this.peers.forEach((peer, peerId) => {
-                peer.pc.addTrack(videoTrack, this.screenStream);
+                // Video track ekle
+                const videoSender = peer.pc.addTrack(videoTrack, this.screenStream);
+                // Bitrate + framerate sınırı (donmayı önler)
+                if (videoSender) {
+                    try {
+                        const params = videoSender.getParameters();
+                        if (!params.encodings || params.encodings.length === 0) {
+                            params.encodings = [{}];
+                        }
+                        params.encodings[0].maxBitrate = 2500000; // 2.5 Mbps — akıcı için yeterli
+                        params.encodings[0].maxFramerate = 30;
+                        videoSender.setParameters(params).catch(e => 
+                            console.warn(`[WRTC] Bitrate ayarlanamadı (peer ${peerId}):`, e)
+                        );
+                    } catch (e) {
+                        console.warn(`[WRTC] Sender params hatası:`, e);
+                    }
+                }
+                // Audio track ekle — KARŞI TARAF YAYIN SESİNİ DUYMAYA BUKADAR LAZIM
+                if (audioTrack) {
+                    try {
+                        peer.pc.addTrack(audioTrack, this.screenStream);
+                    } catch (e) {
+                        console.warn(`[WRTC] Audio track eklenemedi (peer ${peerId}):`, e);
+                    }
+                }
             });
             
             this.showLocalVideo(this.screenStream);
+            this.showToast('📺', audioTrack 
+                ? 'Ekran paylaşımı başlatıldı! Ses + görüntü karşı tarafa gidiyor.' 
+                : 'Ekran paylaşımı başlatıldı (görüntü). Sistem sesi yakalanamadı — Chrome\'da "Sistemin sesini paylaş" seçeneğini açın.');
 
         } catch (err) {
             console.error('Ekran paylaşımı hatası:', err);
@@ -2159,18 +2250,19 @@ class VoiceChatApp {
         }
 
         if (this.screenStream) {
-            this.screenStream.getTracks().forEach(track => track.stop());
-            
-            const videoTrack = this.screenStream.getVideoTracks()[0] || this.screenStream.getTracks().find(t => t.kind === 'video');
-            if (videoTrack) {
-                this.peers.forEach((peer) => {
-                    const senders = peer.pc.getSenders();
-                    const sender = senders.find(s => s.track && s.track.kind === 'video');
-                    if (sender) {
-                        peer.pc.removeTrack(sender);
+            // Önce peer'lardan göndericileri kaldır (video + audio)
+            this.peers.forEach((peer) => {
+                const senders = peer.pc.getSenders();
+                senders.forEach(sender => {
+                    if (sender.track && this.screenStream.getTracks().includes(sender.track)) {
+                        try { peer.pc.removeTrack(sender); } catch (e) {
+                            console.warn('[WRTC] removeTrack hatası:', e);
+                        }
                     }
                 });
-            }
+            });
+            // Stream'i tamamen durdur
+            this.screenStream.getTracks().forEach(track => track.stop());
             this.screenStream = null;
         }
 
@@ -2214,24 +2306,50 @@ class VoiceChatApp {
         const videoEl = document.createElement('video');
         videoEl.id = `video-${peerId}`;
         videoEl.srcObject = stream;
-        videoEl.playsInline = true;
+        videoEl.autoplay = true;        // CODEC HAZIR OLSUN DİYE autoplay açık
+        videoEl.muted = true;           // Tarayıcı autoplay politikası için muted başla
+        videoEl.playsInline = true;     // iOS Safari için
         videoEl.className = 'stage-video';
-        videoEl.style.display = 'none'; // Başlangıçta gizli
+        videoEl.style.display = 'block'; // GİZLİ DEĞİL — codec initialize olsun, görüntü aksın
+        videoEl.style.width = '100%';
+        videoEl.style.height = '100%';
+        videoEl.style.objectFit = 'contain';
+        videoEl.style.background = '#000';
+
+        // Codec tercihleri: H.264 öncelik (en uyumlu, donma az)
+        try {
+            const transceivers = stream ? null : null; // signal-based ayar createPeerConnection'da yapılır
+        } catch (_) {}
+
+        // Video yüklendiğinde force play (akıcılık için)
+        videoEl.addEventListener('loadedmetadata', () => {
+            videoEl.play().catch(e => console.warn('[WRTC] Remote video autoplay engellendi:', e));
+        });
 
         // Kullanıcı adını bul
         const pCard = document.getElementById(`participant-${peerId}`);
         const username = pCard ? pCard.querySelector('.participant-name').textContent : 'Bir Kullanıcı';
         
-        // Overlay (Yayına Katıl)
+        // Overlay (Yayına Katıl — SES AÇMA butonu)
         const overlay = document.createElement('div');
         overlay.className = 'stream-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
         overlay.style.textAlign = 'center';
         overlay.style.color = '#fff';
+        overlay.style.zIndex = '5';
+        overlay.style.background = 'rgba(0,0,0,0.4)';
         overlay.innerHTML = `
             <div style="background: rgba(0,0,0,0.6); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="font-size: 30px; margin-bottom: 10px;">📺</div>
                 <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 500;">${username} yayın başlattı</h3>
-                <button class="btn-primary" id="join-stream-btn-${peerId}" style="width: 100%;">Yayını İzle</button>
+                <button class="btn-primary" id="join-stream-btn-${peerId}" style="width: 100%;">🔊 Yayını İzle (Sesi Aç)</button>
             </div>
         `;
 
@@ -2253,6 +2371,7 @@ class VoiceChatApp {
         controls.innerHTML = `
             <span style="color:var(--green); font-size:13px; font-weight:bold; align-self:center; margin-right:10px;">🔴 ${username}</span>
             <button class="btn-secondary" style="padding: 4px 12px; font-size: 13px;" id="fs-stream-btn-${peerId}">🔲 Tam Ekran</button>
+            <button class="btn-secondary" style="padding: 4px 12px; font-size: 13px;" id="mute-stream-btn-${peerId}">🔇 Sessize Al</button>
             <button class="btn-leave" style="padding: 4px 12px; font-size: 13px; background: rgba(237,66,69,0.2); color: #ED4245; border: 1px solid rgba(237,66,69,0.5);" id="close-stream-btn-${peerId}">Kapat</button>
         `;
 
@@ -2265,24 +2384,35 @@ class VoiceChatApp {
         const joinBtn = document.getElementById(`join-stream-btn-${peerId}`);
         const closeBtn = document.getElementById(`close-stream-btn-${peerId}`);
         const fsBtn = document.getElementById(`fs-stream-btn-${peerId}`);
+        const muteBtn = document.getElementById(`mute-stream-btn-${peerId}`);
 
+        // Yayını izle = SESİ AÇ (video zaten autoplay muted olarak çalıyor)
         joinBtn.addEventListener('click', () => {
             overlay.classList.add('hidden');
-            videoEl.style.display = 'block';
             controls.classList.remove('hidden');
+            videoEl.muted = false;  // Ses aç
+            videoEl.volume = 1.0;
             videoEl.play().catch(e => {
                 console.error('Video oynatılamadı:', e);
-                this.showToast('⚠️', 'Tarayıcınız otomatik oynatmayı engelledi.');
+                this.showToast('⚠️', 'Tarayıcınız otomatik oynatmayı engelledi. Tekrar tıklayın.');
             });
         });
 
         closeBtn.addEventListener('click', () => {
             videoEl.pause();
-            videoEl.style.display = 'none';
-            controls.classList.add('hidden');
+            videoEl.muted = true;
             overlay.classList.remove('hidden');
-            joinBtn.textContent = 'Yayına Geri Dön';
+            controls.classList.add('hidden');
+            joinBtn.textContent = '🔊 Yayına Geri Dön';
         });
+
+        // Sessize al / aç
+        if (muteBtn) {
+            muteBtn.addEventListener('click', () => {
+                videoEl.muted = !videoEl.muted;
+                muteBtn.textContent = videoEl.muted ? '🔊 Sesi Aç' : '🔇 Sessize Al';
+            });
+        }
 
         fsBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
