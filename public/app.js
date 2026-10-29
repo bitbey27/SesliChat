@@ -839,16 +839,88 @@ class VoiceChatApp {
         document.addEventListener('click', resumeAudioOnInteraction);
         document.addEventListener('keydown', resumeAudioOnInteraction);
         document.addEventListener('touchstart', resumeAudioOnInteraction);
+        
+        // === ARKA PLANDA MÜZİK ÇALMAYA DEVAM ET (oyuna girince bile) ===
+        // Tarayıcı arka planda audio'yu durdurabilir — bunu aşmak için:
+        // 1. visibilitychange — tab tekrar görünür olunca tüm audio'ları play et
+        // 2. window blur/focus — pencere odak değiştirince audio'ları play et
+        // 3. Periyodik interval — her 2 saniyede bir paused audio'ları play et (arka planda da)
+        // 4. MediaSession API — tarayıcıya "şu an medya oynatıyor" bilgisi ver (arka plan izni)
+        
         // Tab tekrar görünür olduğunda da resume
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                resumeAudioOnInteraction();
-            }
+            // Hem visible olunca HEM DE hidden olunca audio'ları play etmeye çalış
+            // (hidden iken tarayıcı bazı audio'ları durdurabilir, biz tekrar başlatırız)
+            setTimeout(() => resumeAudioOnInteraction(), 100);
+            setTimeout(() => resumeAudioOnInteraction(), 500);
+            setTimeout(() => resumeAudioOnInteraction(), 1500);
         });
-        // Periyodik kontrol — her 5 saniyede bir (kullanıcı etkileşimi olmadan da çalışabilir)
+        
+        // Pencere odak değiştirince (oyun açılınca/kapanınca)
+        window.addEventListener('blur', () => {
+            // Pencere blur olunca audio'yu hemen play et ki arka planda da çalsın
+            setTimeout(() => resumeAudioOnInteraction(), 200);
+        });
+        window.addEventListener('focus', () => {
+            setTimeout(() => resumeAudioOnInteraction(), 100);
+        });
+        
+        // Periyodik kontrol — HER 2 SANİYEDE BİR (arka plan dahil)
+        // Arka planda audio pause olursa hemen tekrar başlat
+        setInterval(() => {
+            // Tüm peer audio elementlerini kontrol et
+            this.peers.forEach((peer) => {
+                if (peer.audioEl && peer.remoteStream) {
+                    if (peer.audioEl.paused || peer.audioEl.ended) {
+                        try {
+                            peer.audioEl.currentTime = peer.audioEl.currentTime || 0;
+                            this.forcePlayAudio(peer.audioEl);
+                        } catch (_) {}
+                    }
+                }
+            });
+            // AudioContext resume (VAD/notification)
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().catch(() => {});
+            }
+            if (this.vcAudioContext && this.vcAudioContext.state === 'suspended') {
+                this.vcAudioContext.resume().catch(() => {});
+            }
+        }, 2000);
+        
+        // === MediaSession API — tarayıcıya "şu an medya oynatıyor" söyle ===
+        // Bu sayede tarayıcı arka planda audio'yu durdurmaz (Chrome/Edge/Firefox)
+        if ('mediaSession' in navigator) {
+            try {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: 'SesliChat — Canlı Yayın',
+                    artist: 'SesliChat Topluluğu',
+                    album: 'Sesli Sohbet',
+                    artwork: [
+                        { src: 'https://seslichat.onrender.com/logo.svg', sizes: '512x512', type: 'image/svg+xml' }
+                    ]
+                });
+                // Play/Pause handler'ları — tarayıcı bunları kullanır
+                navigator.mediaSession.setActionHandler('play', () => {
+                    this.peers.forEach((peer) => {
+                        if (peer.audioEl) this.forcePlayAudio(peer.audioEl);
+                    });
+                });
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    // Pause etme — biz her zaman çalmasını istiyoruz
+                    this.peers.forEach((peer) => {
+                        if (peer.audioEl) this.forcePlayAudio(peer.audioEl);
+                    });
+                });
+                console.log('[Audio] MediaSession API aktif — arka plan çalma modu');
+            } catch (e) {
+                console.warn('[Audio] MediaSession kurulamadı:', e);
+            }
+        }
+        
+        // Eski periyodik kontrol — her 5 saniyede bir
         setInterval(() => {
             if (this.vcAudioContext && this.vcAudioContext.state === 'suspended' && !document.hidden) {
-                // Sadece tab görünür durumdaysa deneyelim (arka planda çalışmaz zaten)
                 this.vcAudioContext.resume().catch(() => {});
             }
         }, 5000);
