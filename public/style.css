@@ -7225,30 +7225,30 @@ body.theme-huzur-active .aurora-bg {
 
 .ticker-bar {
     /* TAM ORTADA — sabit tabela panel */
-    position: fixed;
+    position: fixed !important;
     top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(560px, 70vw);
+    /* Ortalamak için left + margin (transform override edilmesin diye) */
+    left: calc(50vw - 280px) !important;
+    width: 560px;
     height: 52px;
-    z-index: 9000;
+    z-index: 9000 !important;
     overflow: hidden;
-    display: flex;
+    display: flex !important;
     align-items: center;
     /* ŞEFFAF panel — yarı saydam + blur (tabela efekti) */
-    background: rgba(15, 12, 10, 0.55);
+    background: rgba(15, 12, 10, 0.65) !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 26px;
     box-shadow: 
         0 10px 30px rgba(0, 0, 0, 0.5),
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
     font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
     pointer-events: none;
-    /* MASK — sol/sağ kenarda yazı fade-out ile kaybolur (tabela efekti) */
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+    /* MASK — sol/sağ kenarda yazı fade-out ile kaybolur */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 
 /* Atatürk görseli — ticker-bar DIŞINDA, sabit (mask'ten etkilenmez) */

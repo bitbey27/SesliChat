@@ -44,8 +44,8 @@ app.get('/health', (req, res) => {
 // Admin panelinden değiştirilebilir, tüm kullanıcılara broadcast edilir
 let tickerState = {
   text: 'CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ',
-  imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Mustafa_Kemal_Atat%C3%BCrk_1930.jpg/220px-Mustafa_Kemal_Atat%C3%BCrk_1930.jpg',
-  showFlag: false, // Türk bayrağı arka planı kapalı (şeffaf)
+  imageUrl: 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2250%22%20fill%3D%22%23E30A17%22/%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2250%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Ccircle%20cx%3D%2233%22%20cy%3D%2250%22%20r%3D%2213%22%20fill%3D%22%23E30A17%22/%3E%3Cpolygon%20points%3D%2250%2C50%2058%2C53%2062%2C58%2060%2C50%2062%2C42%2058%2C47%22%20fill%3D%22%23fff%22%20transform%3D%22rotate%2815%2050%2050%29%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2288%22%20font-family%3D%22Arial%22%20font-size%3D%2212%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%3EATAT%C3%9CRK%3C/text%3E%3C/svg%3E',
+  showFlag: false,
   enabled: true
 };
 
