@@ -7234,38 +7234,67 @@ body.theme-huzur-active .aurora-bg {
     overflow: hidden;
     display: flex !important;
     align-items: center;
-    /* ŞEFFAF panel — yarı saydam koyu (tabela efekti) */
-    background: rgba(20, 25, 40, 0.88) !important;
+    /* ŞEFFAF panel — neon ışıklı tabela */
+    background: rgba(15, 12, 25, 0.85) !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    /* NEON border — mor cyan karışımı */
+    border: 2px solid rgba(124, 92, 252, 0.7) !important;
     border-radius: 26px;
+    /* NEON glow — dış + iç */
     box-shadow: 
+        0 0 20px rgba(124, 92, 252, 0.6),
+        0 0 40px rgba(124, 92, 252, 0.3),
         0 10px 30px rgba(0, 0, 0, 0.6),
-        0 0 20px rgba(124, 92, 252, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        inset 0 0 20px rgba(124, 92, 252, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
     pointer-events: none;
+    /* CSS variable — animasyon için parent width */
+    --panel-width: 560px;
 }
 
-/* İçeride fade overlay — kenarda yazı yumuşak kaybolsun (separate element, mask yok) */
+/* Neon pulse animasyonu — tabela nefes alır gibi */
+@keyframes ticker-neon-pulse {
+    0%, 100% {
+        box-shadow: 
+            0 0 20px rgba(124, 92, 252, 0.6),
+            0 0 40px rgba(124, 92, 252, 0.3),
+            0 10px 30px rgba(0, 0, 0, 0.6),
+            inset 0 0 20px rgba(124, 92, 252, 0.15);
+        border-color: rgba(124, 92, 252, 0.7);
+    }
+    50% {
+        box-shadow: 
+            0 0 30px rgba(124, 92, 252, 0.9),
+            0 0 60px rgba(124, 92, 252, 0.5),
+            0 10px 30px rgba(0, 0, 0, 0.6),
+            inset 0 0 30px rgba(124, 92, 252, 0.25);
+        border-color: rgba(180, 140, 255, 0.9);
+    }
+}
+.ticker-bar {
+    animation: ticker-neon-pulse 3s ease-in-out infinite;
+}
+
+/* İçeride fade overlay — kenarda yazı yumuşak kaybolsun */
 .ticker-bar::before,
 .ticker-bar::after {
     content: '';
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 50px;
+    width: 60px;
     z-index: 5;
     pointer-events: none;
 }
 .ticker-bar::before {
     left: 0;
-    background: linear-gradient(to right, rgba(20, 25, 40, 1), rgba(20, 25, 40, 0));
+    background: linear-gradient(to right, rgba(15, 12, 25, 1) 0%, rgba(15, 12, 25, 0) 100%);
 }
 .ticker-bar::after {
     right: 0;
-    background: linear-gradient(to left, rgba(20, 25, 40, 1), rgba(20, 25, 40, 0));
+    background: linear-gradient(to left, rgba(15, 12, 25, 1) 0%, rgba(15, 12, 25, 0) 100%);
 }
 
 /* Atatürk görseli — ticker-bar DIŞINDA, sabit (mask'ten etkilenmez) */
@@ -7288,79 +7317,100 @@ body.theme-huzur-active .aurora-bg {
 /* Türk bayrağı arka planı yok */
 .ticker-flag-bg { display: none !important; }
 
-/* Kayan yazı içeriği — soldan girer, sağdan kaybolur */
+/* Kayan yazı içeriği — SOLDAN girer, SAĞDAN çıkar, loop olur */
 .ticker-content {
     position: absolute;
     top: 50%;
-    transform: translateY(-50%);
-    left: 100%;
+    left: 0;
     white-space: nowrap;
     z-index: 3;
-    animation: ticker-scroll 18s linear infinite;
+    /* Soldan girer (translateX -100%), sağdan çıkar (translateX panel-width) */
+    animation: ticker-scroll 15s linear infinite;
 }
 
 .ticker-text {
     display: inline-block;
     padding: 0 30px;
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    /* BEYAZ yazı + NEON mor glow */
     color: #fff;
     text-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.9),
-        0 0 8px rgba(0, 0, 0, 0.6);
+        0 0 4px rgba(255, 255, 255, 0.9),
+        0 0 10px rgba(255, 255, 255, 0.7),
+        0 0 20px rgba(124, 92, 252, 0.9),
+        0 0 30px rgba(124, 92, 252, 0.6),
+        0 0 40px rgba(124, 92, 252, 0.4),
+        0 2px 2px rgba(0, 0, 0, 0.8);
     text-transform: uppercase;
 }
 
 /* Sağdaki bayrak ikonu — kapalı */
 .ticker-flag-icon { display: none !important; }
 
+/* SOLDAN GİRER → SAĞDAN ÇIKAR → LOOP
+   0%: yazı parent'ın solunda (translateX -100% = kendi genişliği kadar sol)
+   100%: yazı parent'ın sağına geçti (translateX 560px = panel genişliği) */
 @keyframes ticker-scroll {
-    0% { transform: translate(0, -50%); }     /* panelin sağından başlar */
-    100% { transform: translate(-100%, -50%); } /* panelin soluna kadar kayar, mask ile kaybolur */
+    0% { transform: translate(-100%, -50%); }
+    100% { transform: translate(560px, -50%); }
 }
 
 /* Ticker kapalıyken gizle */
 .ticker-bar.hidden { display: none !important; }
 
 /* no-flag class — geri uyumluluk */
-.ticker-bar.no-flag { background: rgba(15, 12, 10, 0.55); }
+.ticker-bar.no-flag { background: rgba(15, 12, 25, 0.85) !important; }
 
 /* Mobil uyumluluk */
 @media (max-width: 968px) {
     .ticker-bar {
-        width: min(420px, 80vw);
+        width: 420px;
         height: 44px;
         top: 8px;
+        left: calc(50vw - 210px) !important;
+        --panel-width: 420px;
     }
-    .ticker-text { font-size: 13px; letter-spacing: 0.5px; padding: 0 20px; }
+    .ticker-text { font-size: 13px; letter-spacing: 1px; padding: 0 20px; }
     .ticker-attaturk {
         height: 36px;
         width: 36px;
         top: 12px;
         left: calc(50% - 210px - 40px);
     }
-    .ticker-content { animation-duration: 15s; }
+    .ticker-content { animation-duration: 12s; }
+    @keyframes ticker-scroll {
+        0% { transform: translate(-100%, -50%); }
+        100% { transform: translate(420px, -50%); }
+    }
 }
 
 @media (max-width: 768px) {
     .ticker-bar {
-        width: min(320px, 85vw);
+        width: 320px;
         height: 38px;
         top: 6px;
+        left: calc(50vw - 160px) !important;
         border-radius: 20px;
+        --panel-width: 320px;
     }
-    .ticker-text { font-size: 11px; padding: 0 14px; }
+    .ticker-text { font-size: 12px; padding: 0 14px; }
     .ticker-attaturk {
         height: 30px;
         width: 30px;
         top: 10px;
         left: calc(50% - 160px - 36px);
     }
-    .ticker-content { animation-duration: 12s; }
+    .ticker-content { animation-duration: 10s; }
+    @keyframes ticker-scroll {
+        0% { transform: translate(-100%, -50%); }
+        100% { transform: translate(320px, -50%); }
+    }
 }
 
 /* Erişilebilirlik */
 @media (prefers-reduced-motion: reduce) {
     .ticker-content { animation: none; left: 50%; transform: translate(-50%, -50%); }
+    .ticker-bar { animation: none; }
 }
