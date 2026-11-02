@@ -7220,97 +7220,98 @@ body.theme-huzur-active .aurora-bg {
 }
 
 /* ========================================================== */
-/* === KAYAN YAZI (TICKER) — Orta tabela, yazı içinden geçer === */
+/* === KAYAN YAZI (TICKER) — LED TABELA + Rainbow yazı     === */
 /* ========================================================== */
 
 .ticker-bar {
-    /* TAM ORTADA — sabit tabela panel */
+    /* TAM ORTADA — LED panel */
     position: fixed !important;
-    top: 14px;
-    left: calc(50vw - 280px) !important;
-    width: 560px;
-    height: 52px;
+    top: 18px;
+    left: calc(50vw - 290px) !important;
+    width: 580px;
+    height: 60px;
     z-index: 99999 !important;
     overflow: hidden;
     display: flex !important;
     align-items: center;
-    /* ŞEFFAF panel — neon ışıklı tabela */
-    background: rgba(15, 12, 25, 0.85) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    /* NEON border — mor cyan karışımı */
-    border: 2px solid rgba(124, 92, 252, 0.7) !important;
-    border-radius: 26px;
-    /* NEON glow — dış + iç */
+    /* LED PANEL — siyah mat arka plan */
+    background: #000 !important;
+    /* LED dot matrix pattern — küçük noktalar */
+    background-image: 
+        radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        radial-gradient(circle, rgba(124, 92, 252, 0.04) 1px, transparent 1px) !important;
+    background-size: 4px 4px, 8px 8px !important;
+    background-position: 0 0, 2px 2px !important;
+    /* KALIN siyah çerçeve (LED kasa) */
+    border: 6px solid #1a1a1a !important;
+    border-radius: 8px;
+    /* Dış neon glow + iç LED parıltısı */
     box-shadow: 
-        0 0 20px rgba(124, 92, 252, 0.6),
-        0 0 40px rgba(124, 92, 252, 0.3),
-        0 10px 30px rgba(0, 0, 0, 0.6),
-        inset 0 0 20px rgba(124, 92, 252, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+        0 0 30px rgba(124, 92, 252, 0.7),
+        0 0 60px rgba(255, 50, 130, 0.4),
+        0 12px 40px rgba(0, 0, 0, 0.8),
+        inset 0 0 30px rgba(0, 0, 0, 0.9),
+        inset 0 2px 0 rgba(255, 255, 255, 0.05);
+    font-family: 'Courier New', 'Consolas', monospace;
     pointer-events: none;
-    /* CSS variable — animasyon için parent width */
-    --panel-width: 560px;
 }
 
-/* Neon pulse animasyonu — tabela nefes alır gibi */
-@keyframes ticker-neon-pulse {
+/* LED pulse — parıltı animasyonu */
+@keyframes ticker-led-pulse {
     0%, 100% {
         box-shadow: 
-            0 0 20px rgba(124, 92, 252, 0.6),
-            0 0 40px rgba(124, 92, 252, 0.3),
-            0 10px 30px rgba(0, 0, 0, 0.6),
-            inset 0 0 20px rgba(124, 92, 252, 0.15);
-        border-color: rgba(124, 92, 252, 0.7);
+            0 0 30px rgba(124, 92, 252, 0.7),
+            0 0 60px rgba(255, 50, 130, 0.4),
+            0 12px 40px rgba(0, 0, 0, 0.8),
+            inset 0 0 30px rgba(0, 0, 0, 0.9);
     }
     50% {
         box-shadow: 
-            0 0 30px rgba(124, 92, 252, 0.9),
-            0 0 60px rgba(124, 92, 252, 0.5),
-            0 10px 30px rgba(0, 0, 0, 0.6),
-            inset 0 0 30px rgba(124, 92, 252, 0.25);
-        border-color: rgba(180, 140, 255, 0.9);
+            0 0 40px rgba(124, 92, 252, 0.9),
+            0 0 80px rgba(255, 50, 130, 0.5),
+            0 12px 40px rgba(0, 0, 0, 0.8),
+            inset 0 0 30px rgba(0, 0, 0, 0.9);
     }
 }
 .ticker-bar {
-    animation: ticker-neon-pulse 3s ease-in-out infinite;
+    animation: ticker-led-pulse 2.5s ease-in-out infinite;
 }
 
-/* İçeride fade overlay — kenarda yazı yumuşak kaybolsun */
+/* LED kenar fade overlay — yazı panel kenarında yumuşak kaybolsun */
 .ticker-bar::before,
 .ticker-bar::after {
     content: '';
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 60px;
+    width: 50px;
     z-index: 5;
     pointer-events: none;
 }
 .ticker-bar::before {
     left: 0;
-    background: linear-gradient(to right, rgba(15, 12, 25, 1) 0%, rgba(15, 12, 25, 0) 100%);
+    background: linear-gradient(to right, #000 0%, rgba(0,0,0,0) 100%);
 }
 .ticker-bar::after {
     right: 0;
-    background: linear-gradient(to left, rgba(15, 12, 25, 1) 0%, rgba(15, 12, 25, 0) 100%);
+    background: linear-gradient(to left, #000 0%, rgba(0,0,0,0) 100%);
 }
 
-/* Atatürk görseli — ticker-bar DIŞINDA, sabit (mask'ten etkilenmez) */
+/* Atatürk görseli — LED panelin SOLUNDA sabit */
 .ticker-attaturk {
     position: fixed;
-    top: 18px;
-    left: calc(50% - 280px - 50px);  /* ticker'ın soluna konumlan */
-    transform: translateX(-100%);
-    height: 44px;
-    width: 44px;
+    top: 22px;
+    left: calc(50vw - 350px);
+    height: 50px;
+    width: 50px;
     object-fit: cover;
-    border-radius: 50%;
-    opacity: 1;
+    border-radius: 4px;
     z-index: 9001;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 16px rgba(255, 255, 255, 0.1);
+    border: 3px solid #1a1a1a;
+    box-shadow: 
+        0 0 12px rgba(227, 10, 23, 0.7),
+        0 0 24px rgba(227, 10, 23, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.6);
     flex-shrink: 0;
 }
 
@@ -7324,25 +7325,37 @@ body.theme-huzur-active .aurora-bg {
     left: 0;
     white-space: nowrap;
     z-index: 3;
-    /* Soldan girer (translateX -100%), sağdan çıkar (translateX panel-width) */
-    animation: ticker-scroll 15s linear infinite;
+    animation: ticker-scroll 16s linear infinite;
 }
 
 .ticker-text {
     display: inline-block;
-    padding: 0 30px;
-    font-size: 16px;
+    padding: 0 40px;
+    /* LED pixel font */
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    font-size: 22px;
     font-weight: 900;
-    letter-spacing: 1.5px;
-    /* BEYAZ yazı + NEON mor glow */
-    color: #fff;
-    text-shadow:
-        0 0 4px rgba(255, 255, 255, 0.9),
-        0 0 10px rgba(255, 255, 255, 0.7),
-        0 0 20px rgba(124, 92, 252, 0.9),
-        0 0 30px rgba(124, 92, 252, 0.6),
-        0 0 40px rgba(124, 92, 252, 0.4),
-        0 2px 2px rgba(0, 0, 0, 0.8);
+    letter-spacing: 3px;
+    /* RAINBOW gradient text (LED renkli harfler) */
+    background: linear-gradient(90deg,
+        #ff0080 0%,    /* pink */
+        #ff8c00 16%,   /* orange */
+        #ffd700 32%,   /* yellow */
+        #00ff00 48%,   /* green */
+        #00bfff 64%,   /* blue */
+        #8a2be2 80%,   /* purple */
+        #ff0080 100%   /* pink (loop) */
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* LED glow — drop-shadow (background-clip ile çalışır) */
+    filter: 
+        drop-shadow(0 0 3px rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 6px rgba(255, 255, 255, 0.6))
+        drop-shadow(0 0 10px rgba(124, 92, 252, 0.7))
+        drop-shadow(0 0 20px rgba(255, 50, 130, 0.4));
     text-transform: uppercase;
 }
 
@@ -7350,36 +7363,36 @@ body.theme-huzur-active .aurora-bg {
 .ticker-flag-icon { display: none !important; }
 
 /* SOLDAN GİRER → SAĞDAN ÇIKAR → LOOP
-   0%: yazı parent'ın solunda (translateX -100% = kendi genişliği kadar sol)
-   100%: yazı parent'ın sağına geçti (translateX 560px = panel genişliği) */
+   0%: yazı parent'ın solunda (translateX -100%)
+   100%: yazı parent'ın sağına geçti (translateX panel-width) */
 @keyframes ticker-scroll {
     0% { transform: translate(-100%, -50%); }
-    100% { transform: translate(560px, -50%); }
+    100% { transform: translate(580px, -50%); }
 }
 
 /* Ticker kapalıyken gizle */
 .ticker-bar.hidden { display: none !important; }
 
 /* no-flag class — geri uyumluluk */
-.ticker-bar.no-flag { background: rgba(15, 12, 25, 0.85) !important; }
+.ticker-bar.no-flag { background: #000 !important; }
 
 /* Mobil uyumluluk */
 @media (max-width: 968px) {
     .ticker-bar {
         width: 420px;
-        height: 44px;
-        top: 8px;
-        left: calc(50vw - 210px) !important;
-        --panel-width: 420px;
-    }
-    .ticker-text { font-size: 13px; letter-spacing: 1px; padding: 0 20px; }
-    .ticker-attaturk {
-        height: 36px;
-        width: 36px;
+        height: 50px;
         top: 12px;
-        left: calc(50% - 210px - 40px);
+        left: calc(50vw - 210px) !important;
+        border-width: 4px;
     }
-    .ticker-content { animation-duration: 12s; }
+    .ticker-text { font-size: 17px; letter-spacing: 2px; padding: 0 24px; }
+    .ticker-attaturk {
+        height: 42px;
+        width: 42px;
+        top: 16px;
+        left: calc(50vw - 260px);
+    }
+    .ticker-content { animation-duration: 13s; }
     @keyframes ticker-scroll {
         0% { transform: translate(-100%, -50%); }
         100% { transform: translate(420px, -50%); }
@@ -7389,20 +7402,20 @@ body.theme-huzur-active .aurora-bg {
 @media (max-width: 768px) {
     .ticker-bar {
         width: 320px;
-        height: 38px;
-        top: 6px;
+        height: 42px;
+        top: 8px;
         left: calc(50vw - 160px) !important;
-        border-radius: 20px;
-        --panel-width: 320px;
+        border-width: 3px;
+        border-radius: 6px;
     }
-    .ticker-text { font-size: 12px; padding: 0 14px; }
+    .ticker-text { font-size: 13px; letter-spacing: 1.5px; padding: 0 16px; }
     .ticker-attaturk {
-        height: 30px;
-        width: 30px;
-        top: 10px;
-        left: calc(50% - 160px - 36px);
+        height: 32px;
+        width: 32px;
+        top: 13px;
+        left: calc(50vw - 200px);
     }
-    .ticker-content { animation-duration: 10s; }
+    .ticker-content { animation-duration: 11s; }
     @keyframes ticker-scroll {
         0% { transform: translate(-100%, -50%); }
         100% { transform: translate(320px, -50%); }
