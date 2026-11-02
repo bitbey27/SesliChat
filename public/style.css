@@ -7220,110 +7220,130 @@ body.theme-huzur-active .aurora-bg {
 }
 
 /* ========================================================== */
-/* === KAYAN YAZI (TICKER) — Sadece orta sütun, şeffaf, Atatürk arka plan === */
+/* === KAYAN YAZI (TICKER) — Orta tabela, yazı içinden geçer === */
 /* ========================================================== */
 
 .ticker-bar {
+    /* TAM ORTADA — sabit tabela panel */
     position: fixed;
-    top: 0;
-    /* SADECE ORTA SÜTUN GENİŞLİĞİNDE — sol/sağ sütunu aşmaz */
-    left: 240px;   /* sol sidebar genişliği */
-    right: 0;      /* chat sağda varsa otomatik ayarlanır */
-    height: 48px;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(560px, 70vw);
+    height: 52px;
     z-index: 9000;
     overflow: hidden;
     display: flex;
     align-items: center;
-    /* ŞEFFAF arka plan — sadece yazı geçer */
-    background: transparent;
-    border: none;
-    box-shadow: none;
+    /* ŞEFFAF panel — yarı saydam + blur (tabela efekti) */
+    background: rgba(15, 12, 10, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 26px;
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
     font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
-    pointer-events: none;  /* ticker altındaki içeriğe tıklamayı engellemesin */
-}
-
-/* Atatürk görseli — arka planda, yazının altında (watermark efekti) */
-.ticker-attaturk {
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 44px;
-    width: auto;
-    object-fit: contain;
-    opacity: 0.45;
-    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6));
-    z-index: 1;
     pointer-events: none;
-    border-radius: 4px;
+    /* MASK — sol/sağ kenarda yazı fade-out ile kaybolur (tabela efekti) */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
 }
 
-/* Türk bayrağı arka planı artık yok — kaldırıldı */
+/* Atatürk görseli — ticker-bar DIŞINDA, sabit (mask'ten etkilenmez) */
+.ticker-attaturk {
+    position: fixed;
+    top: 18px;
+    left: calc(50% - 280px - 50px);  /* ticker'ın soluna konumlan */
+    transform: translateX(-100%);
+    height: 44px;
+    width: 44px;
+    object-fit: cover;
+    border-radius: 50%;
+    opacity: 1;
+    z-index: 9001;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 16px rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+/* Türk bayrağı arka planı yok */
 .ticker-flag-bg { display: none !important; }
 
-/* Kayan yazı içeriği */
+/* Kayan yazı içeriği — soldan girer, sağdan kaybolur */
 .ticker-content {
     position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
     left: 100%;
-    width: auto;
     white-space: nowrap;
     z-index: 3;
-    animation: ticker-scroll 28s linear infinite;
+    animation: ticker-scroll 18s linear infinite;
 }
 
 .ticker-text {
     display: inline-block;
     padding: 0 30px;
-    font-size: 17px;
-    font-weight: 900;
-    letter-spacing: 1.5px;
-    /* Yazı şeffaf arka planda — kontrast için güçlü gölge */
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
     color: #fff;
     text-shadow:
-        0 1px 3px rgba(0, 0, 0, 1),
-        0 0 2px rgba(0, 0, 0, 1),
-        1px 1px 0 rgba(0, 0, 0, 0.95),
-        -1px -1px 0 rgba(0, 0, 0, 0.95),
-        0 2px 8px rgba(0, 0, 0, 0.7);
+        0 1px 2px rgba(0, 0, 0, 0.9),
+        0 0 8px rgba(0, 0, 0, 0.6);
     text-transform: uppercase;
 }
 
-/* Sağdaki bayrak ikonu — kaldırıldı (kullanıcı istemedi) */
+/* Sağdaki bayrak ikonu — kapalı */
 .ticker-flag-icon { display: none !important; }
 
 @keyframes ticker-scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-200%); }
+    0% { transform: translate(0, -50%); }     /* panelin sağından başlar */
+    100% { transform: translate(-100%, -50%); } /* panelin soluna kadar kayar, mask ile kaybolur */
 }
 
 /* Ticker kapalıyken gizle */
 .ticker-bar.hidden { display: none !important; }
 
-/* no-flag class artık gerekmez ama geri uyumluluk için */
-.ticker-bar.no-flag { background: transparent; }
+/* no-flag class — geri uyumluluk */
+.ticker-bar.no-flag { background: rgba(15, 12, 10, 0.55); }
 
-/* Mobil uyumluluk — sol panel mobilde daha dar olabilir */
+/* Mobil uyumluluk */
 @media (max-width: 968px) {
     .ticker-bar {
-        left: 72px; /* mobilde sadece server sidebar genişliği */
-        height: 40px;
+        width: min(420px, 80vw);
+        height: 44px;
+        top: 8px;
     }
-    .ticker-text { font-size: 13px; letter-spacing: 1px; padding: 0 20px; }
-    .ticker-attaturk { height: 36px; }
-    .ticker-content { animation-duration: 22s; }
+    .ticker-text { font-size: 13px; letter-spacing: 0.5px; padding: 0 20px; }
+    .ticker-attaturk {
+        height: 36px;
+        width: 36px;
+        top: 12px;
+        left: calc(50% - 210px - 40px);
+    }
+    .ticker-content { animation-duration: 15s; }
 }
 
 @media (max-width: 768px) {
     .ticker-bar {
-        left: 64px;
-        right: 0;
-        height: 36px;
+        width: min(320px, 85vw);
+        height: 38px;
+        top: 6px;
+        border-radius: 20px;
     }
-    .ticker-text { font-size: 12px; }
-    .ticker-attaturk { height: 30px; }
+    .ticker-text { font-size: 11px; padding: 0 14px; }
+    .ticker-attaturk {
+        height: 30px;
+        width: 30px;
+        top: 10px;
+        left: calc(50% - 160px - 36px);
+    }
+    .ticker-content { animation-duration: 12s; }
 }
 
-/* Erişilebilirlik — prefers-reduced-motion */
+/* Erişilebilirlik */
 @media (prefers-reduced-motion: reduce) {
-    .ticker-content { animation: none; }
+    .ticker-content { animation: none; left: 50%; transform: translate(-50%, -50%); }
 }
