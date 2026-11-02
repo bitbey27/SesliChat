@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v47">
+    <link rel="stylesheet" href="style.css?v48">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -16,6 +16,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 </head>
 <body>
+    <!-- === KAYAN YAZI (TICKER) — body direct çocuğu, app-screen gizli bile olsa görünür === -->
+    <!-- Atatürk görseli — Türk bayrağı temalı inline SVG (her zaman yüklenir) -->
+    <img id="ticker-attaturk" class="ticker-attaturk" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2250%22%20fill%3D%22%23E30A17%22/%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2250%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Ccircle%20cx%3D%2233%22%20cy%3D%2250%22%20r%3D%2213%22%20fill%3D%22%23E30A17%22/%3E%3Cpolygon%20points%3D%2250%2C50%2058%2C53%2062%2C58%2060%2C50%2062%2C42%2058%2C47%22%20fill%3D%22%23fff%22%20transform%3D%22rotate%2815%2050%2050%29%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2288%22%20font-family%3D%22Arial%22%20font-size%3D%2212%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%3EATAT%C3%9CRK%3C/text%3E%3C/svg%3E" alt="Mustafa Kemal Atatürk">
+    <!-- Tabela panel — şeffaf, sadece yazı kayar -->
+    <div id="ticker-bar" class="ticker-bar">
+        <div class="ticker-content">
+            <span id="ticker-text" class="ticker-text">CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ</span>
+        </div>
+    </div>
+
     <!-- Giriş Ekranı -->
     <div id="login-screen" class="login-screen">
         <div class="login-bg-effects">
@@ -116,15 +126,7 @@
             <div class="neon-stripe neon-stripe-5"></div>
         </div>
 
-        <!-- === KAYAN YAZI (TICKER) — Orta tabela, yazı içinden geçer === -->
-        <!-- Atatürk görseli — Türk bayrağı temalı inline SVG (her zaman yüklenir) -->
-        <img id="ticker-attaturk" class="ticker-attaturk" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2250%22%20fill%3D%22%23E30A17%22/%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2250%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Ccircle%20cx%3D%2233%22%20cy%3D%2250%22%20r%3D%2213%22%20fill%3D%22%23E30A17%22/%3E%3Cpolygon%20points%3D%2250%2C50%2058%2C53%2062%2C58%2060%2C50%2062%2C42%2058%2C47%22%20fill%3D%22%23fff%22%20transform%3D%22rotate%2815%2050%2050%29%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2288%22%20font-family%3D%22Arial%22%20font-size%3D%2212%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%3EATAT%C3%9CRK%3C/text%3E%3C/svg%3E" alt="Mustafa Kemal Atatürk">
-        <!-- Tabela panel — şeffaf, sadece yazı kayar -->
-        <div id="ticker-bar" class="ticker-bar">
-            <div class="ticker-content">
-                <span id="ticker-text" class="ticker-text">CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ</span>
-            </div>
-        </div>
+        <!-- === KAYAN YAZI (TICKER) app-screen içinde DEĞİL — body direct çocuğu olarak yukarı taşındı === -->
 
         <!-- Şimşek (CSS flash + arka plan) -->
         <div id="theme-lightning" class="theme-lightning hidden">
@@ -735,7 +737,7 @@
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- v32: TGS sticker seti (Lottie) — chat emoji sekmesi + manifest + inline render -->
-    <script src="app-v32.js?v33"></script>
+    <script src="app-v32.js?v34"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
     <!-- Premium Temalar v15: hayal1 default tema -->
