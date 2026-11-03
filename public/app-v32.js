@@ -251,6 +251,10 @@ class VoiceChatApp {
         this.ytPendingThumb = null;
         this.currentVideoId = null;
         this.currentTrackName = '';
+        // YouTube autoplay-policy unlock durumu — ilk kullanıcı etkileşimine kadar mute
+        this._ytAudioUnlocked = false;
+        this._ytUnlockHandler = null;
+        this._ytUnlockToastShown = false;
         this.currentThumbUrl = '';
         this.youtubeSearchEnabled = false;
         this.listenerPlayers = new Map();
@@ -3660,20 +3664,74 @@ class VoiceChatApp {
                     onReady: (e) => {
                         data.ready = true;
                         data.player = e.target;
-                        // Başlangıç ses seviyesi
-                        e.target.setVolume(70);
-                        // Autoplay başarılıysa mute durumunu uygula
-                        if (data.userMuted) e.target.mute();
+                        const vol = (typeof data.volume === 'number') ? data.volume : 70;
+                        e.target.setVolume(vol);
+                        if (data.userMuted) {
+                            // Kullanıcı kendi mute etmiş — kalsın
+                            e.target.mute();
+                            data.mutedPendingGesture = false;
+                        } else if (!this._ytAudioUnlocked) {
+                            // AUTOPLAY POLICY FIX: muted autoplay tarayıcılar tarafından
+                            // her zaman izin verilir. Önce mute → playVideo → ilk kullanıcı
+                            // etkileşiminde (click/keydown/touch) unmute.
+                            e.target.mute();
+                            try { e.target.playVideo(); } catch (_) {}
+                            data.mutedPendingGesture = true;
+                            this._unlockYtAudioOnGesture();
+                        } else {
+                            // Kullanıcı zaten etkileşim yapmış — direkt sesli çal
+                            try { e.target.playVideo(); } catch (_) {}
+                            data.mutedPendingGesture = false;
+                        }
                     },
                     onStateChange: (e) => {
-                        // Dinleyici tarafı kendi video'sunu yönetir — DJ status'u override edebilir
-                        // Boş bırakıyoruz; sync onMusicStatusFromPeer'da yönetiliyor
+                        // Sync onMusicStatusFromPeer'da yönetiliyor
+                    },
+                    onError: (e) => {
+                        const code = e.data;
+                        if (code === 101 || code === 150) {
+                            this.showToast('⚠️', 'Bu video gömülü oynatmayı desteklemiyor. DJ başka video seçmeli.');
+                        } else if (code === 2 || code === 5 || code === 100) {
+                            this.showToast('⚠️', 'Müzik videosu yüklenemedi (geçersiz veya private).');
+                        } else {
+                            console.warn('[Music] Listener YT hata kodu:', code);
+                        }
                     }
                 }
             });
             data.player = player;
         } catch (e) {
             console.warn('Listener YT player oluşturulamadı:', e);
+        }
+    }
+
+    // =========================================
+    // YouTube autoplay-policy unlock — ilk kullanıcı etkileşiminde
+    // tüm mute-bekleyen listener player'ları unmute eder
+    // =========================================
+    _unlockYtAudioOnGesture() {
+        if (this._ytUnlockHandler) return;  // zaten kurulmuş
+        const handler = () => {
+            this._ytAudioUnlocked = true;
+            this.listenerPlayers.forEach((data) => {
+                if (data && data.mutedPendingGesture && data.player && data.ready && !data.userMuted) {
+                    try { data.player.unMute(); } catch (_) {}
+                    data.mutedPendingGesture = false;
+                }
+            });
+            document.removeEventListener('click', handler);
+            document.removeEventListener('keydown', handler);
+            document.removeEventListener('touchstart', handler);
+            this._ytUnlockHandler = null;
+        };
+        this._ytUnlockHandler = handler;
+        document.addEventListener('click', handler);
+        document.addEventListener('keydown', handler);
+        document.addEventListener('touchstart', handler, { passive: true });
+        // İlk seferde bilgi toast'ı
+        if (!this._ytUnlockToastShown) {
+            this.showToast('🎵', 'DJ müzik açtı — sesi duymak için ekrana bir kez dokunun');
+            this._ytUnlockToastShown = true;
         }
     }
 
