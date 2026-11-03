@@ -8,7 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v53">
+    <!-- Neon yazı karakterleri (admin panelinden seçilir) -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Audiowide&family=Beon&family=Bebas+Neue&family=Bungee&family=Bungee+Shade&family=Cinzel+Decorative:wght@400;700&family=Delius&family=Faster+One&family=Lobster&family=Major+Mono+Display&family=Monoton&family=Montserrat:wght@400;700&family=Orbitron:wght@400;700&family=Pacifico&family=Pirata+One&family=Playfair+Display:wght@400;700&family=Press+Start+2P&family=Sofia&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v54">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -23,6 +25,7 @@
     <div id="ticker-bar" class="ticker-bar">
         <div class="ticker-content">
             <span id="ticker-text" class="ticker-text">CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ</span>
+            <span id="ticker-text-2" class="ticker-text">CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ</span>
         </div>
     </div>
 
@@ -495,9 +498,23 @@
             <!-- === KAYAN YAZI (TICKER) YÖNETİMİ === -->
             <div class="settings-group">
                 <h4>📢 Kayan Yazı (Neon Harf)</h4>
-                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 12px;">Üst ortada içi boş neon harflerle kayan yazı: arka plan görünür, sadece harf çerçevesi seçilen neon renkte olur.</p>
-                <div style="display:flex; flex-direction:column; gap:8px;">
+                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 12px;">Üst ortada içi boş neon harflerle kayan yazı: arka plan görünür, sadece harf çerçevesi seçilen neon renkte olur. Sağa doğru sürekli kayar.</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
                     <textarea id="admin-ticker-text" class="modern-input" rows="3" placeholder="Kayan yazı metni... (örn: CUMHURİYET BAYRAMINIZ KUTLU OLSUN)" style="resize:vertical; min-height:60px;"></textarea>
+
+                    <!-- Yazı karakteri seçici — JS ile doldurulur -->
+                    <div>
+                        <label style="font-size:12px; display:block; margin-bottom:4px; color: var(--text-primary);">Yazı Karakteri:</label>
+                        <div id="ticker-font-grid" class="ticker-font-grid"></div>
+                    </div>
+
+                    <!-- Boyut slider -->
+                    <div>
+                        <label style="font-size:12px; display:block; margin-bottom:4px; color: var(--text-primary);">Yazı Boyutu: <span id="ticker-size-val">24</span>px</label>
+                        <input type="range" id="admin-ticker-size" min="14" max="56" value="24" step="1">
+                    </div>
+
+                    <!-- Renk seçici + preset + aktif -->
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
                             <input type="color" id="admin-ticker-color" value="#b450ff"> Neon Rengi
@@ -514,6 +531,7 @@
                             <input type="checkbox" id="admin-ticker-enabled" checked> Aktif
                         </label>
                     </div>
+
                     <input type="text" id="admin-ticker-image" class="modern-input" placeholder="Görsel URL (boş = sadece neon yazı)">
                     <button id="admin-ticker-save-btn" class="btn-primary">📢 Kayan Yazıyı Yayınla</button>
                 </div>
@@ -745,7 +763,7 @@
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- v32: TGS sticker seti (Lottie) — chat emoji sekmesi + manifest + inline render -->
-    <script src="app-v32.js?v36"></script>
+    <script src="app-v32.js?v37"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
     <!-- Premium Temalar v15: hayal1 default tema -->

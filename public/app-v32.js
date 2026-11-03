@@ -2,6 +2,33 @@
 // SesliChat - Ana Uygulama Mantığı
 // =========================================
 
+// === Kayan yazı (ticker) için neon font listesi ===
+// Her biri Google Fonts'tan yüklenir (index.html <link>)
+// Görseldeki 20 neon yazı karakterine karşılık gelen seçmeler
+const TICKER_FONTS = [
+    { id: 'Courier',   family: "'Courier New', monospace",           label: 'Courier (default)' },
+    { id: 'Beon',      family: "'Beon', monospace",                  label: 'Beon' },
+    { id: 'Monoton',   family: "'Monoton', cursive",                label: 'Monoton' },
+    { id: 'Sofia',     family: "'Sofia', cursive",                  label: 'Sofia' },
+    { id: 'Delius',    family: "'Delius', cursive",                 label: 'Delius' },
+    { id: 'Montserrat',family: "'Montserrat', sans-serif",         label: 'Montserrat' },
+    { id: 'Pacifico',  family: "'Pacifico', cursive",              label: 'Pacifico' },
+    { id: 'Lobster',   family: "'Lobster', cursive",               label: 'Lobster' },
+    { id: 'Bungee',    family: "'Bungee', cursive",                label: 'Bungee' },
+    { id: 'Bungee Shade', family: "'Bungee Shade', cursive",       label: 'Bungee Shade' },
+    { id: 'Press Start 2P', family: "'Press Start 2P', monospace", label: 'Press Start' },
+    { id: 'VT323',     family: "'VT323', monospace",                label: 'VT323' },
+    { id: 'Major Mono',family: "'Major Mono Display', monospace",  label: 'Major Mono' },
+    { id: 'Orbitron',  family: "'Orbitron', sans-serif",           label: 'Orbitron' },
+    { id: 'Audiowide', family: "'Audiowide', cursive",             label: 'Audiowide' },
+    { id: 'Faster One',family: "'Faster One', cursive",            label: 'Faster One' },
+    { id: 'Bebas Neue',family: "'Bebas Neue', sans-serif",         label: 'Bebas Neue' },
+    { id: 'Anton',     family: "'Anton', sans-serif",               label: 'Anton' },
+    { id: 'Cinzel Deco',family: "'Cinzel Decorative', serif",      label: 'Cinzel Deco' },
+    { id: 'Pirata One',family: "'Pirata One', cursive",            label: 'Pirata One' },
+    { id: 'Playfair',  family: "'Playfair Display', serif",        label: 'Playfair' },
+];
+
 class VoiceChatApp {
     constructor() {
         this.ws = null;
@@ -158,10 +185,14 @@ class VoiceChatApp {
         this.adminTickerText = document.getElementById('admin-ticker-text');
         this.adminTickerImage = document.getElementById('admin-ticker-image');
         this.adminTickerColor = document.getElementById('admin-ticker-color');
+        this.adminTickerSize = document.getElementById('admin-ticker-size');
+        this.adminTickerSizeVal = document.getElementById('ticker-size-val');
+        this.tickerFontGrid = document.getElementById('ticker-font-grid');
         this.adminTickerEnabled = document.getElementById('admin-ticker-enabled');
         this.adminTickerSaveBtn = document.getElementById('admin-ticker-save-btn');
         this.tickerBar = document.getElementById('ticker-bar');
         this.tickerText = document.getElementById('ticker-text');
+        this.tickerText2 = document.getElementById('ticker-text-2');
         this.tickerAttaturk = document.getElementById('ticker-attaturk');
 
         // Emoji
@@ -379,6 +410,8 @@ class VoiceChatApp {
                     text: (this.adminTickerText.value || '').trim(),
                     imageUrl: (this.adminTickerImage.value || '').trim(),
                     color: (this.adminTickerColor && this.adminTickerColor.value) ? this.adminTickerColor.value : '#b450ff',
+                    font: this.currentTickerFont || 'Beon',
+                    size: parseInt(this.adminTickerSize && this.adminTickerSize.value) || 24,
                     enabled: this.adminTickerEnabled.checked
                 };
                 if (!tickerData.text && tickerData.enabled) {
@@ -393,6 +426,38 @@ class VoiceChatApp {
             });
         }
 
+        // === TICKER: Font grid'i doldur ===
+        if (this.tickerFontGrid) {
+            this.tickerFontGrid.innerHTML = '';
+            TICKER_FONTS.forEach(f => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ticker-font-btn';
+                btn.dataset.fontId = f.id;
+                btn.style.fontFamily = f.family;
+                btn.textContent = f.label;
+                btn.title = f.label;
+                btn.addEventListener('click', () => {
+                    this.currentTickerFont = f.id;
+                    document.querySelectorAll('.ticker-font-btn').forEach(b => b.classList.toggle('active', b === btn));
+                    // Canlı önizleme — ticker'da hemen uygulansın
+                    if (this.tickerBar) {
+                        this.tickerBar.style.setProperty('--ticker-font', f.family);
+                    }
+                });
+                this.tickerFontGrid.appendChild(btn);
+            });
+        }
+
+        // === TICKER: Boyut slider — canlı önizleme ===
+        if (this.adminTickerSize) {
+            this.adminTickerSize.addEventListener('input', () => {
+                const v = parseInt(this.adminTickerSize.value) || 24;
+                if (this.adminTickerSizeVal) this.adminTickerSizeVal.textContent = v;
+                if (this.tickerBar) this.tickerBar.style.setProperty('--ticker-size', v + 'px');
+            });
+        }
+
         // === TICKER: Neon renk preset butonları (admin) ===
         document.querySelectorAll('.ticker-color-preset').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -400,12 +465,15 @@ class VoiceChatApp {
                 if (!c) return;
                 if (this.adminTickerColor) this.adminTickerColor.value = c;
                 document.querySelectorAll('.ticker-color-preset').forEach(b => b.classList.toggle('active', b === btn));
+                // Canlı önizleme
+                if (this.tickerBar) this.tickerBar.style.setProperty('--ticker-color', c);
             });
         });
-        // Elle renk seçilince preset seçimini temizle
+        // Elle renk seçilince preset seçimini temizle + canlı önizleme
         if (this.adminTickerColor) {
             this.adminTickerColor.addEventListener('input', () => {
                 document.querySelectorAll('.ticker-color-preset').forEach(b => b.classList.remove('active'));
+                if (this.tickerBar) this.tickerBar.style.setProperty('--ticker-color', this.adminTickerColor.value);
             });
         }
 
@@ -2632,20 +2700,36 @@ class VoiceChatApp {
         }
         this.tickerBar.classList.remove('hidden');
         
-        // Neon rengi — CSS değişkeni ile harf çerçevesinin rengi
+        // Neon rengi
         const neonColor = ticker.color || '#b450ff';
         this.tickerBar.style.setProperty('--ticker-color', neonColor);
         
-        // Yazı güncelle + animasyonu yeniden başlat (yeni metin için)
-        if (ticker.text && this.tickerText) {
-            this.tickerText.textContent = ticker.text;
-            // Animasyonu yeniden başlat — yeni metin için translate sıfırla
-            const content = this.tickerText.parentElement;
+        // Font + boyut — CSS değişkenleri
+        const fontId = ticker.font || 'Beon';
+        const fontDef = TICKER_FONTS.find(f => f.id === fontId) || TICKER_FONTS[1];
+        this.tickerBar.style.setProperty('--ticker-font', fontDef.family);
+        const fontSize = Math.max(14, Math.min(56, parseInt(ticker.size) || 24));
+        this.tickerBar.style.setProperty('--ticker-size', fontSize + 'px');
+        this.currentTickerFont = fontId;
+        
+        // Yazı güncelle (iki kopya — gapsiz marquee için) + animasyonu yeniden başlat
+        if (ticker.text) {
+            if (this.tickerText) this.tickerText.textContent = ticker.text;
+            if (this.tickerText2) this.tickerText2.textContent = ticker.text;
+            const content = this.tickerText ? this.tickerText.parentElement : null;
             if (content) {
                 content.style.animation = 'none';
-                // Force reflow
-                void content.offsetWidth;
+                void content.offsetWidth;  // force reflow
                 content.style.animation = '';
+                // Animasyon süresini metin genişliğine göre ayarla — hız sabit (~70px/s)
+                // requestAnimationFrame ile ölç (font yüklenmiş halde)
+                requestAnimationFrame(() => {
+                    const w = this.tickerText ? this.tickerText.offsetWidth : 0;
+                    if (w > 0) {
+                        const duration = Math.max(8, Math.min(60, w / 70));
+                        content.style.animationDuration = duration + 's';
+                    }
+                });
             }
         }
         
@@ -2678,6 +2762,16 @@ class VoiceChatApp {
         document.querySelectorAll('.ticker-color-preset').forEach(b => {
             b.classList.toggle('active', (b.dataset.color || '').toLowerCase() === neonColor.toLowerCase());
         });
+        // Font grid aktifliği
+        const fontId = ticker.font || 'Beon';
+        this.currentTickerFont = fontId;
+        document.querySelectorAll('.ticker-font-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.fontId === fontId);
+        });
+        // Boyut slider
+        const fontSize = Math.max(14, Math.min(56, parseInt(ticker.size) || 24));
+        if (this.adminTickerSize) this.adminTickerSize.value = fontSize;
+        if (this.adminTickerSizeVal) this.adminTickerSizeVal.textContent = fontSize;
         if (this.adminTickerEnabled) this.adminTickerEnabled.checked = ticker.enabled !== false;
     }
     

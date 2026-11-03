@@ -42,11 +42,14 @@ app.get('/health', (req, res) => {
 
 // === TICKER (Kayan Yazı) STATE ===
 // Admin panelinden değiştirilebilir, tüm kullanıcılara broadcast edilir
-// Neon harf: içi boş, sadece harf çerçevesi neon renkte — color admin panelinden değişir
+// Neon harf: içi boş, sadece harf çerçevesi neon renkte
+// color / font / size admin panelinden değişir
 let tickerState = {
   text: 'CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ',
   imageUrl: '',
   color: '#b450ff',
+  font: 'Beon',
+  size: 24,
   enabled: true
 };
 
@@ -493,6 +496,11 @@ wss.on('connection', (ws) => {
             if (typeof message.ticker.text === 'string') tickerState.text = message.ticker.text;
             if (typeof message.ticker.imageUrl === 'string') tickerState.imageUrl = message.ticker.imageUrl;
             if (typeof message.ticker.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(message.ticker.color)) tickerState.color = message.ticker.color;
+            if (typeof message.ticker.font === 'string' && message.ticker.font.length <= 40) tickerState.font = message.ticker.font;
+            if (typeof message.ticker.size === 'number' || (typeof message.ticker.size === 'string' && /^\d+$/.test(message.ticker.size))) {
+              const s = parseInt(message.ticker.size);
+              if (s >= 10 && s <= 80) tickerState.size = s;
+            }
             if (typeof message.ticker.enabled === 'boolean') tickerState.enabled = message.ticker.enabled;
           }
           // Tüm kullanıcılara broadcast

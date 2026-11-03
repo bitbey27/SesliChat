@@ -7221,8 +7221,10 @@ body.theme-huzur-active .aurora-bg {
 
 /* ========================================================== */
 /* === KAYAN YAZI (TICKER) — İÇİ BOŞ NEON HARFLER          === */
-/* === Panel YOK, çerçeve YOK, glow YOK — sadece yazı     === */
-/* === Renk: --ticker-color (admin panelinden değişir)    === */
+/* === Panel/çerçeve/glow YOK — sadece yazı               === */
+/* === Renk: --ticker-color                                === */
+/* === Font: --ticker-font   Boyut: --ticker-size          === */
+/* === (hepsi admin panelinden değişir)                    === */
 /* ========================================================== */
 
 .ticker-bar {
@@ -7243,14 +7245,13 @@ body.theme-huzur-active .aurora-bg {
     border-radius: 0 !important;
     box-shadow: none !important;
     animation: none !important;
-    font-family: 'Courier New', 'Consolas', monospace;
     pointer-events: none;
     /* Yazı kenarlarda yumuşakça kaybolsun (her arka planda çalışır) */
     -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 50px, #000 calc(100% - 50px), transparent 100%);
     mask-image: linear-gradient(to right, transparent 0%, #000 50px, #000 calc(100% - 50px), transparent 100%);
 }
 
-/* Atatürk görseli — admin URL girerse görünür (varsayılan kapalı), çerçevesiz */
+/* Atatürk görseli — admin URL girerse görünür (varsayılan kapalı) */
 .ticker-attaturk {
     position: fixed;
     top: 22px;
@@ -7265,52 +7266,56 @@ body.theme-huzur-active .aurora-bg {
     flex-shrink: 0;
 }
 
-/* Türk bayrağı arka planı yok */
 .ticker-flag-bg { display: none !important; }
 
-/* Kayan yazı içeriği — SOLDAN girer, SAĞDAN çıkar, loop olur */
+/* Kayan yazı içeriği — iki kopya yan yana (gapsiz sürekli kayma için) */
 .ticker-content {
     position: absolute;
     top: 50%;
     left: 0;
+    display: inline-flex;
+    flex-wrap: nowrap;
     white-space: nowrap;
     z-index: 3;
-    animation: ticker-scroll 16s linear infinite;
+    /* -50%'den 0'a → sağa doğru sürekli kayar, loop gapsiz (kopya devreye girer) */
+    animation: ticker-scroll 20s linear infinite;
+    will-change: transform;
 }
 
 .ticker-text {
     display: inline-block;
     padding: 0 40px;
-    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
-    font-size: 24px;
+    /* Font + boyut admin panelinden --ticker-font / --ticker-size ile */
+    font-family: var(--ticker-font, 'Courier New'), 'Consolas', monospace;
+    font-size: var(--ticker-size, 24px);
     /* Kalın DEĞİL — ince yazı */
     font-weight: normal;
     letter-spacing: 3px;
-    /* İÇİ BOŞ NEON HARF: fill transparent, sadece harf çerçevesi neon renkli
-       Renk admin panelinden --ticker-color ile değiştirilir */
+    /* İÇİ BOŞ NEON HARF: fill transparent, sadece harf çerçevesi neon renkli */
     color: transparent !important;
     -webkit-text-stroke: 1.5px var(--ticker-color, #b450ff);
-    /* GLOW YOK — parlama yok, sadece çizgi */
+    /* GLOW YOK */
     filter: none !important;
     /* BÜYÜK HARF */
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
-/* Sağdaki bayrak ikonu — kapalı */
 .ticker-flag-icon { display: none !important; }
 
-/* SOLDAN GİRER → SAĞDAN ÇIKAR → LOOP
-   0%: yazı parent'ın solunda (translateX -100%)
-   100%: yazı parent'ın sağına geçti (translateX panel-width) */
+/* SAĞA DOĞRU GAPSİZ DÖNGÜ:
+   İki kopya yan yana. 0%'de içerik sola yarım (bir kopya genişliği) kaymış
+   → 2. kopya visible. 100%'de içerik 0 konumda → 1. kopya visible.
+   Loop'ta 2. kopya 1.'nin yerine geçer → gapsiz, sürekli sağa akar. */
 @keyframes ticker-scroll {
-    0% { transform: translate(-100%, -50%); }
-    100% { transform: translate(580px, -50%); }
+    0% { transform: translate(-50%, -50%); }
+    100% { transform: translate(0, -50%); }
 }
 
 /* Ticker kapalıyken gizle */
 .ticker-bar.hidden { display: none !important; }
 
-/* Mobil uyumluluk */
+/* Mobil uyumluluk — font-size artık --ticker-size ile (otomatik ölçekler) */
 @media (max-width: 968px) {
     .ticker-bar {
         width: 420px;
@@ -7318,18 +7323,14 @@ body.theme-huzur-active .aurora-bg {
         top: 12px;
         left: calc(50vw - 210px) !important;
     }
-    .ticker-text { font-size: 17px; letter-spacing: 2px; padding: 0 24px; }
+    .ticker-text { padding: 0 24px; }
     .ticker-attaturk {
         height: 42px;
         width: 42px;
         top: 16px;
         left: calc(50vw - 260px);
     }
-    .ticker-content { animation-duration: 13s; }
-    @keyframes ticker-scroll {
-        0% { transform: translate(-100%, -50%); }
-        100% { transform: translate(420px, -50%); }
-    }
+    .ticker-content { animation-duration: 16s; }
 }
 
 @media (max-width: 768px) {
@@ -7339,23 +7340,74 @@ body.theme-huzur-active .aurora-bg {
         top: 8px;
         left: calc(50vw - 160px) !important;
     }
-    .ticker-text { font-size: 13px; letter-spacing: 1.5px; padding: 0 16px; }
+    .ticker-text { padding: 0 16px; }
     .ticker-attaturk {
         height: 32px;
         width: 32px;
         top: 13px;
         left: calc(50vw - 200px);
     }
-    .ticker-content { animation-duration: 11s; }
-    @keyframes ticker-scroll {
-        0% { transform: translate(-100%, -50%); }
-        100% { transform: translate(320px, -50%); }
-    }
+    .ticker-content { animation-duration: 12s; }
 }
 
 /* Erişilebilirlik */
 @media (prefers-reduced-motion: reduce) {
     .ticker-content { animation: none; left: 50%; transform: translate(-50%, -50%); }
+}
+
+/* ========================================================== */
+/* === ADMIN: NEON FONT SEÇİCİ + BOYUT SLIDER              === */
+/* ========================================================== */
+
+.ticker-font-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    gap: 5px;
+    max-height: 170px;
+    overflow-y: auto;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 92, 252, 0.5) rgba(0, 0, 0, 0.3);
+}
+.ticker-font-grid::-webkit-scrollbar { width: 6px; }
+.ticker-font-grid::-webkit-scrollbar-thumb { background: rgba(124, 92, 252, 0.5); border-radius: 3px; }
+
+.ticker-font-btn {
+    padding: 8px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    font-size: 15px;
+    text-align: center;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+    /* Kendi fontuyla render edilir — buton başlığı o fontun örneği */
+    line-height: 1.2;
+    min-height: 32px;
+}
+.ticker-font-btn:hover {
+    border-color: var(--accent, #7C5CFC);
+    background: rgba(124, 92, 252, 0.18);
+}
+.ticker-font-btn.active {
+    border-color: var(--accent, #7C5CFC);
+    background: rgba(124, 92, 252, 0.32);
+    transform: scale(0.97);
+    box-shadow: 0 0 0 1px rgba(124, 92, 252, 0.5);
+}
+
+#admin-ticker-size {
+    width: 100%;
+    accent-color: var(--accent, #7C5CFC);
+    cursor: pointer;
+}
+#ticker-size-val {
+    color: var(--accent, #7C5CFC);
+    font-weight: bold;
 }
 
 /* ========================================================== */
