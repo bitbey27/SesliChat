@@ -1753,7 +1753,7 @@ class VoiceChatApp {
             // AUDIO TRACK (voice)
             let peerData = this.peers.get(peerId);
             if (!peerData) {
-                peerData = { pc, audioEl: null, remoteStream: null };
+                peerData = { pc, audioEl: null, remoteStream: null, videoSender: null };
                 this.peers.set(peerId, peerData);
             }
 
@@ -1786,7 +1786,7 @@ class VoiceChatApp {
 
         // Peer datasını başlat
         if (!this.peers.has(peerId)) {
-            this.peers.set(peerId, { pc, audioEl: null, remoteStream: null });
+            this.peers.set(peerId, { pc, audioEl: null, remoteStream: null, videoSender: null });
         }
 
         // === ŞİMDİ tracks ekle (handler'lar set, onnegotiationneeded güvenli) ===
@@ -1796,10 +1796,21 @@ class VoiceChatApp {
                 pc.addTrack(track, this.localStream);
             });
         }
-        if (addTracks && this.isScreenSharing && this.screenStream) {
-            this.screenStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.screenStream);
-            });
+        // Video track (kamera VEYA ekran paylaşımı) — tek bir video sender, replaceTrack ile yönet
+        // m-line reorder hatasını önlemek için addTrack sadece ilk kez, sonrasında replaceTrack
+        if (addTracks) {
+            const videoStream = this.isScreenSharing && this.screenStream ? this.screenStream
+                              : (this.isCameraOn && this.cameraStream ? this.cameraStream : null);
+            if (videoStream) {
+                const videoTrack = videoStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    try {
+                        const sender = pc.addTrack(videoTrack, videoStream);
+                        const pd = this.peers.get(peerId);
+                        if (pd) pd.videoSender = sender;
+                    } catch (e) { console.warn('[WRTC] Video track eklenemedi:', e); }
+                }
+            }
         }
 
         // Explicit createOffer (initiator ise) — race condition güvenli
@@ -2436,8 +2447,20 @@ class VoiceChatApp {
             
             const videoTrack = this.cameraStream.getVideoTracks()[0];
             
+            // replaceTrack pattern — m-line yapısını bozmaz (removeTrack/addTrack YERİNE)
             this.peers.forEach((peer) => {
-                peer.pc.addTrack(videoTrack, this.cameraStream);
+                try {
+                    if (peer.videoSender) {
+                        // Mevcut video sender — sadece track'i değiştir (renegotiation yok)
+                        peer.videoSender.replaceTrack(videoTrack).catch(e =>
+                            console.warn('[Cam] replaceTrack hatası:', e)
+                        );
+                    } else {
+                        // İlk kez video ekle — addTrack + sender'ı sakla
+                        const sender = peer.pc.addTrack(videoTrack, this.cameraStream);
+                        peer.videoSender = sender;
+                    }
+                } catch (e) { console.warn('[Cam] track ekleme hatası:', e); }
             });
             
             this.showLocalVideo(this.cameraStream);
@@ -2458,14 +2481,17 @@ class VoiceChatApp {
 
         if (this.cameraStream) {
             this.cameraStream.getTracks().forEach(track => track.stop());
-            const videoTrack = this.cameraStream.getVideoTracks()[0];
-            if (videoTrack) {
-                this.peers.forEach((peer) => {
-                    const senders = peer.pc.getSenders();
-                    const sender = senders.find(s => s.track && s.track.kind === 'video');
-                    if (sender) peer.pc.removeTrack(sender);
-                });
-            }
+            // replaceTrack: ekran paylaşımı aktifse screen track'e geç, değilse null
+            // (removeTrack YERİNE — m-line yapısı korunur)
+            this.peers.forEach((peer) => {
+                if (peer.videoSender) {
+                    const screenTrack = (this.isScreenSharing && this.screenStream)
+                        ? this.screenStream.getVideoTracks()[0] : null;
+                    peer.videoSender.replaceTrack(screenTrack).catch(e =>
+                        console.warn('[Cam] replaceTrack (stop):', e)
+                    );
+                }
+            });
             this.cameraStream = null;
         }
 
@@ -2499,7 +2525,18 @@ class VoiceChatApp {
             };
 
             this.peers.forEach((peer, peerId) => {
-                peer.pc.addTrack(videoTrack, this.screenStream);
+                try {
+                    if (peer.videoSender) {
+                        // Mevcut video sender (kamera) — screen track ile değiştir
+                        peer.videoSender.replaceTrack(videoTrack).catch(e =>
+                            console.warn('[Screen] replaceTrack hatası:', e)
+                        );
+                    } else {
+                        // İlk kez video ekle
+                        const sender = peer.pc.addTrack(videoTrack, this.screenStream);
+                        peer.videoSender = sender;
+                    }
+                } catch (e) { console.warn('[Screen] track ekleme hatası:', e); }
             });
             
             this.showLocalVideo(this.screenStream);
@@ -2520,17 +2557,17 @@ class VoiceChatApp {
 
         if (this.screenStream) {
             this.screenStream.getTracks().forEach(track => track.stop());
-            
-            const videoTrack = this.screenStream.getVideoTracks()[0] || this.screenStream.getTracks().find(t => t.kind === 'video');
-            if (videoTrack) {
-                this.peers.forEach((peer) => {
-                    const senders = peer.pc.getSenders();
-                    const sender = senders.find(s => s.track && s.track.kind === 'video');
-                    if (sender) {
-                        peer.pc.removeTrack(sender);
-                    }
-                });
-            }
+            // replaceTrack: kamera açıksa camera track'e dön, değilse null
+            // (removeTrack YERİNE — m-line yapısı korunur)
+            this.peers.forEach((peer) => {
+                if (peer.videoSender) {
+                    const camTrack = (this.isCameraOn && this.cameraStream)
+                        ? this.cameraStream.getVideoTracks()[0] : null;
+                    peer.videoSender.replaceTrack(camTrack).catch(e =>
+                        console.warn('[Screen] replaceTrack (stop):', e)
+                    );
+                }
+            });
             this.screenStream = null;
         }
 
