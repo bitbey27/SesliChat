@@ -7220,11 +7220,13 @@ body.theme-huzur-active .aurora-bg {
 }
 
 /* ========================================================== */
-/* === KAYAN YAZI (TICKER) — LED TABELA + Rainbow yazı     === */
+/* === KAYAN YAZI (TICKER) — İÇİ BOŞ NEON HARFLER          === */
+/* === Panel YOK, çerçeve YOK, glow YOK — sadece yazı     === */
+/* === Renk: --ticker-color (admin panelinden değişir)    === */
 /* ========================================================== */
 
 .ticker-bar {
-    /* TAM ORTADA — LED panel */
+    /* TAM ORTADA — görünmez kayma alanı: sadece neon harfler kayar */
     position: fixed !important;
     top: 18px;
     left: calc(50vw - 290px) !important;
@@ -7234,70 +7236,21 @@ body.theme-huzur-active .aurora-bg {
     overflow: hidden;
     display: flex !important;
     align-items: center;
-    /* LED PANEL — siyah mat arka plan */
-    background: #000 !important;
-    /* LED dot matrix pattern — küçük noktalar */
-    background-image: 
-        radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-        radial-gradient(circle, rgba(124, 92, 252, 0.04) 1px, transparent 1px) !important;
-    background-size: 4px 4px, 8px 8px !important;
-    background-position: 0 0, 2px 2px !important;
-    /* KALIN siyah çerçeve (LED kasa) */
-    border: 6px solid #1a1a1a !important;
-    border-radius: 8px;
-    /* Dış neon glow + iç LED parıltısı */
-    box-shadow: 
-        0 0 30px rgba(124, 92, 252, 0.7),
-        0 0 60px rgba(255, 50, 130, 0.4),
-        0 12px 40px rgba(0, 0, 0, 0.8),
-        inset 0 0 30px rgba(0, 0, 0, 0.9),
-        inset 0 2px 0 rgba(255, 255, 255, 0.05);
+    /* Arkaplan tamamen şeffaf — sayfanın arka planı görünür */
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    animation: none !important;
     font-family: 'Courier New', 'Consolas', monospace;
     pointer-events: none;
+    /* Yazı kenarlarda yumuşakça kaybolsun (her arka planda çalışır) */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 50px, #000 calc(100% - 50px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 50px, #000 calc(100% - 50px), transparent 100%);
 }
 
-/* LED pulse — parıltı animasyonu */
-@keyframes ticker-led-pulse {
-    0%, 100% {
-        box-shadow: 
-            0 0 30px rgba(124, 92, 252, 0.7),
-            0 0 60px rgba(255, 50, 130, 0.4),
-            0 12px 40px rgba(0, 0, 0, 0.8),
-            inset 0 0 30px rgba(0, 0, 0, 0.9);
-    }
-    50% {
-        box-shadow: 
-            0 0 40px rgba(124, 92, 252, 0.9),
-            0 0 80px rgba(255, 50, 130, 0.5),
-            0 12px 40px rgba(0, 0, 0, 0.8),
-            inset 0 0 30px rgba(0, 0, 0, 0.9);
-    }
-}
-.ticker-bar {
-    animation: ticker-led-pulse 2.5s ease-in-out infinite;
-}
-
-/* LED kenar fade overlay — yazı panel kenarında yumuşak kaybolsun */
-.ticker-bar::before,
-.ticker-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 50px;
-    z-index: 5;
-    pointer-events: none;
-}
-.ticker-bar::before {
-    left: 0;
-    background: linear-gradient(to right, #000 0%, rgba(0,0,0,0) 100%);
-}
-.ticker-bar::after {
-    right: 0;
-    background: linear-gradient(to left, #000 0%, rgba(0,0,0,0) 100%);
-}
-
-/* Atatürk görseli — LED panelin SOLUNDA sabit */
+/* Atatürk görseli — admin URL girerse görünür (varsayılan kapalı), çerçevesiz */
 .ticker-attaturk {
     position: fixed;
     top: 22px;
@@ -7307,11 +7260,8 @@ body.theme-huzur-active .aurora-bg {
     object-fit: cover;
     border-radius: 4px;
     z-index: 9001;
-    border: 3px solid #1a1a1a;
-    box-shadow: 
-        0 0 12px rgba(227, 10, 23, 0.7),
-        0 0 24px rgba(227, 10, 23, 0.4),
-        0 4px 12px rgba(0, 0, 0, 0.6);
+    border: none;
+    box-shadow: none;
     flex-shrink: 0;
 }
 
@@ -7331,22 +7281,18 @@ body.theme-huzur-active .aurora-bg {
 .ticker-text {
     display: inline-block;
     padding: 0 40px;
-    /* LED pixel font */
     font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
     font-size: 24px;
-    font-weight: 900;
+    /* Kalın DEĞİL — ince yazı */
+    font-weight: normal;
     letter-spacing: 3px;
-    /* NEON OUTLINE YAZI: içi BOŞ, dış çerçeve NEON GLOW */
+    /* İÇİ BOŞ NEON HARF: fill transparent, sadece harf çerçevesi neon renkli
+       Renk admin panelinden --ticker-color ile değiştirilir */
     color: transparent !important;
-    -webkit-text-stroke: 1.5px #b450ff;
-    text-stroke: 1.5px #b450ff;
-    /* Neon glow — stroke etrafında parlayan ışık */
-    filter: 
-        drop-shadow(0 0 2px #b450ff)
-        drop-shadow(0 0 6px #b450ff)
-        drop-shadow(0 0 12px #8a2be2)
-        drop-shadow(0 0 24px rgba(180, 80, 255, 0.7))
-        drop-shadow(0 0 48px rgba(180, 80, 255, 0.4));
+    -webkit-text-stroke: 1.5px var(--ticker-color, #b450ff);
+    /* GLOW YOK — parlama yok, sadece çizgi */
+    filter: none !important;
+    /* BÜYÜK HARF */
     text-transform: uppercase;
 }
 
@@ -7364,9 +7310,6 @@ body.theme-huzur-active .aurora-bg {
 /* Ticker kapalıyken gizle */
 .ticker-bar.hidden { display: none !important; }
 
-/* no-flag class — geri uyumluluk */
-.ticker-bar.no-flag { background: #000 !important; }
-
 /* Mobil uyumluluk */
 @media (max-width: 968px) {
     .ticker-bar {
@@ -7374,7 +7317,6 @@ body.theme-huzur-active .aurora-bg {
         height: 50px;
         top: 12px;
         left: calc(50vw - 210px) !important;
-        border-width: 4px;
     }
     .ticker-text { font-size: 17px; letter-spacing: 2px; padding: 0 24px; }
     .ticker-attaturk {
@@ -7396,8 +7338,6 @@ body.theme-huzur-active .aurora-bg {
         height: 42px;
         top: 8px;
         left: calc(50vw - 160px) !important;
-        border-width: 3px;
-        border-radius: 6px;
     }
     .ticker-text { font-size: 13px; letter-spacing: 1.5px; padding: 0 16px; }
     .ticker-attaturk {
@@ -7416,8 +7356,36 @@ body.theme-huzur-active .aurora-bg {
 /* Erişilebilirlik */
 @media (prefers-reduced-motion: reduce) {
     .ticker-content { animation: none; left: 50%; transform: translate(-50%, -50%); }
-    .ticker-bar { animation: none; }
 }
+
+/* ========================================================== */
+/* === ADMIN: NEON RENK SEÇİCİ (kayan yazı)                === */
+/* ========================================================== */
+
+#admin-ticker-color {
+    width: 46px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+}
+#admin-ticker-color::-webkit-color-swatch-wrapper { padding: 2px; }
+#admin-ticker-color::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+.ticker-color-preset {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    background: var(--pc, #b450ff);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.ticker-color-preset:hover { transform: scale(1.25); border-color: #fff; }
+.ticker-color-preset.active { border-color: #fff; transform: scale(1.15); }
 
 /* ========================================================== */
 /* === ADMIN MODAL — KAYDIRMALI (scrollable)                === */

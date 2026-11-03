@@ -157,7 +157,7 @@ class VoiceChatApp {
         // === TICKER (Kayan Yazı) element'leri ===
         this.adminTickerText = document.getElementById('admin-ticker-text');
         this.adminTickerImage = document.getElementById('admin-ticker-image');
-        this.adminTickerFlag = document.getElementById('admin-ticker-flag');
+        this.adminTickerColor = document.getElementById('admin-ticker-color');
         this.adminTickerEnabled = document.getElementById('admin-ticker-enabled');
         this.adminTickerSaveBtn = document.getElementById('admin-ticker-save-btn');
         this.tickerBar = document.getElementById('ticker-bar');
@@ -325,6 +325,8 @@ class VoiceChatApp {
 
         this.adminPanelBtn.addEventListener('click', () => {
             this.adminModal.classList.remove('hidden');
+            // Kayan yazı alanlarını son bilinen state ile doldur
+            if (this.lastTickerState) this.populateAdminTickerFields(this.lastTickerState);
         });
         this.closeAdminBtn.addEventListener('click', () => {
             this.adminModal.classList.add('hidden');
@@ -376,7 +378,7 @@ class VoiceChatApp {
                 const tickerData = {
                     text: (this.adminTickerText.value || '').trim(),
                     imageUrl: (this.adminTickerImage.value || '').trim(),
-                    showFlag: this.adminTickerFlag.checked,
+                    color: (this.adminTickerColor && this.adminTickerColor.value) ? this.adminTickerColor.value : '#b450ff',
                     enabled: this.adminTickerEnabled.checked
                 };
                 if (!tickerData.text && tickerData.enabled) {
@@ -388,6 +390,22 @@ class VoiceChatApp {
                     ticker: tickerData
                 }));
                 this.showToast('📢', 'Kayan yazı yayınlandı! Tüm kullanıcılarda güncellendi.');
+            });
+        }
+
+        // === TICKER: Neon renk preset butonları (admin) ===
+        document.querySelectorAll('.ticker-color-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const c = btn.dataset.color;
+                if (!c) return;
+                if (this.adminTickerColor) this.adminTickerColor.value = c;
+                document.querySelectorAll('.ticker-color-preset').forEach(b => b.classList.toggle('active', b === btn));
+            });
+        });
+        // Elle renk seçilince preset seçimini temizle
+        if (this.adminTickerColor) {
+            this.adminTickerColor.addEventListener('input', () => {
+                document.querySelectorAll('.ticker-color-preset').forEach(b => b.classList.remove('active'));
             });
         }
 
@@ -2603,6 +2621,9 @@ class VoiceChatApp {
     applyTickerState(ticker) {
         if (!ticker || !this.tickerBar) return;
         
+        // Son state'i sakla — admin paneli açılınca alanları doldurmak için
+        this.lastTickerState = { ...ticker };
+        
         // Aktif/pasif
         if (ticker.enabled === false) {
             this.tickerBar.classList.add('hidden');
@@ -2611,12 +2632,9 @@ class VoiceChatApp {
         }
         this.tickerBar.classList.remove('hidden');
         
-        // Bayrak arka planı (artık kullanılmıyor — şeffaf panel)
-        if (ticker.showFlag === false) {
-            this.tickerBar.classList.add('no-flag');
-        } else {
-            this.tickerBar.classList.remove('no-flag');
-        }
+        // Neon rengi — CSS değişkeni ile harf çerçevesinin rengi
+        const neonColor = ticker.color || '#b450ff';
+        this.tickerBar.style.setProperty('--ticker-color', neonColor);
         
         // Yazı güncelle + animasyonu yeniden başlat (yeni metin için)
         if (ticker.text && this.tickerText) {
@@ -2647,11 +2665,20 @@ class VoiceChatApp {
         
         // Admin paneli açıksa, input'ları güncelle
         if (this.adminTickerText && this.adminModal && !this.adminModal.classList.contains('hidden')) {
-            if (this.adminTickerText) this.adminTickerText.value = ticker.text || '';
-            if (this.adminTickerImage) this.adminTickerImage.value = ticker.imageUrl || '';
-            if (this.adminTickerFlag) this.adminTickerFlag.checked = ticker.showFlag !== false;
-            if (this.adminTickerEnabled) this.adminTickerEnabled.checked = ticker.enabled !== false;
+            this.populateAdminTickerFields(ticker);
         }
+    }
+
+    // Admin panelindeki kayan yazı alanlarını verilen state ile doldur
+    populateAdminTickerFields(ticker) {
+        if (this.adminTickerText) this.adminTickerText.value = ticker.text || '';
+        if (this.adminTickerImage) this.adminTickerImage.value = ticker.imageUrl || '';
+        const neonColor = ticker.color || '#b450ff';
+        if (this.adminTickerColor) this.adminTickerColor.value = neonColor;
+        document.querySelectorAll('.ticker-color-preset').forEach(b => {
+            b.classList.toggle('active', (b.dataset.color || '').toLowerCase() === neonColor.toLowerCase());
+        });
+        if (this.adminTickerEnabled) this.adminTickerEnabled.checked = ticker.enabled !== false;
     }
     
     showToast(icon, message) {

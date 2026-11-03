@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v52">
+    <link rel="stylesheet" href="style.css?v53">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -17,9 +17,9 @@
 </head>
 <body>
     <!-- === KAYAN YAZI (TICKER) — body direct çocuğu, app-screen gizli bile olsa görünür === -->
-    <!-- Atatürk görseli — Türk bayrağı temalı inline SVG (her zaman yüklenir) -->
-    <img id="ticker-attaturk" class="ticker-attaturk" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2250%22%20fill%3D%22%23E30A17%22/%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2250%22%20r%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Ccircle%20cx%3D%2233%22%20cy%3D%2250%22%20r%3D%2213%22%20fill%3D%22%23E30A17%22/%3E%3Cpolygon%20points%3D%2250%2C50%2058%2C53%2062%2C58%2060%2C50%2062%2C42%2058%2C47%22%20fill%3D%22%23fff%22%20transform%3D%22rotate%2815%2050%2050%29%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2288%22%20font-family%3D%22Arial%22%20font-size%3D%2212%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%3EATAT%C3%9CRK%3C/text%3E%3C/svg%3E" alt="Mustafa Kemal Atatürk">
-    <!-- Tabela panel — şeffaf, sadece yazı kayar -->
+    <!-- Opsiyonel görsel — admin URL girerse görünür (varsayılan: sadece neon harfler) -->
+    <img id="ticker-attaturk" class="ticker-attaturk" style="display:none" alt="">
+    <!-- Görünmez kayma alanı — sadece içi boş neon harfler kayar, arka plan görünür -->
     <div id="ticker-bar" class="ticker-bar">
         <div class="ticker-content">
             <span id="ticker-text" class="ticker-text">CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ</span>
@@ -494,19 +494,27 @@
 
             <!-- === KAYAN YAZI (TICKER) YÖNETİMİ === -->
             <div class="settings-group">
-                <h4>📢 Kayan Yazı (Üst Bar)</h4>
-                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 12px;">Tüm kullanıcılarda üst orta kısımda kayan yazı gösterilir. Türk bayrağı arka planı ile.</p>
+                <h4>📢 Kayan Yazı (Neon Harf)</h4>
+                <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 12px;">Üst ortada içi boş neon harflerle kayan yazı: arka plan görünür, sadece harf çerçevesi seçilen neon renkte olur.</p>
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                    <textarea id="admin-ticker-text" class="modern-input" rows="3" placeholder="Kayan yazı metni... (örn: CUMHURİYET BAYRAMINIZ KUTLU OLSUN)" style="resize:vertical; font-weight:bold; min-height:60px;"></textarea>
-                    <input type="text" id="admin-ticker-image" class="modern-input" placeholder="Atatürk görsel URL (boş = görsel yok)">
-                    <div style="display:flex; gap:8px; align-items:center;">
+                    <textarea id="admin-ticker-text" class="modern-input" rows="3" placeholder="Kayan yazı metni... (örn: CUMHURİYET BAYRAMINIZ KUTLU OLSUN)" style="resize:vertical; min-height:60px;"></textarea>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
-                            <input type="checkbox" id="admin-ticker-flag" checked> Türk Bayrağı arka plan
+                            <input type="color" id="admin-ticker-color" value="#b450ff"> Neon Rengi
                         </label>
+                        <button type="button" class="ticker-color-preset" data-color="#b450ff" style="--pc:#b450ff" title="Mor"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#ff3d81" style="--pc:#ff3d81" title="Pembe"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#00e5ff" style="--pc:#00e5ff" title="Cyan"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#39ff14" style="--pc:#39ff14" title="Yeşil"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#ff9d00" style="--pc:#ff9d00" title="Turuncu"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#ff2233" style="--pc:#ff2233" title="Kırmızı"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#ffe600" style="--pc:#ffe600" title="Sarı"></button>
+                        <button type="button" class="ticker-color-preset" data-color="#ffffff" style="--pc:#ffffff" title="Beyaz"></button>
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-left:auto;">
                             <input type="checkbox" id="admin-ticker-enabled" checked> Aktif
                         </label>
                     </div>
+                    <input type="text" id="admin-ticker-image" class="modern-input" placeholder="Görsel URL (boş = sadece neon yazı)">
                     <button id="admin-ticker-save-btn" class="btn-primary">📢 Kayan Yazıyı Yayınla</button>
                 </div>
             </div>
@@ -737,7 +745,7 @@
     <!-- YouTube IFrame API — müzik player için (API key gerekmez, video oynatma için) -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- v32: TGS sticker seti (Lottie) — chat emoji sekmesi + manifest + inline render -->
-    <script src="app-v32.js?v35"></script>
+    <script src="app-v32.js?v36"></script>
     <!-- Eğlence Özellikleri v3: fal botu KALDIRILDI (fısıltı, sürpriz ses, emoji, ambient) -->
     <script src="fun-features-v2.js?v3"></script>
     <!-- Premium Temalar v15: hayal1 default tema -->
