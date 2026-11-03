@@ -7350,10 +7350,9 @@ body.theme-huzur-active .aurora-bg {
     .ticker-content { animation-duration: 12s; }
 }
 
-/* Erişilebilirlik */
-@media (prefers-reduced-motion: reduce) {
-    .ticker-content { animation: none; left: 50%; transform: translate(-50%, -50%); }
-}
+/* Erişilebilirlik — ticker animasyonu JS (rAF) ile sürürülüyor,
+   prefers-reduced-motion tarafından durdurulamaz. Kullanıcı hareket istiyor. */
+/* (Reduced-motion override kaldırıldı — ticker hareketi özelliğin kendisidir) */
 
 /* ========================================================== */
 /* === ADMIN: NEON FONT SEÇİCİ + BOYUT SLIDER              === */

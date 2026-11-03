@@ -289,6 +289,15 @@ class VoiceChatApp {
         this.vcMonitorActive = false;
         this.vcProcessedStream = null;   // WebRTC'ye gönderilen stream
         this.vcActive = false;           // voice changer aktif mi?
+
+        // Kayan yazı animasyonunu hemen başlat — sayfa yüklenir yüklenmez hareket etsin
+        // (WS bağlanmadan önce default HTML metni ile)
+        this.startTickerAnimation();
+        // Pencere yeniden boyutlanınca metin genişliği değişebilir — yeniden başlat
+        window.addEventListener('resize', () => {
+            clearTimeout(this._tickerResizeTimer);
+            this._tickerResizeTimer = setTimeout(() => this.startTickerAnimation(), 200);
+        });
     }
 
     initEventListeners() {
@@ -2696,6 +2705,7 @@ class VoiceChatApp {
         if (ticker.enabled === false) {
             this.tickerBar.classList.add('hidden');
             if (this.tickerAttaturk) this.tickerAttaturk.style.display = 'none';
+            this.stopTickerAnimation();
             return;
         }
         this.tickerBar.classList.remove('hidden');
@@ -2712,25 +2722,12 @@ class VoiceChatApp {
         this.tickerBar.style.setProperty('--ticker-size', fontSize + 'px');
         this.currentTickerFont = fontId;
         
-        // Yazı güncelle (iki kopya — gapsiz marquee için) + animasyonu yeniden başlat
+        // Yazı güncelle (iki kopya — gapsiz marquee için) + JS animasyonu başlat
         if (ticker.text) {
             if (this.tickerText) this.tickerText.textContent = ticker.text;
             if (this.tickerText2) this.tickerText2.textContent = ticker.text;
-            const content = this.tickerText ? this.tickerText.parentElement : null;
-            if (content) {
-                content.style.animation = 'none';
-                void content.offsetWidth;  // force reflow
-                content.style.animation = '';
-                // Animasyon süresini metin genişliğine göre ayarla — hız sabit (~70px/s)
-                // requestAnimationFrame ile ölç (font yüklenmiş halde)
-                requestAnimationFrame(() => {
-                    const w = this.tickerText ? this.tickerText.offsetWidth : 0;
-                    if (w > 0) {
-                        const duration = Math.max(8, Math.min(60, w / 70));
-                        content.style.animationDuration = duration + 's';
-                    }
-                });
-            }
+            // JS rAF animasyonu — prefers-reduced-motion ve tarayıcı kısıtlamalarından etkilenmez
+            this.startTickerAnimation();
         }
         
         // Atatürk görseli
@@ -2773,6 +2770,54 @@ class VoiceChatApp {
         if (this.adminTickerSize) this.adminTickerSize.value = fontSize;
         if (this.adminTickerSizeVal) this.adminTickerSizeVal.textContent = fontSize;
         if (this.adminTickerEnabled) this.adminTickerEnabled.checked = ticker.enabled !== false;
+    }
+
+    // =========================================
+    // TICKER — JS requestAnimationFrame animasyonu
+    // (CSS animasyonu yerine bu çalışır — prefers-reduced-motion,
+    //  tarayıcı eklentileri veya güç tasarrufu modu tarafından durdurulamaz)
+    // =========================================
+    startTickerAnimation() {
+        const content = this.tickerText ? this.tickerText.parentElement : null;
+        if (!content || !this.tickerText) return;
+        // Önceki rAF'i temizle
+        if (this._tickerRAF) cancelAnimationFrame(this._tickerRAF);
+        // CSS animasyonunu kapat — JS yönetecek (çakışmayı önle)
+        content.style.animation = 'none';
+
+        const speed = 70; // px/s — sağa doğru
+        this._tickerLastTime = 0;
+        this._tickerX = null;
+
+        const tick = (now) => {
+            const textWidth = this.tickerText.offsetWidth;
+            if (textWidth <= 0) {
+                // Font henüz yüklenmemiş olabilir — bekleyip tekrar dene
+                this._tickerRAF = requestAnimationFrame(tick);
+                return;
+            }
+            const dt = this._tickerLastTime ? (now - this._tickerLastTime) / 1000 : 0;
+            this._tickerLastTime = now;
+            // İlk frame: -textWidth'ten başlat (yazı tam solda, 2. kopya visible)
+            if (this._tickerX === null) this._tickerX = -textWidth;
+            this._tickerX += speed * dt;
+            // 0'a ulaşınca (1. kopya tam visible) loop: -textWidth'e dön (2. kopya visible) — gapsiz
+            if (this._tickerX >= 0) this._tickerX = -textWidth;
+            content.style.transform = `translate(${this._tickerX.toFixed(2)}px, -50%)`;
+            this._tickerRAF = requestAnimationFrame(tick);
+        };
+        this._tickerRAF = requestAnimationFrame(tick);
+    }
+
+    stopTickerAnimation() {
+        if (this._tickerRAF) {
+            cancelAnimationFrame(this._tickerRAF);
+            this._tickerRAF = null;
+        }
+        this._tickerX = null;
+        this._tickerLastTime = 0;
+        const content = this.tickerText ? this.tickerText.parentElement : null;
+        if (content) content.style.transform = '';
     }
     
     showToast(icon, message) {
