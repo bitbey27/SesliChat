@@ -2701,8 +2701,8 @@ class VoiceChatApp {
         // Son state'i sakla — admin paneli açılınca alanları doldurmak için
         this.lastTickerState = { ...ticker };
         
-        // Aktif/pasif
-        if (ticker.enabled === false) {
+        // Aktif/pasif — yazı boşsa da gizle (default boş gelir, admin girince görünür)
+        if (ticker.enabled === false || !ticker.text || !ticker.text.trim()) {
             this.tickerBar.classList.add('hidden');
             if (this.tickerAttaturk) this.tickerAttaturk.style.display = 'none';
             this.stopTickerAnimation();
@@ -2780,6 +2780,11 @@ class VoiceChatApp {
     startTickerAnimation() {
         const content = this.tickerText ? this.tickerText.parentElement : null;
         if (!content || !this.tickerText) return;
+        // Metin boşsa animasyon başlatma — ticker gizli zaten, CPU boşa gitmesin
+        if (!this.tickerText.textContent || !this.tickerText.textContent.trim()) {
+            this.stopTickerAnimation();
+            return;
+        }
         // Önceki rAF'i temizle
         if (this._tickerRAF) cancelAnimationFrame(this._tickerRAF);
         // CSS animasyonunu kapat — JS yönetecek (çakışmayı önle)

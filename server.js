@@ -45,7 +45,7 @@ app.get('/health', (req, res) => {
 // Neon harf: içi boş, sadece harf çerçevesi neon renkte
 // color / font / size admin panelinden değişir
 let tickerState = {
-  text: 'CUMHURİYET BAYRAMINIZ KUTLU OLSUN  •  TÜRK BAYRAĞI ARKASINA ATATÜRK İLE KALINIZ',
+  text: '',
   imageUrl: '',
   color: '#b450ff',
   font: 'Beon',
