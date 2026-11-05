@@ -1196,6 +1196,12 @@ class VoiceChatApp {
                 this.handleSpeakingState(message);
                 break;
 
+            // === EKRAN PAYLAŞIMI KAPATMA ===
+            // Yayın açan kişi stopScreenShare() yapınca server'dan gelir
+            case 'screen-share-stopped':
+                this.removeRemoteVideo(message.senderId);
+                break;
+
             // === SAYFA YENİLEME / DUPLICATE USER ===
             // Sunucu, aynı username'le yeni giriş yapıldığında eski bağlantıya bunu gönderir
             case 'force-disconnect':
@@ -1750,27 +1756,44 @@ class VoiceChatApp {
                 return;
             }
 
-            // AUDIO TRACK (voice)
+            // AUDIO TRACK (voice VEYA ekran paylaşımı sesi)
             let peerData = this.peers.get(peerId);
             if (!peerData) {
-                peerData = { pc, audioEl: null, remoteStream: null, videoSender: null };
+                peerData = { pc, audioEl: null, remoteStream: null, videoSender: null, screenAudioSender: null, screenAudioEl: null };
                 this.peers.set(peerId, peerData);
             }
 
-            let audioEl = peerData.audioEl;
-            if (!audioEl) {
-                audioEl = document.createElement('audio');
-                audioEl.id = `audio-${peerId}`;
-                audioEl.autoplay = true;
-                audioEl.playsInline = true;
-                const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
-                audioEl.volume = volValue;
-                document.body.appendChild(audioEl);
-                peerData.audioEl = audioEl;
+            // İlk audio track = mic (primary). Farklı stream'den gelen = ekran sesi (secondary)
+            if (!peerData.remoteStream || stream === peerData.remoteStream) {
+                // Primary audio (mic)
+                let audioEl = peerData.audioEl;
+                if (!audioEl) {
+                    audioEl = document.createElement('audio');
+                    audioEl.id = `audio-${peerId}`;
+                    audioEl.autoplay = true;
+                    audioEl.playsInline = true;
+                    const volValue = this.peerVolumes.has(peerId) ? this.peerVolumes.get(peerId) : 1.0;
+                    audioEl.volume = volValue;
+                    document.body.appendChild(audioEl);
+                    peerData.audioEl = audioEl;
+                }
+                audioEl.srcObject = stream;
+                this.forcePlayAudio(audioEl);
+                peerData.remoteStream = stream;
+            } else {
+                // Secondary audio (ekran paylaşımı sesi) — ayrı audio element
+                if (!peerData.screenAudioEl) {
+                    const sEl = document.createElement('audio');
+                    sEl.id = `audio-screen-${peerId}`;
+                    sEl.autoplay = true;
+                    sEl.playsInline = true;
+                    sEl.volume = 1.0;
+                    document.body.appendChild(sEl);
+                    peerData.screenAudioEl = sEl;
+                }
+                peerData.screenAudioEl.srcObject = stream;
+                this.forcePlayAudio(peerData.screenAudioEl);
             }
-            audioEl.srcObject = stream;
-            this.forcePlayAudio(audioEl);
-            peerData.remoteStream = stream;
         };
 
         pc.onconnectionstatechange = () => {
@@ -1786,7 +1809,7 @@ class VoiceChatApp {
 
         // Peer datasını başlat
         if (!this.peers.has(peerId)) {
-            this.peers.set(peerId, { pc, audioEl: null, remoteStream: null, videoSender: null });
+            this.peers.set(peerId, { pc, audioEl: null, remoteStream: null, videoSender: null, screenAudioSender: null, screenAudioEl: null });
         }
 
         // === ŞİMDİ tracks ekle (handler'lar set, onnegotiationneeded güvenli) ===
@@ -1810,6 +1833,17 @@ class VoiceChatApp {
                         if (pd) pd.videoSender = sender;
                     } catch (e) { console.warn('[WRTC] Video track eklenemedi:', e); }
                 }
+            }
+        }
+        // Ekran paylaşımı SES track (sistem/sekme sesi) — ayrı sender, mic ile karışmaz
+        if (addTracks && this.isScreenSharing && this.screenStream) {
+            const screenAudioTrack = this.screenStream.getAudioTracks()[0];
+            if (screenAudioTrack) {
+                try {
+                    const sender = pc.addTrack(screenAudioTrack, this.screenStream);
+                    const pd = this.peers.get(peerId);
+                    if (pd) pd.screenAudioSender = sender;
+                } catch (e) { console.warn('[WRTC] Screen audio track eklenemedi:', e); }
             }
         }
 
@@ -2539,6 +2573,27 @@ class VoiceChatApp {
                 } catch (e) { console.warn('[Screen] track ekleme hatası:', e); }
             });
             
+            // Ekran paylaşımı SES track (sistem/sekme sesi) — mic'den ayrı sender
+            const screenAudioTrack = this.screenStream.getAudioTracks()[0];
+            if (screenAudioTrack) {
+                this.peers.forEach((peer) => {
+                    try {
+                        if (peer.screenAudioSender) {
+                            peer.screenAudioSender.replaceTrack(screenAudioTrack).catch(e =>
+                                console.warn('[Screen] audio replaceTrack:', e)
+                            );
+                        } else {
+                            const sender = peer.pc.addTrack(screenAudioTrack, this.screenStream);
+                            peer.screenAudioSender = sender;
+                        }
+                    } catch (e) { console.warn('[Screen] audio track ekleme hatası:', e); }
+                });
+                this.showToast('🔊', 'Ekran sesi paylaşılıyor — karşı taraf duyacak');
+            } else {
+                // Kullanıcı "Ses paylaş" kutusunu işaretlemedi
+                this.showToast('ℹ️', 'İpucu: Paylaşım penceresinde "Ses de paylaş" kutusunu işaretle — karşı taraf ekran sesini duysun');
+            }
+            
             this.showLocalVideo(this.screenStream);
 
         } catch (err) {
@@ -2567,8 +2622,22 @@ class VoiceChatApp {
                         console.warn('[Screen] replaceTrack (stop):', e)
                     );
                 }
+                // Ekran ses sender'ını da null yap (sessiz)
+                if (peer.screenAudioSender) {
+                    peer.screenAudioSender.replaceTrack(null).catch(e =>
+                        console.warn('[Screen] audio replaceTrack (stop):', e)
+                    );
+                }
             });
             this.screenStream = null;
+        }
+
+        // Odadaki herkese "yayın kapandı" sinyali gönder — karşı tarafın
+        // ekran görüntüsü güvenilir şekilde kapansın (track.onended tek başına yetersiz)
+        if (this.ws && this.ws.readyState === WebSocket.OPEN && this.currentRoom) {
+            try {
+                this.ws.send(JSON.stringify({ type: 'screen-share-stopped' }));
+            } catch (e) { console.warn('[Screen] stop signal gönderilemedi:', e); }
         }
 
         this.videoStage.innerHTML = '';
@@ -2588,119 +2657,142 @@ class VoiceChatApp {
         
         const label = document.createElement('div');
         label.className = 'stage-label';
-        label.textContent = 'Sizin Ekranınız';
+        label.textContent = 'Sizin Ekranınız — yayın aktif';
+        
+        // X close button — yayını kapat (her zaman görünür)
+        const xBtn = document.createElement('button');
+        xBtn.className = 'stream-x-btn stream-x-btn-local';
+        xBtn.innerHTML = '✕';
+        xBtn.title = 'Ekran paylaşımını kapat';
+        xBtn.addEventListener('click', () => this.stopScreenShare());
         
         this.videoStage.appendChild(videoEl);
         this.videoStage.appendChild(label);
+        this.videoStage.appendChild(xBtn);
     }
 
     showRemoteVideo(peerId, stream) {
         this.videoStage.innerHTML = '';
         this.videoStage.classList.remove('hidden');
         
-        // Ana Konteyner
+        // Kullanıcı adını bul
+        const pCard = document.getElementById(`participant-${peerId}`);
+        const username = pCard ? (pCard.querySelector('.participant-name')?.textContent || 'Bir Kullanıcı') : 'Bir Kullanıcı';
+        
+        // Container — id ile (güvenilir kaldırma için)
         const container = document.createElement('div');
+        container.id = `remote-container-${peerId}`;
         container.className = 'remote-stream-container';
-        container.style.width = '100%';
-        container.style.height = '100%';
-        container.style.position = 'relative';
-        container.style.display = 'flex';
-        container.style.justifyContent = 'center';
-        container.style.alignItems = 'center';
-
+        
         const videoEl = document.createElement('video');
         videoEl.id = `video-${peerId}`;
         videoEl.srcObject = stream;
         videoEl.playsInline = true;
         videoEl.className = 'stage-video';
         videoEl.style.display = 'none'; // Başlangıçta gizli
-
-        // Kullanıcı adını bul
-        const pCard = document.getElementById(`participant-${peerId}`);
-        const username = pCard ? pCard.querySelector('.participant-name').textContent : 'Bir Kullanıcı';
         
-        // Overlay (Yayına Katıl)
+        // Overlay (Yayını İzle)
         const overlay = document.createElement('div');
         overlay.className = 'stream-overlay';
-        overlay.style.textAlign = 'center';
-        overlay.style.color = '#fff';
         overlay.innerHTML = `
-            <div style="background: rgba(0,0,0,0.6); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                <div style="font-size: 30px; margin-bottom: 10px;">📺</div>
-                <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 500;">${username} yayın başlattı</h3>
-                <button class="btn-primary" id="join-stream-btn-${peerId}" style="width: 100%;">Yayını İzle</button>
+            <div class="stream-overlay-box">
+                <div class="stream-overlay-icon">📺</div>
+                <h3>${this.escapeHtml(username)} yayın başlattı</h3>
+                <button class="btn-primary" id="join-stream-btn-${peerId}">Yayını İzle</button>
             </div>
         `;
-
-        // Kontrol Çubuğu
+        
+        // Kontrol çubuğu (Tam Ekran — Kapat kaldırıldı, X butonu var)
         const controls = document.createElement('div');
         controls.className = 'stream-controls hidden';
-        controls.style.position = 'absolute';
-        controls.style.bottom = '15px';
-        controls.style.left = '50%';
-        controls.style.transform = 'translateX(-50%)';
-        controls.style.display = 'flex';
-        controls.style.gap = '10px';
-        controls.style.background = 'rgba(0,0,0,0.85)';
-        controls.style.padding = '8px 15px';
-        controls.style.borderRadius = '20px';
-        controls.style.border = '1px solid rgba(255,255,255,0.1)';
-        controls.style.backdropFilter = 'blur(10px)';
-        controls.style.zIndex = '10';
         controls.innerHTML = `
-            <span style="color:var(--green); font-size:13px; font-weight:bold; align-self:center; margin-right:10px;">🔴 ${username}</span>
-            <button class="btn-secondary" style="padding: 4px 12px; font-size: 13px;" id="fs-stream-btn-${peerId}">🔲 Tam Ekran</button>
-            <button class="btn-leave" style="padding: 4px 12px; font-size: 13px; background: rgba(237,66,69,0.2); color: #ED4245; border: 1px solid rgba(237,66,69,0.5);" id="close-stream-btn-${peerId}">Kapat</button>
+            <span class="stream-dj-name">🔴 ${this.escapeHtml(username)}</span>
+            <button class="btn-secondary stream-fs-btn" id="fs-stream-btn-${peerId}">🔲 Tam Ekran</button>
         `;
-
+        
+        // X close button (top-right) — yayını küçült (geri dönebilirsin)
+        const xBtn = document.createElement('button');
+        xBtn.className = 'stream-x-btn';
+        xBtn.innerHTML = '✕';
+        xBtn.title = 'Yayını küçült (geri dönebilirsin)';
+        xBtn.style.display = 'none'; // video gösterilince görünür
+        
         container.appendChild(videoEl);
         container.appendChild(overlay);
         container.appendChild(controls);
+        container.appendChild(xBtn);
         this.videoStage.appendChild(container);
-
-        // Event Listeners
-        const joinBtn = document.getElementById(`join-stream-btn-${peerId}`);
-        const closeBtn = document.getElementById(`close-stream-btn-${peerId}`);
-        const fsBtn = document.getElementById(`fs-stream-btn-${peerId}`);
-
+        
+        const joinBtn = overlay.querySelector(`#join-stream-btn-${peerId}`);
+        const fsBtn = controls.querySelector(`#fs-stream-btn-${peerId}`);
+        
         joinBtn.addEventListener('click', () => {
             overlay.classList.add('hidden');
             videoEl.style.display = 'block';
             controls.classList.remove('hidden');
-            videoEl.play().catch(e => {
-                console.error('Video oynatılamadı:', e);
-                this.showToast('⚠️', 'Tarayıcınız otomatik oynatmayı engelledi.');
-            });
+            xBtn.style.display = 'block';
+            videoEl.play().catch(() =>
+                this.showToast('⚠️', 'Otomatik oynatma engellendi — tekrar tıkla.')
+            );
         });
-
-        closeBtn.addEventListener('click', () => {
-            videoEl.pause();
-            videoEl.style.display = 'none';
-            controls.classList.add('hidden');
-            overlay.classList.remove('hidden');
-            joinBtn.textContent = 'Yayına Geri Dön';
+        
+        // X → küçült: container gizle, floating pill göster
+        xBtn.addEventListener('click', () => {
+            container.style.display = 'none';
+            const anyVisible = Array.from(this.videoStage.children).some(c => c.style.display !== 'none');
+            if (!anyVisible) this.videoStage.classList.add('hidden');
+            this._showScreenPill(peerId, username);
         });
-
+        
         fsBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => {
-                    this.showToast('❌', 'Tam ekran yapılamadı.');
-                });
+                container.requestFullscreen().catch(() =>
+                    this.showToast('❌', 'Tam ekran yapılamadı.')
+                );
             } else {
                 document.exitFullscreen();
             }
         });
     }
 
+    // Minimize edilmiş yayın için küçük floating pill (sağ-alt köşe)
+    _showScreenPill(peerId, username) {
+        if (document.getElementById(`screen-pill-${peerId}`)) return;
+        const pill = document.createElement('button');
+        pill.id = `screen-pill-${peerId}`;
+        pill.className = 'screen-share-pill';
+        pill.innerHTML = `📺 ${this.escapeHtml(username)} yayınına geri dön`;
+        pill.addEventListener('click', () => {
+            const container = document.getElementById(`remote-container-${peerId}`);
+            if (container) {
+                container.style.display = '';
+                const xBtn = container.querySelector('.stream-x-btn');
+                if (xBtn) xBtn.style.display = 'block';
+                this.videoStage.classList.remove('hidden');
+            }
+            pill.remove();
+        });
+        document.body.appendChild(pill);
+    }
+
     removeRemoteVideo(peerId) {
-        const videoEl = document.getElementById(`video-${peerId}`);
-        if (videoEl) {
-            videoEl.srcObject = null;
-            videoEl.remove();
+        const container = document.getElementById(`remote-container-${peerId}`);
+        if (container) {
+            // Tam ekranda ise çık
+            if (document.fullscreenElement === container) {
+                try { document.exitFullscreen(); } catch(_) {}
+            }
+            container.remove();
         }
-        const labelEl = document.getElementById(`video-label-${peerId}`);
-        if (labelEl) labelEl.remove();
-        
+        // Minimize pill'i de kaldır
+        const pill = document.getElementById(`screen-pill-${peerId}`);
+        if (pill) pill.remove();
+        // Ekran sesi audio element'i temizle
+        const peer = this.peers.get(peerId);
+        if (peer && peer.screenAudioEl) {
+            try { peer.screenAudioEl.srcObject = null; peer.screenAudioEl.remove(); } catch(_) {}
+            peer.screenAudioEl = null;
+        }
         if (this.videoStage.children.length === 0) {
             this.videoStage.classList.add('hidden');
         }

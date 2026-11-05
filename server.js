@@ -705,6 +705,26 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        // --- EKRAN PAYLAŞIMI KAPATMA SİNYALİ ---
+        // Yayın açan kişi stopScreenShare() yapınca, odadaki herkese bildirilir
+        // ki karşı tarafın ekran görüntüsü güvenilir şekilde kapansın
+        case 'screen-share-stopped': {
+          const user = connectedUsers.get(userId);
+          if (!user || !user.currentRoom) return;
+          const stopRoom = rooms[user.currentRoom];
+          if (!stopRoom) return;
+          const stopMsg = JSON.stringify({
+            type: 'screen-share-stopped',
+            senderId: userId
+          });
+          stopRoom.users.forEach((u) => {
+            if (u.id !== userId && u.ws.readyState === WebSocket.OPEN) {
+              u.ws.send(stopMsg);
+            }
+          });
+          break;
+        }
+
         // --- ADMIN KOMUTLARI ---
         case 'admin-clear-chat': {
           const adminUser = connectedUsers.get(userId);
