@@ -2634,6 +2634,46 @@ body {
     display: none !important;
 }
 
+/* === MÜZİK SES AÇMA BANNER (autoplay-policy unlock) === */
+.music-unlock-banner {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.25), rgba(255, 61, 129, 0.2));
+    border: 1px solid rgba(124, 92, 252, 0.5);
+    border-radius: 8px;
+    animation: unlockPulse 2s ease-in-out infinite;
+}
+.music-unlock-banner.hidden { display: none !important; }
+.music-unlock-btn {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #7C5CFC, #ff3d81);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(124, 92, 252, 0.4);
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.music-unlock-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(124, 92, 252, 0.6);
+}
+.music-unlock-btn:active { transform: scale(0.98); }
+.music-unlock-hint {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    flex: 1;
+}
+@keyframes unlockPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124, 92, 252, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(124, 92, 252, 0); }
+}
+
 /* YouTube player wrapper — AUDIO ONLY (1x1 off-screen, video yok) */
 .yt-listener-player-wrapper {
     position: absolute !important;

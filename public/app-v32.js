@@ -3595,6 +3595,10 @@ class VoiceChatApp {
                 </div>
                 <button class="music-dj-close-music-btn" id="music-dj-close-${djId}" title="Müziği kapat (sadece sende durur)">✕</button>
             </div>
+            <div class="music-unlock-banner hidden" id="music-unlock-${djId}">
+                <button type="button" class="music-unlock-btn">🔊 Sesi Aç</button>
+                <span class="music-unlock-hint">Tarayıcı sesli oynatma izni gerekiyor — tıklayın</span>
+            </div>
             <div class="yt-listener-player-wrapper">
                 <div id="yt-listener-${djId}"></div>
             </div>
@@ -3659,11 +3663,25 @@ class VoiceChatApp {
             ready: false,
             videoHidden: false,
             userMuted: false,
+            mutedPendingGesture: false,
+            volume: 30,
             pendingVideoId: videoId,
             djName: djName,
             trackName: trackName,
             videoId: videoId
         });
+
+        // Unlock overlay butonu — tıklanınca bu DJ'nin player'ını unmute et
+        const unlockOverlay = box.querySelector(`#music-unlock-${djId}`);
+        if (unlockOverlay) {
+            const unlockBtn = unlockOverlay.querySelector('.music-unlock-btn');
+            if (unlockBtn) {
+                unlockBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this._unmuteListenerPlayer(djId);
+                });
+            }
+        }
 
         // YouTube player'ı oluştur
         if (this.ytApiReady) {
@@ -3701,24 +3719,26 @@ class VoiceChatApp {
                     onReady: (e) => {
                         data.ready = true;
                         data.player = e.target;
-                        const vol = (typeof data.volume === 'number') ? data.volume : 70;
+                        const vol = (typeof data.volume === 'number') ? data.volume : 30;
                         e.target.setVolume(vol);
                         if (data.userMuted) {
                             // Kullanıcı kendi mute etmiş — kalsın
                             e.target.mute();
                             data.mutedPendingGesture = false;
+                            this._hideUnlockOverlay(djId);
                         } else if (!this._ytAudioUnlocked) {
-                            // AUTOPLAY POLICY FIX: muted autoplay tarayıcılar tarafından
-                            // her zaman izin verilir. Önce mute → playVideo → ilk kullanıcı
-                            // etkileşiminde (click/keydown/touch) unmute.
+                            // AUTOPLAY POLICY FIX: muted autoplay her zaman çalışır.
+                            // Önce mute → playVideo → kullanıcı "Sesi Aç" butonuna basınca unmute
                             e.target.mute();
                             try { e.target.playVideo(); } catch (_) {}
                             data.mutedPendingGesture = true;
+                            this._showUnlockOverlay(djId);
                             this._unlockYtAudioOnGesture();
                         } else {
                             // Kullanıcı zaten etkileşim yapmış — direkt sesli çal
                             try { e.target.playVideo(); } catch (_) {}
                             data.mutedPendingGesture = false;
+                            this._hideUnlockOverlay(djId);
                         }
                     },
                     onStateChange: (e) => {
@@ -3728,6 +3748,7 @@ class VoiceChatApp {
                         const code = e.data;
                         if (code === 101 || code === 150) {
                             this.showToast('⚠️', 'Bu video gömülü oynatmayı desteklemiyor. DJ başka video seçmeli.');
+                            this._hideUnlockOverlay(djId);
                         } else if (code === 2 || code === 5 || code === 100) {
                             this.showToast('⚠️', 'Müzik videosu yüklenemedi (geçersiz veya private).');
                         } else {
@@ -3750,10 +3771,11 @@ class VoiceChatApp {
         if (this._ytUnlockHandler) return;  // zaten kurulmuş
         const handler = () => {
             this._ytAudioUnlocked = true;
-            this.listenerPlayers.forEach((data) => {
+            this.listenerPlayers.forEach((data, djId) => {
                 if (data && data.mutedPendingGesture && data.player && data.ready && !data.userMuted) {
                     try { data.player.unMute(); } catch (_) {}
                     data.mutedPendingGesture = false;
+                    this._hideUnlockOverlay(djId);
                 }
             });
             document.removeEventListener('click', handler);
@@ -3765,11 +3787,39 @@ class VoiceChatApp {
         document.addEventListener('click', handler);
         document.addEventListener('keydown', handler);
         document.addEventListener('touchstart', handler, { passive: true });
-        // İlk seferde bilgi toast'ı
-        if (!this._ytUnlockToastShown) {
-            this.showToast('🎵', 'DJ müzik açtı — sesi duymak için ekrana bir kez dokunun');
-            this._ytUnlockToastShown = true;
-        }
+    }
+
+    /** Belirli bir DJ'nin player'ını unmute et (unlock butonu tıklanınca) */
+    _unmuteListenerPlayer(djId) {
+        const data = this.listenerPlayers.get(djId);
+        if (!data || !data.player || !data.ready) return;
+        try {
+            data.player.unMute();
+            const vol = (typeof data.volume === 'number') ? data.volume : 30;
+            data.player.setVolume(vol);
+            data.player.playVideo();
+        } catch (_) {}
+        data.mutedPendingGesture = false;
+        this._ytAudioUnlocked = true;  // bundan sonra yeni şarkılarda mute gerekmez
+        this._hideUnlockOverlay(djId);
+        // Diğer pending player'ları da unmute et
+        this.listenerPlayers.forEach((d, id) => {
+            if (d && d.mutedPendingGesture && d.player && d.ready && !d.userMuted) {
+                try { d.player.unMute(); } catch (_) {}
+                d.mutedPendingGesture = false;
+                this._hideUnlockOverlay(id);
+            }
+        });
+    }
+
+    _showUnlockOverlay(djId) {
+        const el = document.getElementById(`music-unlock-${djId}`);
+        if (el) el.classList.remove('hidden');
+    }
+
+    _hideUnlockOverlay(djId) {
+        const el = document.getElementById(`music-unlock-${djId}`);
+        if (el) el.classList.add('hidden');
     }
 
     // =========================================
